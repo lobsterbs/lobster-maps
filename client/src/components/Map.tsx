@@ -120,13 +120,14 @@ function satelliteStyle(): StyleSpecification {
 type Props = {
   onMapReady?: (map: MapLibreMap) => void;
   onMoveEnd?: (bounds: [number, number, number, number]) => void;
+  onError?: (message: string) => void;
 };
 
 type ViewMode = 'map' | 'satellite';
 
 // Exported as MapCanvas, not Map, so it doesn't shadow the built-in
 // Map constructor wherever this gets imported alongside marker tracking.
-export function MapCanvas({ onMapReady, onMoveEnd }: Props) {
+export function MapCanvas({ onMapReady, onMoveEnd, onError }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   const [mode, setMode] = useState<ViewMode>('map');
@@ -143,6 +144,14 @@ export function MapCanvas({ onMapReady, onMoveEnd }: Props) {
       center: [-73.9857, 40.7484],
       zoom: 12,
       pitch: DEFAULT_PITCH,
+    });
+
+    // Without this, a bad or unreachable tiles source (wrong URL, no
+    // CORS, host down) means 'load' never fires and the caller has no
+    // way to know the map is stuck rather than still loading. Whatever
+    // caused it, the UI shouldn't spin forever pretending it's fine.
+    map.on('error', (e) => {
+      onError?.(e.error?.message ?? 'Map failed to load');
     });
 
     map.on('load', () => {

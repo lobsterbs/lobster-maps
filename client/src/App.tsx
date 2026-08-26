@@ -26,6 +26,7 @@ export default function App() {
   const businessLookupRef = useRef(new Map<string, Business>());
   const [modalOpen, setModalOpen] = useState(false);
   const [mapLoaded, setMapLoaded] = useState(false);
+  const [mapError, setMapError] = useState<string | null>(null);
   const [center, setCenter] = useState<[number, number]>([-73.9857, 40.7484]);
   const [selectedBusiness, setSelectedBusiness] = useState<Business | null>(null);
 
@@ -122,6 +123,10 @@ export default function App() {
     [syncMarkers]
   );
 
+  const handleMapError = useCallback((message: string) => {
+    setMapError(message);
+  }, []);
+
   const handleMoveEnd = useCallback(
     (bounds: [number, number, number, number]) => {
       setCenter([(bounds[0] + bounds[2]) / 2, (bounds[1] + bounds[3]) / 2]);
@@ -143,8 +148,34 @@ export default function App() {
 
   return (
     <div style={{ position: 'fixed', inset: 0 }}>
-      <MapCanvas onMapReady={handleMapReady} onMoveEnd={handleMoveEnd} />
-      {!mapLoaded && <LoadingMorph />}
+      <MapCanvas onMapReady={handleMapReady} onMoveEnd={handleMoveEnd} onError={handleMapError} />
+      {!mapLoaded && !mapError && <LoadingMorph />}
+      {mapError && (
+        <div
+          role="alert"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 8,
+            background: 'var(--lobster-bg)',
+            color: 'var(--lobster-text)',
+            fontFamily: 'var(--font-body)',
+            textAlign: 'center',
+            padding: 24,
+          }}
+        >
+          <div style={{ fontFamily: 'var(--font-heading)', fontSize: 18 }}>
+            Map didn&apos;t load
+          </div>
+          <div style={{ color: 'var(--lobster-text-dim)', fontSize: 14, maxWidth: 360 }}>
+            {mapError}
+          </div>
+        </div>
+      )}
       <SearchBar onSelect={handleSearchSelect} />
       <AddBusinessFAB onClick={() => setModalOpen(true)} />
       <AddBusinessModal
