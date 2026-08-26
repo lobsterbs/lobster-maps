@@ -26,22 +26,44 @@ app.use('/api/geocode', geocodeRouter);
 // connector in Claude, this lets Claude read/write project files and
 // run commands (npm, tsc, git) directly. That's real file-write and
 // command-execution access sitting on a public URL, so it's gated
-// behind a bearer token rather than left open. Set MCP_AUTH_TOKEN
-// before deploying; the endpoint refuses to serve without one.
-function requireMcpAuth(req: Request, res: Response, next: NextFunction) {
+// behind a token rather than left open. Set MCP_AUTH_TOKEN before
+// deploying; the endpoint refuses to serve without one.
+//
+// Two ways to authenticate the same endpoint:
+//  - POST /mcp with an `Authorization: Bearer <token>` header. This is
+//    what a proper header-auth connector setup (e.g. Claude's
+//    static_headers beta) sends.
+//  - POST /mcp/<token>, with the token as a path segment instead. For
+//    a bare "add custom connector by URL" flow with no header field
+//    at all — same pattern already used for the LobsterCaptcha
+//    connector. Worth knowing: a path segment ends up in access logs
+//    same as a query string would, it's not meaningfully more secure,
+//    just a pragmatic concession for a single-user hobby server, not
+//    something to reach for if this ever has real stakes.
+function checkMcpToken(provided: string | undefined, res: Response): boolean {
   const token = process.env.MCP_AUTH_TOKEN;
   if (!token) {
     res.status(500).json({ error: 'MCP_AUTH_TOKEN is not configured on this server' });
-    return;
+    return false;
   }
-  if (req.headers.authorization !== `Bearer ${token}`) {
+  if (provided !== token) {
     res.status(401).json({ error: 'Unauthorized' });
-    return;
+    return false;
   }
-  next();
+  return true;
 }
 
-app.post('/mcp', requireMcpAuth, async (req, res) => {
+function requireMcpAuthHeader(req: Request, res: Response, next: NextFunction) {
+  const header = req.headers.authorization;
+  const provided = header?.startsWith('Bearer ') ? header.slice(7) : undefined;
+  if (checkMcpToken(provided, res)) next();
+}
+
+function requireMcpAuthPath(req: Request, res: Response, next: NextFunction) {
+  if (checkMcpToken(req.params.token, res)) next();
+}
+
+async function handleMcpRequest(req: Request, res: Response) {
   try {
     // Fresh transport + server per request: the simplest correct
     // pattern for stateless Streamable HTTP, no session state to manage.
@@ -63,7 +85,10 @@ app.post('/mcp', requireMcpAuth, async (req, res) => {
       });
     }
   }
-});
+}
+
+app.post('/mcp', requireMcpAuthHeader, handleMcpRequest);
+app.post('/mcp/:token', requireMcpAuthPath, handleMcpRequest);
 
 // Serve the built frontend from the same process/port as the API and
 // MCP endpoint, so a single Replit run command is enough — no separate
