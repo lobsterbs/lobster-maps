@@ -1,0 +1,221 @@
+import { useEffect, useState } from 'react';
+import type { CSSProperties } from 'react';
+import { animated, useTransition } from '@react-spring/web';
+import { fetchBusinessById, type Business } from '../lib/api';
+
+type Props = {
+  business: Business | null;
+  onClose: () => void;
+};
+
+// Business as passed in from a marker click only has the columns the
+// bbox listing selects (see routes/businesses.ts) — no description,
+// phone, website, or hours. Those get fetched here, on demand, via the
+// /:id endpoint, which already existed server-side but wasn't called
+// from anywhere in the frontend until now.
+export function BusinessDetailSheet({ business, onClose }: Props) {
+  const [full, setFull] = useState<Business | null>(null);
+  const [loadingFull, setLoadingFull] = useState(false);
+
+  useEffect(() => {
+    if (!business) {
+      setFull(null);
+      return;
+    }
+    setFull(null);
+    setLoadingFull(true);
+    fetchBusinessById(business.id)
+      .then(setFull)
+      .catch(() => setFull(null))
+      .finally(() => setLoadingFull(false));
+  }, [business]);
+
+  const transition = useTransition(business, {
+    from: { opacity: 0, transform: 'translateY(100%)' },
+    enter: { opacity: 1, transform: 'translateY(0%)' },
+    leave: { opacity: 0, transform: 'translateY(100%)' },
+    config: { tension: 280, friction: 30 },
+  });
+
+  const backdropTransition = useTransition(!!business, {
+    from: { opacity: 0 },
+    enter: { opacity: 1 },
+    leave: { opacity: 0 },
+  });
+
+  return (
+    <>
+      {backdropTransition(
+        (style, show) =>
+          show && (
+            <animated.div
+              onClick={onClose}
+              style={{ ...backdropStyle, opacity: style.opacity }}
+            />
+          )
+      )}
+      {transition(
+        (style, biz) =>
+          biz && (
+            <animated.div
+              style={{ ...sheetStyle, transform: style.transform, opacity: style.opacity }}
+            >
+              <div style={handleStyle} />
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
+                <div style={{ minWidth: 0 }}>
+                  <h2 style={titleStyle}>{biz.name}</h2>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
+                    <span style={{ color: 'var(--lobster-text-dim)', fontSize: 13 }}>{biz.category}</span>
+                    {biz.verified && <span style={verifiedBadgeStyle}>Verified</span>}
+                  </div>
+                </div>
+                <button onClick={onClose} style={closeButtonStyle} aria-label="Close">
+                  ×
+                </button>
+              </div>
+
+              <p style={addressStyle}>{biz.address}</p>
+
+              {loadingFull && <div style={skeletonBlockStyle} />}
+
+              {!loadingFull && full?.description && <p style={descriptionStyle}>{full.description}</p>}
+
+              {!loadingFull && (full?.phone || full?.website) && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 12 }}>
+                  {full.phone && (
+                    <a href={`tel:${full.phone}`} style={linkRowStyle}>
+                      {full.phone}
+                    </a>
+                  )}
+                  {full.website && (
+                    <a href={full.website} target="_blank" rel="noreferrer" style={linkRowStyle}>
+                      {full.website.replace(/^https?:\/\//, '')}
+                    </a>
+                  )}
+                </div>
+              )}
+
+              {!loadingFull && full?.hours && Object.keys(full.hours).length > 0 && (
+                <div style={hoursGridStyle}>
+                  {Object.entries(full.hours).map(([day, range]) => (
+                    <div key={day} style={hoursRowStyle}>
+                      <span style={{ color: 'var(--lobster-text-dim)' }}>{day}</span>
+                      <span>{range}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </animated.div>
+          )
+      )}
+    </>
+  );
+}
+
+const backdropStyle: CSSProperties = {
+  position: 'absolute',
+  inset: 0,
+  background: 'rgba(0,0,0,0.45)',
+  zIndex: 8,
+};
+
+const sheetStyle: CSSProperties = {
+  position: 'absolute',
+  bottom: 0,
+  left: 0,
+  right: 0,
+  zIndex: 9,
+  maxHeight: '62vh',
+  overflowY: 'auto',
+  background: 'rgba(21, 21, 21, 0.85)',
+  backdropFilter: 'blur(24px) saturate(180%)',
+  WebkitBackdropFilter: 'blur(24px) saturate(180%)',
+  borderTop: '1px solid rgba(255,255,255,0.08)',
+  borderTopLeftRadius: 28,
+  borderTopRightRadius: 28,
+  padding: '12px 20px 28px',
+  boxShadow: '0 -8px 32px rgba(0,0,0,0.45)',
+};
+
+const handleStyle: CSSProperties = {
+  width: 36,
+  height: 4,
+  borderRadius: 999,
+  background: 'rgba(255,255,255,0.2)',
+  margin: '0 auto 16px',
+};
+
+const titleStyle: CSSProperties = {
+  margin: 0,
+  fontFamily: 'var(--font-heading)',
+  fontSize: 20,
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
+};
+
+const verifiedBadgeStyle: CSSProperties = {
+  fontSize: 11,
+  fontWeight: 600,
+  color: 'var(--lobster-gold)',
+  border: '1px solid var(--lobster-gold)',
+  borderRadius: 999,
+  padding: '1px 8px',
+};
+
+const closeButtonStyle: CSSProperties = {
+  flexShrink: 0,
+  width: 32,
+  height: 32,
+  borderRadius: '50%',
+  border: 'none',
+  background: 'rgba(255,255,255,0.08)',
+  color: 'var(--lobster-text)',
+  fontSize: 18,
+  lineHeight: 1,
+  cursor: 'pointer',
+};
+
+const addressStyle: CSSProperties = {
+  fontSize: 13,
+  color: 'var(--lobster-text-dim)',
+  marginTop: 12,
+};
+
+const descriptionStyle: CSSProperties = {
+  fontSize: 14,
+  lineHeight: 1.5,
+  marginTop: 12,
+};
+
+const linkRowStyle: CSSProperties = {
+  fontSize: 14,
+  color: 'var(--lobster-gold)',
+  textDecoration: 'none',
+};
+
+const skeletonBlockStyle: CSSProperties = {
+  height: 14,
+  width: '70%',
+  borderRadius: 6,
+  marginTop: 12,
+  background:
+    'linear-gradient(90deg, rgba(255,255,255,0.06) 25%, rgba(255,255,255,0.12) 37%, rgba(255,255,255,0.06) 63%)',
+  backgroundSize: '400% 100%',
+  animation: 'lobster-skeleton-shimmer 1.4s ease infinite',
+};
+
+const hoursGridStyle: CSSProperties = {
+  marginTop: 16,
+  borderTop: '1px solid rgba(255,255,255,0.08)',
+  paddingTop: 12,
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 4,
+};
+
+const hoursRowStyle: CSSProperties = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  fontSize: 13,
+};
