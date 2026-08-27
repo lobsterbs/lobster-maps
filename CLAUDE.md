@@ -39,12 +39,24 @@ API, and an MCP endpoint all from one port. Database on Neon.
 - Fixed a real bug: the Map component had zero error handling, so any
   tile-load failure just hung the loading spinner forever with no way for
   the UI to know something went wrong. Added a proper `map.on('error', ...)`
-  listener wired through to a real error state in the UI.
+  listener wired through to a real error state in the UI, and made it
+  distinguish "tiles were never configured" (expected, friendly message)
+  from "tiles were configured but something actually broke" (real error
+  shown).
 - Added a path-token MCP auth option (`POST /mcp/<token>`) alongside the
   existing header-based one, since Claude's custom-connector-by-URL flow may
   only expose OAuth fields depending on account tier. `static_headers` (the
   proper fix) is in beta and reads as admin/org-scoped per Anthropic's own
   docs, unconfirmed whether it's available on this account.
+- **Fixed a real path-traversal bug** in the MCP server's `resolveSafe()`:
+  it used `full.startsWith(PROJECT_ROOT)`, a classic bypass, a sibling
+  directory like `/opt/project-evil/secret.txt` also starts with the string
+  `/opt/project` and would incorrectly pass. Proved it with a concrete
+  reproduction (real sibling dir, old logic vs fixed logic side by side),
+  fixed it to require an exact match or a proper path-separator boundary,
+  and re-verified against the actual compiled server through the real MCP
+  protocol: legit paths still resolve, the sibling escape now correctly
+  returns `isError:true` on both `read_file` and `list_directory`.
 
 > **Mistake made and corrected, worth knowing about:** early in this deploy
 > I set `VITE_PMTILES_URL` to a URL I hadn't actually verified existed
@@ -55,23 +67,57 @@ API, and an MCP endpoint all from one port. Database on Neon.
 > URLs before wiring them into anything production-facing, especially env
 > vars baked into a client build.
 
+## Known limitation: this sandbox can't reach Protomaps
+
+Confirmed directly (`curl` to `build.protomaps.com` returns
+`x-deny-reason: host_not_allowed`): whatever environment a Claude session
+is running the deploy work from may not have network access to Protomaps'
+build servers, or any real basemap tile source. Checked for alternatives
+(Protomaps' own test fixtures are synthetic 1x1-degree squares with no
+real geography, not usable) — there isn't a workaround from inside a
+sandboxed session. **A real `.pmtiles` region extract has to come from the
+user's own machine**, or from a session with broader network access. This
+isn't a "pick a region and it'll work" problem, it's a network-access
+problem independent of which region gets chosen.
+
+## Why the MCP connector keeps dropping
+
+Checked Render's logs directly: four separate container instances booted
+today, hours apart, each one clean (no crashes, just a normal boot then
+nothing until the next gap). That's Render's free tier spinning the service
+down after ~15 min idle and cold-starting on the next request (30-50s
+wake-up). If Claude's connector tries to reach it while asleep, the
+wake-up time likely exceeds whatever timeout the connector check uses, and
+it drops from the tool list. Nothing is actually broken.
+
+Real options, genuinely a cost/tradeoff call for the user, not decided
+here:
+1. Leave it, free, but the connector may need a retry after idle periods.
+2. Add a keep-alive ping (cron hitting `/health` every ~10 min) — free,
+   standard workaround, mild hack.
+3. Upgrade to Render's Starter plan (~$7/mo) — always-on, costs money,
+   which this project has deliberately avoided so far.
+
 ## To-Do
 
-- [ ] **Map tiles (the main open item).** No real `.pmtiles` file exists
-      yet. Needs a region (city, metro area, or bounding box) from the user.
-      This sandbox can't reach `build.protomaps.com` (not in its network
-      allowlist), so a real extract can't be self-served. Path forward: user
-      runs `pmtiles extract` locally and uploads the result, or provides a
-      hosted URL. Once the file exists, committing it to
+- [ ] **Map tiles (the main open item, confirmed blocked from this
+      environment).** No real `.pmtiles` file exists yet, and this sandbox
+      cannot reach any real basemap tile source (confirmed via direct
+      test, see above). Needs the user to run `pmtiles extract` on their
+      own machine and upload the result, or provide a hosted URL some
+      other way. Once the file exists, committing it to
       `client/public/tiles/region.pmtiles` needs zero extra config, that's
       already the code's documented default path.
+- [ ] Decide how to handle the MCP connector dropping after Render's free
+      tier spins down idle (see "Why the MCP connector keeps dropping"
+      above), leave as-is, add a keep-alive ping, or pay for always-on.
 - [ ] Confirm whether `static_headers` is actually available on this Claude
       account (Settings -> Connectors -> Add custom connector, check for a
       header/token field). If yes, the header-based `/mcp` URL is cleaner
       than the path-token one currently in use.
 - [ ] Regenerate a properly-scoped GitHub token (current one is a classic
       token with full `repo` scope covering every repo on the account) or
-      revoke it now that the push work is done.
+      revoke it, the push work is done for now.
 - [ ] Real auth on `POST /api/businesses` (rate limiting is only a
       stopgap). LobsterID integration is the actual fix, bigger scope,
       needs an explicit decision on timing before real users show up.
