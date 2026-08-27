@@ -12,7 +12,11 @@ const PROJECT_ROOT = path.resolve(__dirname, '../..');
 
 function resolveSafe(relativePath: string): string {
   const full = path.resolve(PROJECT_ROOT, relativePath);
-  if (!full.startsWith(PROJECT_ROOT)) {
+  // A naive `full.startsWith(PROJECT_ROOT)` check is a classic bypass:
+  // if PROJECT_ROOT is "/opt/project", a sibling path like
+  // "/opt/project-evil/secret.txt" also starts with that string. Must
+  // require either an exact match or a proper path-separator boundary.
+  if (full !== PROJECT_ROOT && !full.startsWith(PROJECT_ROOT + path.sep)) {
     throw new Error(`Path escapes project root: ${relativePath}`);
   }
   return full;

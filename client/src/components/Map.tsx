@@ -10,6 +10,7 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 // Apple's or Google's tile servers: both explicitly prohibit scraping
 // or rehosting their map data in their terms of service.
 const PMTILES_URL = import.meta.env.VITE_PMTILES_URL || '/tiles/region.pmtiles';
+const TILES_CONFIGURED = Boolean(import.meta.env.VITE_PMTILES_URL);
 const SOURCE_NAME = 'protomaps';
 
 // Real Protomaps assets, verified against the package's own
@@ -151,6 +152,14 @@ export function MapCanvas({ onMapReady, onMoveEnd, onError }: Props) {
     // way to know the map is stuck rather than still loading. Whatever
     // caused it, the UI shouldn't spin forever pretending it's fine.
     map.on('error', (e) => {
+      if (!TILES_CONFIGURED) {
+        // Expected state until VITE_PMTILES_URL is set to a real hosted
+        // extract (see CLAUDE.md / README "Tiles") — a distinct message
+        // from an actual runtime failure, so this doesn't read as "the
+        // app is broken" when it's really just "not configured yet".
+        onError?.('Map tiles are not configured yet. See CLAUDE.md for how to add a region.');
+        return;
+      }
       onError?.(e.error?.message ?? 'Map failed to load');
     });
 
