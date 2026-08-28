@@ -3,6 +3,7 @@ import type { CSSProperties } from 'react';
 import maplibregl, { type Map as MapLibreMap, type StyleSpecification } from 'maplibre-gl';
 import { Protocol } from 'pmtiles';
 import { layers, namedFlavor } from '@protomaps/basemaps';
+import { animated, useSpring } from '@react-spring/web';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
 // Points at a self-hosted .pmtiles region extract — build one with the
@@ -197,25 +198,58 @@ export function MapCanvas({ onMapReady, onMoveEnd, onError }: Props) {
         {(['map', 'satellite'] as const).map((m) => {
           const disabled = m === 'satellite' && !SATELLITE_TILES_URL;
           return (
-            <button
+            <ModeToggleButton
               key={m}
-              onClick={() => handleModeChange(m)}
+              label={m === 'map' ? 'Map' : 'Satellite'}
+              selected={mode === m}
               disabled={disabled}
               title={disabled ? 'Set VITE_SATELLITE_TILES_URL to enable — see README' : undefined}
-              style={{
-                ...toggleButtonStyle,
-                cursor: disabled ? 'not-allowed' : 'pointer',
-                opacity: disabled ? 0.4 : 1,
-                color: mode === m ? '#0a0a0a' : 'var(--lobster-text-dim)',
-                background: mode === m ? 'var(--lobster-gold)' : 'transparent',
-              }}
-            >
-              {m === 'map' ? 'Map' : 'Satellite'}
-            </button>
+              onClick={() => handleModeChange(m)}
+            />
           );
         })}
       </div>
     </div>
+  );
+}
+
+type ModeToggleButtonProps = {
+  label: string;
+  selected: boolean;
+  disabled: boolean;
+  title?: string;
+  onClick: () => void;
+};
+
+// react-spring can't interpolate `var(--lobster-gold)` directly — it
+// needs an actual color value to animate between, the same reason
+// LoadingMorph.tsx hardcodes a literal hex instead of the CSS custom
+// property. Keep these in sync with tokens.css.
+const GOLD = '#d4a574';
+const TEXT_DIM = '#a3a3a3';
+const INK = '#0a0a0a';
+
+function ModeToggleButton({ label, selected, disabled, title, onClick }: ModeToggleButtonProps) {
+  const style = useSpring({
+    background: selected ? GOLD : 'transparent',
+    color: selected ? INK : TEXT_DIM,
+    config: { tension: 300, friction: 26 },
+  });
+
+  return (
+    <animated.button
+      onClick={onClick}
+      disabled={disabled}
+      title={title}
+      style={{
+        ...toggleButtonStyle,
+        ...style,
+        cursor: disabled ? 'not-allowed' : 'pointer',
+        opacity: disabled ? 0.4 : 1,
+      }}
+    >
+      {label}
+    </animated.button>
   );
 }
 
@@ -243,5 +277,4 @@ const toggleButtonStyle: CSSProperties = {
   fontFamily: 'var(--font-body)',
   fontSize: 13,
   fontWeight: 600,
-  transition: 'background 0.2s var(--ease-elastic), color 0.2s var(--ease-elastic)',
 };

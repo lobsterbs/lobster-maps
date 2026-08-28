@@ -10,6 +10,7 @@ import { ClusterMarker } from './components/ClusterMarker';
 import { BusinessDetailSheet } from './components/BusinessDetailSheet';
 import { LoadingMorph } from './components/LoadingMorph';
 import { SearchBar } from './components/SearchBar';
+import { Snackbar } from './components/Snackbar';
 import { fetchBusinessesInView, type Business } from './lib/api';
 
 type BusinessPointProps = {
@@ -29,6 +30,7 @@ export default function App() {
   const [mapError, setMapError] = useState<string | null>(null);
   const [center, setCenter] = useState<[number, number]>([-73.9857, 40.7484]);
   const [selectedBusiness, setSelectedBusiness] = useState<Business | null>(null);
+  const [snackbarMessage, setSnackbarMessage] = useState<string | null>(null);
 
   const syncMarkers = useCallback(async (bounds: [number, number, number, number]) => {
     const map = mapRef.current;
@@ -135,12 +137,17 @@ export default function App() {
     [syncMarkers]
   );
 
-  const handleCreated = useCallback(() => {
-    const map = mapRef.current;
-    if (!map) return;
-    const b = map.getBounds();
-    syncMarkers([b.getWest(), b.getSouth(), b.getEast(), b.getNorth()]);
-  }, [syncMarkers]);
+  const handleCreated = useCallback(
+    (name: string) => {
+      const map = mapRef.current;
+      if (map) {
+        const b = map.getBounds();
+        syncMarkers([b.getWest(), b.getSouth(), b.getEast(), b.getNorth()]);
+      }
+      setSnackbarMessage(`${name} added`);
+    },
+    [syncMarkers]
+  );
 
   const handleSearchSelect = useCallback((lat: number, lon: number) => {
     mapRef.current?.flyTo({ center: [lon, lat], zoom: 15, essential: true });
@@ -185,6 +192,7 @@ export default function App() {
         mapCenter={center}
       />
       <BusinessDetailSheet business={selectedBusiness} onClose={() => setSelectedBusiness(null)} />
+      <Snackbar message={snackbarMessage} onDismiss={() => setSnackbarMessage(null)} />
     </div>
   );
 }

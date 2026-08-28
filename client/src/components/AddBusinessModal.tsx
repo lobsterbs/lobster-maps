@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { animated, useTransition } from '@react-spring/web';
 import { geocodeAddress, submitBusiness, type GeocodeResult } from '../lib/api';
+import { RippleContainer, useRipple } from './Ripple';
 import { WavyLinearProgress } from './WavyLinearProgress';
 
 type Step = 'location' | 'details';
@@ -9,7 +10,7 @@ type Step = 'location' | 'details';
 type Props = {
   open: boolean;
   onClose: () => void;
-  onCreated: () => void;
+  onCreated: (name: string) => void;
   mapCenter: [number, number]; // [lng, lat] fallback pin
 };
 
@@ -19,6 +20,7 @@ export function AddBusinessModal({ open, onClose, onCreated, mapCenter }: Props)
   const [results, setResults] = useState<GeocodeResult[]>([]);
   const [picked, setPicked] = useState<{ lat: number; lon: number; label: string } | null>(null);
   const [form, setForm] = useState({ name: '', category: '', description: '', phone: '', website: '' });
+  const submitRipple = useRipple();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
@@ -71,7 +73,7 @@ export function AddBusinessModal({ open, onClose, onCreated, mapCenter }: Props)
         phone: form.phone || undefined,
         website: form.website || undefined,
       });
-      onCreated();
+      onCreated(form.name);
       onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong');
@@ -187,10 +189,12 @@ export function AddBusinessModal({ open, onClose, onCreated, mapCenter }: Props)
                 </button>
                 <button
                   onClick={handleSubmit}
+                  onPointerDown={submitRipple.addRipple}
                   disabled={!form.name || !form.category || submitting}
-                  style={submitStyle}
+                  style={{ ...submitStyle, position: 'relative', overflow: 'hidden' }}
                 >
                   {submitting ? 'Adding…' : 'Add business'}
+                  <RippleContainer ripples={submitRipple.ripples} onRippleDone={submitRipple.removeRipple} />
                 </button>
               </div>
             </>
