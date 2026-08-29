@@ -22,12 +22,27 @@ export function BusinessDetailSheet({ business, onClose }: Props) {
       setFull(null);
       return;
     }
+    // Without this guard, clicking a second marker before the first
+    // detail fetch resolves can let the stale response land after the
+    // new one and silently overwrite it — the sheet would show one
+    // business's name with a different business's phone/hours. Proved
+    // it with a timing repro before adding this.
+    let cancelled = false;
     setFull(null);
     setLoadingFull(true);
     fetchBusinessById(business.id)
-      .then(setFull)
-      .catch(() => setFull(null))
-      .finally(() => setLoadingFull(false));
+      .then((data) => {
+        if (!cancelled) setFull(data);
+      })
+      .catch(() => {
+        if (!cancelled) setFull(null);
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingFull(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [business]);
 
   const transition = useTransition(business, {

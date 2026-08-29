@@ -153,6 +153,10 @@ export default function App() {
     mapRef.current?.flyTo({ center: [lon, lat], zoom: 15, essential: true });
   }, []);
 
+  const handleSnackbarDismiss = useCallback(() => {
+    setSnackbarMessage(null);
+  }, []);
+
   return (
     <div style={{ position: 'fixed', inset: 0 }}>
       <MapCanvas onMapReady={handleMapReady} onMoveEnd={handleMoveEnd} onError={handleMapError} />
@@ -192,7 +196,7 @@ export default function App() {
         mapCenter={center}
       />
       <BusinessDetailSheet business={selectedBusiness} onClose={() => setSelectedBusiness(null)} />
-      <Snackbar message={snackbarMessage} onDismiss={() => setSnackbarMessage(null)} />
+      <Snackbar message={snackbarMessage} onDismiss={handleSnackbarDismiss} />
     </div>
   );
 }

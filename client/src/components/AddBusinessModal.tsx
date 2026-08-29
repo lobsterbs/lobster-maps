@@ -47,15 +47,23 @@ export function AddBusinessModal({ open, onClose, onCreated, mapCenter }: Props)
       setResults([]);
       return;
     }
+    // Same race as SearchBar.tsx: clearTimeout only cancels a timer
+    // that hasn't fired yet, not a request already in flight. Guard
+    // against a stale slower response overwriting a newer faster one.
+    let cancelled = false;
     clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(async () => {
       try {
-        setResults(await geocodeAddress(query));
+        const data = await geocodeAddress(query);
+        if (!cancelled) setResults(data);
       } catch {
-        setResults([]);
+        if (!cancelled) setResults([]);
       }
     }, 400); // debounced so we don't hammer the geocode proxy on every keystroke
-    return () => clearTimeout(debounceRef.current);
+    return () => {
+      cancelled = true;
+      clearTimeout(debounceRef.current);
+    };
   }, [query]);
 
   async function handleSubmit() {

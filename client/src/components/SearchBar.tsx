@@ -18,15 +18,25 @@ export function SearchBar({ onSelect }: Props) {
       setResults([]);
       return;
     }
+    // clearTimeout only cancels a timer that hasn't fired yet — it does
+    // nothing for a request that's already in flight. If an earlier
+    // slower search resolves after a later faster one, it would
+    // silently overwrite the correct results with stale ones. This
+    // flag catches that case too.
+    let cancelled = false;
     clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(async () => {
       try {
-        setResults(await geocodeAddress(query));
+        const data = await geocodeAddress(query);
+        if (!cancelled) setResults(data);
       } catch {
-        setResults([]);
+        if (!cancelled) setResults([]);
       }
     }, 400); // debounced so we don't hammer the geocode proxy on every keystroke
-    return () => clearTimeout(debounceRef.current);
+    return () => {
+      cancelled = true;
+      clearTimeout(debounceRef.current);
+    };
   }, [query]);
 
   const dropdownOpen = focused && results.length > 0;
