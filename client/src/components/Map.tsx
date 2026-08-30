@@ -10,10 +10,27 @@ const TILE_URL = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
 const OSM_ATTRIBUTION =
   '© <a href="https://openstreetmap.org">OpenStreetMap</a> contributors';
 
-// Maptiler vector tiles for 3D buildings globally. Free tier with API key.
+// Maptiler vector tiles, used here just for 3D building footprints
+// globally. Free tier with API key.
+//
+// Verified directly against MapTiler's own docs
+// (docs.maptiler.com/gl-style-specification/sources/): the URL form is
+// /tiles/{tilesetid}/tiles.json — "v4" is their Planet v4 global
+// tileset. First attempt (/data/v3.json) was an unverified guess and
+// 404'd in production.
 const MAPTILER_KEY = 'wbQhKmIrXoSFpnzJmV4w';
+const MAPTILER_TILES_URL = `https://api.maptiler.com/tiles/v4/tiles.json?key=${MAPTILER_KEY}`;
 const MAPTILER_ATTRIBUTION =
   '© <a href="https://www.maptiler.com/copyright/">MapTiler</a>';
+
+// Confirmed against MapTiler Planet v4's actual published schema
+// (docs.maptiler.com/schema/planet-v4/, "building" layer): the source
+// layer name is "building", and the height fields are "height" and
+// "height_min" — NOT "min_height", which is what this originally had
+// and would have silently rendered every building at height 0 with no
+// error, just flat extrusions, since MapLibre doesn't error on an
+// unmatched property name.
+const BUILDING_SOURCE_LAYER = 'building';
 
 const DEFAULT_PITCH = 45; // Enable 3D for building extrusions
 
@@ -29,7 +46,7 @@ function rasterStyle(): StyleSpecification {
       },
       maptiler_data: {
         type: 'vector',
-        url: `https://api.maptiler.com/data/v3.json?key=${MAPTILER_KEY}`,
+        url: MAPTILER_TILES_URL,
         attribution: MAPTILER_ATTRIBUTION,
       },
     },
@@ -45,11 +62,11 @@ function rasterStyle(): StyleSpecification {
         id: 'buildings-3d',
         type: 'fill-extrusion',
         source: 'maptiler_data',
-        'source-layer': 'building',
+        'source-layer': BUILDING_SOURCE_LAYER,
         paint: {
           'fill-extrusion-color': '#242428',
           'fill-extrusion-height': ['interpolate', ['linear'], ['zoom'], 15, 0, 15.05, ['get', 'height']],
-          'fill-extrusion-base': ['interpolate', ['linear'], ['zoom'], 15, 0, 15.05, ['get', 'min_height']],
+          'fill-extrusion-base': ['interpolate', ['linear'], ['zoom'], 15, 0, 15.05, ['get', 'height_min']],
           'fill-extrusion-opacity': 0.85,
         },
       },
@@ -58,8 +75,8 @@ function rasterStyle(): StyleSpecification {
 }
 
 function satelliteStyle(): StyleSpecification {
-  // Satellite view: keep it simple, just OSM satellite raster + Maptiler buildings
-  // No labels layer, keep it clean for satellite views
+  // Satellite view: OSM-style raster (Esri World Imagery) + the same
+  // Maptiler buildings layer, no labels layer on top for satellite.
   return {
     version: 8,
     sources: {
@@ -71,7 +88,7 @@ function satelliteStyle(): StyleSpecification {
       },
       maptiler_data: {
         type: 'vector',
-        url: `https://api.maptiler.com/data/v3.json?key=${MAPTILER_KEY}`,
+        url: MAPTILER_TILES_URL,
         attribution: MAPTILER_ATTRIBUTION,
       },
     },
@@ -85,11 +102,11 @@ function satelliteStyle(): StyleSpecification {
         id: 'buildings-3d-sat',
         type: 'fill-extrusion',
         source: 'maptiler_data',
-        'source-layer': 'building',
+        'source-layer': BUILDING_SOURCE_LAYER,
         paint: {
           'fill-extrusion-color': '#e8e8e8',
           'fill-extrusion-height': ['interpolate', ['linear'], ['zoom'], 15, 0, 15.05, ['get', 'height']],
-          'fill-extrusion-base': ['interpolate', ['linear'], ['zoom'], 15, 0, 15.05, ['get', 'min_height']],
+          'fill-extrusion-base': ['interpolate', ['linear'], ['zoom'], 15, 0, 15.05, ['get', 'height_min']],
           'fill-extrusion-opacity': 0.8,
         },
       },
