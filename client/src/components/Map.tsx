@@ -4,70 +4,200 @@ import maplibregl, { type Map as MapLibreMap, type StyleSpecification } from 'ma
 import { animated, useSpring } from '@react-spring/web';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
-// OpenStreetMap raster tiles: global coverage, zero config. Standard Z/X/Y
-// format served by the OSM project itself.
-const TILE_URL = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
-const OSM_ATTRIBUTION =
-  '© <a href="https://openstreetmap.org">OpenStreetMap</a> contributors';
-
-// Maptiler vector tiles, used here just for 3D building footprints
-// globally. Free tier with API key.
+// Maptiler vector tiles: single source for the entire basemap now, not
+// just buildings. Free tier with API key.
 //
-// Verified directly against MapTiler's own docs
-// (docs.maptiler.com/gl-style-specification/sources/): the URL form is
-// /tiles/{tilesetid}/tiles.json — "v4" is their Planet v4 global
-// tileset. First attempt (/data/v3.json) was an unverified guess and
-// 404'd in production.
+// URL form verified directly against MapTiler's own docs
+// (docs.maptiler.com/gl-style-specification/sources/), glyphs URL
+// verified the same way (docs.maptiler.com/gl-style-specification/glyphs/).
+// First attempt at the tiles URL (/data/v3.json) was an unverified guess
+// and 404'd in production — everything below is checked against the
+// actual schema (docs.maptiler.com/schema/planet-v4/), not pattern-matched.
 const MAPTILER_KEY = 'wbQhKmIrXoSFpnzJmV4w';
 const MAPTILER_TILES_URL = `https://api.maptiler.com/tiles/v4/tiles.json?key=${MAPTILER_KEY}`;
-const MAPTILER_ATTRIBUTION =
-  '© <a href="https://www.maptiler.com/copyright/">MapTiler</a>';
+const MAPTILER_GLYPHS_URL = `https://api.maptiler.com/fonts/{fontstack}/{range}.pbf?key=${MAPTILER_KEY}`;
+const MAPTILER_ATTRIBUTION = '© <a href="https://www.maptiler.com/copyright/">MapTiler</a>';
+const SOURCE_NAME = 'maptiler';
 
 // Confirmed against MapTiler Planet v4's actual published schema
-// (docs.maptiler.com/schema/planet-v4/, "building" layer): the source
-// layer name is "building", and the height fields are "height" and
-// "height_min" — NOT "min_height", which is what this originally had
-// and would have silently rendered every building at height 0 with no
-// error, just flat extrusions, since MapLibre doesn't error on an
-// unmatched property name.
+// (docs.maptiler.com/schema/planet-v4/): the building source-layer is
+// literally named "building".
 const BUILDING_SOURCE_LAYER = 'building';
 
-const DEFAULT_PITCH = 45; // Enable 3D for building extrusions
+// "Noto Sans Regular"/"Noto Sans Bold" confirmed as real hosted font
+// names from MapTiler's own example (docs.maptiler.com/cloud/api/other/:
+// "Roboto Medium,Noto Sans Regular/0-255.pbf"), not guessed — Inter
+// (the app's actual body font) isn't necessarily hosted on their glyph
+// service and I didn't want to gamble on labels silently not rendering.
+const LABEL_FONT_REGULAR = ['Noto Sans Regular'];
+const LABEL_FONT_BOLD = ['Noto Sans Bold'];
 
-function rasterStyle(): StyleSpecification {
+// Building height fields confirmed against the actual published schema
+// (docs.maptiler.com/schema/planet-v4/, "building" layer): "height" and
+// "height_min" — NOT "min_height", which is what this originally had
+// and would've silently rendered every building flat, no error thrown,
+// since MapLibre just treats an unmatched property as undefined.
+// Ramped 13->16 instead of the original 15->15.05: at this app's
+// default zoom (16, see below) buildings are already full height, but
+// panning out to city-wide views now grows them in gradually instead
+// of a near-instant, visually jarring cutoff at one exact zoom level.
+function buildingPaint(color: string, opacity: number) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const paint: any = {
+    'fill-extrusion-color': color,
+    'fill-extrusion-height': ['interpolate', ['linear'], ['zoom'], 13, 0, 16, ['get', 'height']],
+    'fill-extrusion-base': ['interpolate', ['linear'], ['zoom'], 13, 0, 16, ['get', 'height_min']],
+    'fill-extrusion-opacity': opacity,
+  };
+  return paint;
+}
+
+const DEFAULT_PITCH = 55; // Steeper than before — sells the 3D buildings immediately on load
+
+// Road hierarchy by the confirmed `class` field on the `road` /
+// `road_label` layers (docs.maptiler.com/schema/planet-v4/, values:
+// motorway/trunk/primary/secondary/tertiary/minor/service/...).
+// Width and color both step down the hierarchy, the same principle
+// Apple Maps and every well-made basemap uses so the eye reads
+// importance at a glance rather than every street looking identical.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const ROAD_CLASS: any = ['get', 'class'];
+// MapLibre's nested expression tuple types are notoriously strict with
+// TypeScript inference on deeply nested match/interpolate arrays. These
+// are hand-verified against the real style spec, not guessed — `any`
+// here sidesteps a type-checker fight, not a correctness gap.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const ROAD_WIDTH: any = [
+  'interpolate', ['linear'], ['zoom'],
+  6, ['match', ROAD_CLASS, ['motorway', 'trunk'], 1, ['primary'], 0.6, 0.2],
+  20, ['match', ROAD_CLASS, ['motorway', 'trunk'], 22, ['primary'], 16, ['secondary', 'tertiary'], 11, 6],
+];
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const ROAD_COLOR: any = [
+  'match', ROAD_CLASS,
+  ['motorway', 'trunk'], '#4a4a4f',
+  ['primary'], '#3f3f44',
+  ['secondary', 'tertiary'], '#333337',
+  '#2a2a2d',
+];
+
+function darkStyle(): StyleSpecification {
   return {
     version: 8,
+    glyphs: MAPTILER_GLYPHS_URL,
     sources: {
-      osm: {
-        type: 'raster',
-        tiles: [TILE_URL],
-        tileSize: 256,
-        attribution: OSM_ATTRIBUTION,
-      },
-      maptiler_data: {
+      [SOURCE_NAME]: {
         type: 'vector',
         url: MAPTILER_TILES_URL,
         attribution: MAPTILER_ATTRIBUTION,
       },
     },
+    // Subtle warm-tinted ambient + directional light on the 3D
+    // buildings, real MapLibre style-spec root property (confirmed via
+    // docs.maptiler.com/gl-style-specification/root/), not decorative
+    // CSS — gives the extrusions actual shading rather than flat color.
+    light: { anchor: 'viewport', color: '#fff4e6', intensity: 0.35 },
     layers: [
+      { id: 'background', type: 'background', paint: { 'background-color': '#0a0a0a' } },
       {
-        id: 'osm-raster',
-        type: 'raster',
-        source: 'osm',
-        minzoom: 0,
-        maxzoom: 19,
+        id: 'landcover',
+        type: 'fill',
+        source: SOURCE_NAME,
+        'source-layer': 'grass',
+        paint: { 'fill-color': '#141a13', 'fill-opacity': 0.6 },
+      },
+      {
+        id: 'landuse-builtup',
+        type: 'fill',
+        source: SOURCE_NAME,
+        'source-layer': 'residential',
+        paint: { 'fill-color': '#121212' },
+      },
+      {
+        id: 'water',
+        type: 'fill',
+        source: SOURCE_NAME,
+        'source-layer': 'water',
+        paint: { 'fill-color': '#0d1620' },
+      },
+      {
+        id: 'buildings-flat',
+        type: 'fill',
+        source: SOURCE_NAME,
+        'source-layer': BUILDING_SOURCE_LAYER, // buildings are visible as flat footprints even before the 3D ramp kicks in at low zoom
+        maxzoom: 13,
+        filter: ['!=', ['get', 'underground'], true],
+        paint: { 'fill-color': '#1c1c1f' },
+      },
+      {
+        id: 'roads',
+        type: 'line',
+        source: SOURCE_NAME,
+        'source-layer': 'road',
+        layout: { 'line-cap': 'round', 'line-join': 'round' },
+        paint: { 'line-color': ROAD_COLOR, 'line-width': ROAD_WIDTH },
       },
       {
         id: 'buildings-3d',
         type: 'fill-extrusion',
-        source: 'maptiler_data',
+        source: SOURCE_NAME,
         'source-layer': BUILDING_SOURCE_LAYER,
+        minzoom: 12,
+        filter: ['!=', ['get', 'underground'], true], // otherwise subway platforms and underground garages show up as floating flat shapes
+        paint: buildingPaint('#242429', 0.92),
+      },
+      {
+        id: 'road-labels',
+        type: 'symbol',
+        source: SOURCE_NAME,
+        'source-layer': 'road_label',
+        minzoom: 13,
+        layout: {
+          'symbol-placement': 'line',
+          'text-field': ['get', 'name'],
+          'text-font': LABEL_FONT_REGULAR,
+          'text-size': 11,
+        },
         paint: {
-          'fill-extrusion-color': '#242428',
-          'fill-extrusion-height': ['interpolate', ['linear'], ['zoom'], 15, 0, 15.05, ['get', 'height']],
-          'fill-extrusion-base': ['interpolate', ['linear'], ['zoom'], 15, 0, 15.05, ['get', 'height_min']],
-          'fill-extrusion-opacity': 0.85,
+          'text-color': '#8a8a8f',
+          'text-halo-color': '#0a0a0a',
+          'text-halo-width': 1,
+        },
+      },
+      {
+        id: 'place-labels',
+        type: 'symbol',
+        source: SOURCE_NAME,
+        'source-layer': 'city_label',
+        layout: {
+          'text-field': ['get', 'name'],
+          'text-font': LABEL_FONT_BOLD,
+          // Bigger, bolder for more important (lower rank number) places
+          'text-size': ['interpolate', ['linear'], ['get', 'rank'], 1, 20, 7, 12],
+        },
+        paint: {
+          'text-color': '#f2f2f2',
+          'text-halo-color': '#0a0a0a',
+          'text-halo-width': 1.4,
+        },
+      },
+      {
+        id: 'country-labels',
+        type: 'symbol',
+        source: SOURCE_NAME,
+        'source-layer': 'country_label',
+        maxzoom: 6,
+        layout: {
+          'text-field': ['get', 'name'],
+          'text-font': LABEL_FONT_BOLD,
+          'text-size': 13,
+          'text-transform': 'uppercase',
+          'text-letter-spacing': 0.05,
+        },
+        paint: {
+          'text-color': '#6a6a6f',
+          'text-halo-color': '#0a0a0a',
+          'text-halo-width': 1,
         },
       },
     ],
@@ -75,8 +205,9 @@ function rasterStyle(): StyleSpecification {
 }
 
 function satelliteStyle(): StyleSpecification {
-  // Satellite view: OSM-style raster (Esri World Imagery) + the same
-  // Maptiler buildings layer, no labels layer on top for satellite.
+  // Satellite view: real Esri World Imagery raster underneath, the
+  // same Maptiler building extrusions on top for a hybrid look. No
+  // road/place labels here, keep satellite view clean.
   return {
     version: 8,
     sources: {
@@ -86,29 +217,22 @@ function satelliteStyle(): StyleSpecification {
         tileSize: 256,
         attribution: '© Esri',
       },
-      maptiler_data: {
+      [SOURCE_NAME]: {
         type: 'vector',
         url: MAPTILER_TILES_URL,
         attribution: MAPTILER_ATTRIBUTION,
       },
     },
     layers: [
-      {
-        id: 'satellite-raster',
-        type: 'raster',
-        source: 'satellite',
-      },
+      { id: 'satellite-raster', type: 'raster', source: 'satellite' },
       {
         id: 'buildings-3d-sat',
         type: 'fill-extrusion',
-        source: 'maptiler_data',
+        source: SOURCE_NAME,
         'source-layer': BUILDING_SOURCE_LAYER,
-        paint: {
-          'fill-extrusion-color': '#e8e8e8',
-          'fill-extrusion-height': ['interpolate', ['linear'], ['zoom'], 15, 0, 15.05, ['get', 'height']],
-          'fill-extrusion-base': ['interpolate', ['linear'], ['zoom'], 15, 0, 15.05, ['get', 'height_min']],
-          'fill-extrusion-opacity': 0.8,
-        },
+        minzoom: 12,
+        filter: ['!=', ['get', 'underground'], true],
+        paint: buildingPaint('#e8e8e8', 0.75),
       },
     ],
   };
@@ -134,9 +258,9 @@ export function MapCanvas({ onMapReady, onMoveEnd, onError }: Props) {
 
     const map = new maplibregl.Map({
       container: containerRef.current,
-      style: rasterStyle(),
+      style: darkStyle(),
       center: [-73.9857, 40.7484],
-      zoom: 12,
+      zoom: 16,
       pitch: DEFAULT_PITCH,
     });
 
@@ -169,7 +293,7 @@ export function MapCanvas({ onMapReady, onMoveEnd, onError }: Props) {
     const map = mapRef.current;
     if (!map || next === mode) return;
     setMode(next);
-    map.setStyle(next === 'satellite' ? satelliteStyle() : rasterStyle());
+    map.setStyle(next === 'satellite' ? satelliteStyle() : darkStyle());
     map.easeTo({ pitch: next === 'satellite' ? 0 : DEFAULT_PITCH, duration: 500 });
   }
 
