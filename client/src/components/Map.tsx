@@ -13,7 +13,15 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 // First attempt at the tiles URL (/data/v3.json) was an unverified guess
 // and 404'd in production — everything below is checked against the
 // actual schema (docs.maptiler.com/schema/planet-v4/), not pattern-matched.
-const MAPTILER_KEY = 'wbQhKmIrXoSFpnzJmV4w';
+const MAPTILER_KEY = import.meta.env.VITE_MAPTILER_KEY || '';
+if (!MAPTILER_KEY) {
+  // Fails loud in the console rather than silently shipping a style
+  // that 404s on every vector tile request — same principle as the
+  // DATABASE_URL check in server/src/db/client.ts.
+  console.error(
+    'VITE_MAPTILER_KEY is not set — the map will not load. Get a free key at cloud.maptiler.com and set it in client/.env (see .env.example).'
+  );
+}
 const MAPTILER_TILES_URL = `https://api.maptiler.com/tiles/v4/tiles.json?key=${MAPTILER_KEY}`;
 const MAPTILER_GLYPHS_URL = `https://api.maptiler.com/fonts/{fontstack}/{range}.pbf?key=${MAPTILER_KEY}`;
 const MAPTILER_ATTRIBUTION = '© <a href="https://www.maptiler.com/copyright/">MapTiler</a>';

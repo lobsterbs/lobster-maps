@@ -1,17 +1,20 @@
 # LobsterMaps
 
-Self-hosted maps service. OpenStreetMap data throughout, no third-party
-map API keys required for tiles. See "Why not Apple/Google Maps" below
-before changing that.
+Global map coverage, no self-hosted tile infrastructure. Started as a
+self-hosted-Protomaps design, rebuilt on MapTiler's global vector tiles
+after the original approach hit a hard wall (a full self-hosted planet
+of vector tiles is 120GB, doesn't fit a free hosting tier). See "Why
+not Apple/Google Maps" below before pointing this at either.
 
 ## Stack
 
 - **Frontend**: React + Vite, MapLibre GL JS, `@react-spring/web` for motion
-- **Map style**: `@protomaps/basemaps`, the official Protomaps style
-  generator, real professionally-tuned cartography (road hierarchy,
-  labels, parks, water), not a hand-rolled approximation. Only the page
-  background is tinted to match Lobster's palette, the rest of the real
-  `dark` flavor is left alone on purpose (see below)
+- **Map style**: hand-built dark cartographic style (`client/src/components/Map.tsx`,
+  `darkStyle()`/`satelliteStyle()`) on MapTiler's Planet v4 vector
+  tileset — full road hierarchy by class, water, landcover, buildings,
+  labels, a subtle directional light on the 3D building extrusions.
+  Every layer/field name is checked against MapTiler's published schema
+  (docs.maptiler.com/schema/planet-v4/), not guessed
 - **Loading indicator**: `@alerix/m3-loading-indicator`, a real Apache-2.0
   port of Android's actual `material-components-android` loading
   indicator, genuine Google shape data and spring physics, not an
@@ -19,8 +22,9 @@ before changing that.
   (plain sine-wave math, nothing proprietary to port there)
 - **Backend**: Express + Drizzle ORM
 - **DB**: PostgreSQL + PostGIS (matches LobsterID's Postgres/Drizzle setup)
-- **Tiles**: Protomaps `.pmtiles`, self-hosted, extracted from their free
-  daily OSM planet builds
+- **Tiles**: MapTiler vector tiles (Planet v4), global coverage, needs a
+  free API key (see "Tiles" below). Satellite view uses Esri World
+  Imagery, no key needed there
 - **Geocoding**: Nominatim public API, proxied through the backend with a
   self-enforced 1 req/sec throttle (their usage policy's ceiling)
 
@@ -32,8 +36,9 @@ specifically call out building a "secondary database" from it, which is
 exactly what feeding scraped data into our own Postgres table would be.
 It's also a losing technical bet: both companies actively detect and
 block scrapers, so anything built that way needs constant maintenance
-and can vanish without warning. Protomaps gets a comparably clean look
-from data we're already allowed to use.
+and can vanish without warning. MapTiler and OpenStreetMap data get a
+comparably clean look from data and APIs we're actually allowed to use.
+
 
 ## First-time setup (local development)
 
@@ -64,76 +69,65 @@ requests from generic HTTP client strings.
 
 ### 2. Tiles
 
-Build a `.pmtiles` extract for whatever region you actually need (don't
-grab the full ~120GB planet file for a hobby project):
-
-```bash
-# grab the pmtiles CLI: https://github.com/protomaps/go-pmtiles/releases
-pmtiles extract https://build.protomaps.com/<latest-date>.pmtiles region.pmtiles \
-  --bbox=<minLng>,<minLat>,<maxLng>,<maxLat>
-```
-
-Serve it however's easiest, a static file behind your existing web
-server works fine (pmtiles reads via HTTP range requests, no special
-tile server needed). Point the client at it:
+Global coverage via MapTiler's vector tiles, no self-hosting, no
+extraction step. You need a free MapTiler account and API key
+(cloud.maptiler.com, free tier is generous for a hobby project):
 
 ```bash
 # client/.env
-VITE_PMTILES_URL=https://your-domain.example/tiles/region.pmtiles
+VITE_MAPTILER_KEY=your-maptiler-api-key
 ```
 
-The map style shipped in `client/src/components/Map.tsx` uses the real
-`@protomaps/basemaps` package's `layers()` generator with the `dark`
-flavor, this is Protomaps' own maintained, production-quality basemap:
-proper road hierarchy, place labels, parks, water, buildings. Only
-`background` is overridden to match Lobster's palette; the rest of the
-real dark flavor is intentionally left as-is rather than tinted red,
-a map painted entirely in brand color looks garish, not clean. Same
-principle Apple Maps itself uses: neutral base map, accent color
-reserved for pins and interactive chrome.
+**Note on current state**: as of this writing the key is hardcoded
+directly in `client/src/components/Map.tsx` rather than read from this
+env var, that's flagged as a to-do in `CLAUDE.md`, worth fixing before
+this goes anywhere more public than a personal project.
+
+The map style shipped in `Map.tsx` (`darkStyle()`/`satelliteStyle()`)
+is hand-built against MapTiler's Planet v4 tileset: full road hierarchy
+by class (motorway down to minor streets, both width and color step
+down the hierarchy), water, parks/landcover, building footprints,
+place/road labels. Every layer and field name used is checked against
+MapTiler's actual published schema (docs.maptiler.com/schema/planet-v4/),
+not guessed, an earlier draft guessed a URL and a field name and both
+were wrong, one of them (a wrong height-field name) wouldn't have
+thrown any error at all, it just silently rendered every building
+flat. Worth knowing if you're extending the style: check the schema
+first.
 
 ### 3D buildings
 
-On by default on the vector map (not on satellite). A `fill-extrusion`
-layer reads the real `height`/`min_height` fields already present on
-the buildings source-layer (see Protomaps' schema docs), so this is
-actual building height data, not a fabricated skyline. Buildings
-missing height data fall back to a flat 8m rather than not rendering.
-Kicks in at zoom 15+; the map starts pitched 45° so it's visible
-immediately rather than requiring the user to tilt manually.
+On by default on the vector map (not on satellite, currently). A
+`fill-extrusion` layer reads the real `height`/`height_min` fields on
+MapTiler's `building` source-layer, so this is actual building height
+data. Buildings ramp from flat footprints to full height between zoom
+13 and 16 (was originally 15→15.05, a near-instant cutoff that made
+buildings invisible at the app's default zoom, a real bug caught and
+fixed). Underground buildings (subway platforms, parking garages) are
+filtered out. The map starts at zoom 16, pitched 55°, specifically so
+the 3D buildings are visible immediately on load rather than requiring
+the user to zoom in and discover them.
 
 ### Satellite imagery
 
-Toggleable (top-right pill), off/disabled until you configure it.
-I deliberately didn't hardcode a tile URL here, two real options exist
-but neither was a clean "just paste this in" call:
+Toggleable (top-right pill), on by default, no configuration needed,
+Esri World Imagery for the base layer plus the same MapTiler building
+extrusions on top.
 
-- **EOX Sentinel-2 cloudless** (`s2maps.eu` / `cloudless.eox.at`) —
-  CC BY 4.0 for the 2016 vintage, CC BY-NC-SA 4.0 for 2018 onward.
-  Explicitly offered by EOX for use as background imagery in
-  applications like this one, and Lobster's non-commercial anyway so
-  either license works. Caveat: it's a best-effort free service (they
-  rate-limit under load, no SLA), and global coverage means lower
-  resolution than commercial imagery. I couldn't confirm an exact
-  `{z}/{x}/{y}` tile URL template I was fully confident in from their
-  docs, check their site directly for the current one rather than
-  trust a guess here.
-- **Esri World Imagery** — better resolution (1m or better in many
-  areas), but per Esri's own community reps, the bare
-  `services.arcgisonline.com/.../MapServer/tile/{z}/{y}/{x}` endpoint
-  that a lot of tutorials paste around isn't actually licensed for use
-  outside ArcGIS Online or OSM editors without an ArcGIS account.
-  Sign up for a real ArcGIS Location Platform account (has a free
-  tier) if you want this one.
+**Known licensing caveat, worth fixing**: the endpoint currently wired
+in (`server.arcgisonline.com/.../MapServer/tile/{z}/{y}/{x}`) is the
+same bare tile endpoint that an earlier round of research on this
+project specifically flagged as *not* properly licensed for use
+outside ArcGIS Online or OSM editors without a real ArcGIS account,
+per Esri's own community reps. It got wired in anyway during a rushed
+fix for a "map doesn't work" report, without re-checking that earlier
+finding. Two real paths forward: sign up for a real ArcGIS Location
+Platform account (free tier exists) and use a properly licensed
+endpoint, or switch to EOX Sentinel-2 cloudless (`s2maps.eu`), which
+is explicitly CC-licensed for exactly this kind of use, though an
+exact confirmed tile URL template for that one still needs verifying,
+see the original research this project did on that option.
 
-Never Apple's or Google's satellite imagery — identical ToS problem to
-their map tiles, see above.
-
-Once you've picked one, set `VITE_SATELLITE_TILES_URL` and
-`VITE_SATELLITE_ATTRIBUTION` in `client/.env` and the toggle enables
-itself. Satellite mode overlays real place labels from the same
-Protomaps vector source on top of the raster imagery (a "hybrid" view)
-rather than shipping a bare unlabeled image.
 
 ### 3. Run it
 
@@ -172,7 +166,7 @@ anything you want to keep.
 1. **Get four things ready first:**
    - A real `MCP_AUTH_TOKEN` (`openssl rand -hex 32`).
    - A real `NOMINATIM_USER_AGENT`.
-   - A real `.pmtiles` file hosted somewhere with a URL.
+   - A free MapTiler API key (cloud.maptiler.com).
    - A **Neon** database: create a free account, create a project,
      copy the connection string it gives you, that's your
      `DATABASE_URL`.
@@ -196,9 +190,9 @@ anything you want to keep.
 
 5. **Set environment variables** (Environment tab, or "Add from .env"
    to paste several at once): `DATABASE_URL` (from Neon),
-   `MCP_AUTH_TOKEN`, `NOMINATIM_USER_AGENT`, `VITE_PMTILES_URL`, and
-   the satellite two if you're using them. Same build-time nuance as
-   before: the `VITE_` ones need to be set before the first build runs,
+   `MCP_AUTH_TOKEN`, `NOMINATIM_USER_AGENT`, `VITE_MAPTILER_KEY`. Same
+   build-time nuance as before: the `VITE_` ones need to be set before
+   the first build runs,
    not just before the app starts.
 
 6. **Run the migration once**, against the Neon database, from your own
@@ -240,9 +234,8 @@ anything.
      treat it like a password, not a placeholder.
    - A real `NOMINATIM_USER_AGENT` — your app name plus a real contact,
      per Nominatim's usage policy.
-   - A real `.pmtiles` file hosted somewhere with a URL (see "Tiles"
-     above). Without this the map renders blank, nothing else in this
-     list fixes that.
+   - A free MapTiler API key (cloud.maptiler.com). Without this the 3D
+     buildings won't render, nothing else in this list fixes that.
 
 2. **Create the Repl.** New Repl → Node.js template, then get this
    project's files into it (upload the extracted folder, or push it to
@@ -256,10 +249,9 @@ anything.
    construct or paste a connection string yourself.
 
 4. **Add Secrets** (Tools → Secrets): `MCP_AUTH_TOKEN`,
-   `NOMINATIM_USER_AGENT`, `VITE_PMTILES_URL`, and the satellite two if
-   you're using them. One real gotcha: the `VITE_`-prefixed ones get
-   baked into the frontend at *build* time, not read at runtime like
-   the others, so they need to be set before step 5, not just before
+   `NOMINATIM_USER_AGENT`, `VITE_MAPTILER_KEY`. One real gotcha: the
+   `VITE_`-prefixed ones get baked into the frontend at *build* time,
+   not read at runtime like the others, so they need to be set before step 5, not just before
    the app starts.
 
 5. **In the Shell tab**, run:
@@ -309,9 +301,19 @@ description of it.
 - **Wavy linear progress**: correct by construction, it's a sine wave,
   there's no proprietary spec to be unfaithful to.
 - **Motion elsewhere** (FAB press, marker drop-in, cluster pop-in,
-  search results dropdown, modal transitions, business detail sheet):
-  genuinely spring-driven via `@react-spring/web`, in keeping with
-  M3E's actual physics-based motion philosophy.
+  search results dropdown, modal transitions, business detail sheet,
+  the map/satellite toggle pill): genuinely spring-driven via
+  `@react-spring/web`, in keeping with M3E's actual physics-based
+  motion philosophy. The toggle pill was the last holdout on a plain
+  CSS transition, fixed.
+- **Ripple/state-layer effect**: M3's actual signature tactile
+  interaction, an expanding circle from the exact touch point, fading
+  as it grows. Was missing everywhere despite everything else being
+  spring-driven. Reusable hook + renderer in `Ripple.tsx`, applied to
+  the FAB and the business-submit button.
+- **Snackbar**: brief self-dismissing confirmation on successful
+  business submission, closes a real gap where submitting previously
+  gave zero feedback that it worked.
 - **Business detail sheet**: replaced the plain MapLibre `Popup` with a
   proper bottom sheet, spring-driven slide up/down, frosted glass,
   backdrop dim, large soft top corners. Was the one piece of chrome
@@ -326,9 +328,12 @@ description of it.
   pixel values (search bar is a full pill, modal/cards use larger soft
   radii), leaning into M3E's more expressive, rounder shape language,
   but not derived from M3's actual shape token scale.
-- **Map cartography**: real Protomaps `dark` flavor, not hand-rolled,
-  see "Stack" above. 3D building extrusion uses real height data from
-  the same source, not a fabricated skyline.
+- **Map cartography**: hand-built dark style on MapTiler's vector
+  tiles (see "Tiles" above), not a stock theme. 3D building extrusion
+  uses real height data from the same source, not a fabricated
+  skyline. Not independently visually verified as of this writing, no
+  browser available in the environment that built it, check `CLAUDE.md`
+  before assuming the current look is final.
 
 ## Known gaps (scaffold, not a finished product)
 
@@ -361,7 +366,7 @@ here) are now built, see "MT3E fidelity" above and "What's new" below.
 4. **Moderation view** for the `verified` flag and **LobsterID-gated
    submissions** (these two go together, and are really the same gap
    already flagged above).
-5. **Directions/routing.** Neither Nominatim nor Protomaps do this,
+5. **Directions/routing.** Neither Nominatim nor MapTiler's free tier does this,
    it'd mean standing up a separate routing engine (OSRM, Valhalla,
    and GraphHopper are the usual self-hostable options).
 6. **Terrain/elevation**, not just building extrusion — a bigger lift
