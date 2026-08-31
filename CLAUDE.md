@@ -2,18 +2,22 @@
 
 ## About the project
 
-LobsterMaps is a self-hosted maps and local-business-directory app, part of
-the Lobster Ecosystem (sibling projects: LobsterCaptcha, LobsterID).
-OpenStreetMap data throughout, no Apple/Google Maps (their ToS prohibits
-rehosting map data, see README for the full reasoning).
+LobsterMaps is a maps and local-business-directory app, part of the
+Lobster Ecosystem (sibling projects: LobsterCaptcha, LobsterID).
+Global map coverage via MapTiler's vector tiles (switched from an
+original self-hosted-Protomaps-extract design, see "Major update"
+below for the full story of why).
 
-**Stack:** React + Vite + MapLibre GL client, `@react-spring/web` for motion,
-Express + Drizzle server, Postgres + PostGIS (Neon), Protomaps vector tiles
-served from a self-hosted `.pmtiles` file, Nominatim for geocoding (proxied
-server-side, rate-limited to comply with their usage policy).
+**Stack:** React + Vite + MapLibre GL client with a hand-built dark
+cartographic style (`Map.tsx`'s `darkStyle()`/`satelliteStyle()`),
+`@react-spring/web` for motion, Express + Drizzle server, Postgres +
+PostGIS (Neon), MapTiler vector tiles (Planet v4 tileset) for the
+basemap + 3D buildings, Esri World Imagery for satellite view,
+Nominatim for geocoding (proxied server-side, rate-limited to comply
+with their usage policy).
 
-**Deployment:** single Node process on Render serves the built client, the
-API, and an MCP endpoint all from one port. Database on Neon.
+**Deployment:** single Node process on Render serves the built client,
+the API, and an MCP endpoint all from one port. Database on Neon.
 
 ## Current status
 
@@ -67,18 +71,63 @@ API, and an MCP endpoint all from one port. Database on Neon.
 > URLs before wiring them into anything production-facing, especially env
 > vars baked into a client build.
 
-## Known limitation: this sandbox can't reach Protomaps
+## Major update: map tiles and style completely rebuilt
 
-Confirmed directly (`curl` to `build.protomaps.com` returns
-`x-deny-reason: host_not_allowed`): whatever environment a Claude session
-is running the deploy work from may not have network access to Protomaps'
-build servers, or any real basemap tile source. Checked for alternatives
-(Protomaps' own test fixtures are synthetic 1x1-degree squares with no
-real geography, not usable) — there isn't a workaround from inside a
-sandboxed session. **A real `.pmtiles` region extract has to come from the
-user's own machine**, or from a session with broader network access. This
-isn't a "pick a region and it'll work" problem, it's a network-access
-problem independent of which region gets chosen.
+The original plan (self-hosted Protomaps `.pmtiles` regional extract)
+got abandoned entirely over the course of one long session. Here's the
+actual path that happened, in order, since a future agent should know
+the full story, not just the end state:
+
+1. User asked for the entire world map, not a regional extract. The
+   self-hosted-pmtiles design fundamentally doesn't support that (the
+   full planet file is 120GB).
+2. First attempt: point `VITE_PMTILES_URL` directly at Protomaps' CDN
+   build. Wrong, hotlinking their builds is explicitly discouraged and
+   PMTiles format doesn't work as a simple URL swap anyway, it needs
+   proper range-request support.
+3. Second attempt: switch to plain OpenStreetMap raster tiles for
+   global coverage. Worked, but lost 3D buildings and looked flat/dated
+   against the app's actual dark theme, plain default-OSM styling on a
+   raster base doesn't take custom styling.
+4. User provided a MapTiler API key to add 3D buildings back
+   (`wbQhKmIrXoSFpnzJmV4w`, hardcoded directly in `Map.tsx` — not an
+   env var, see "On the horizon" for why that should change eventually).
+5. First MapTiler integration attempt used a guessed URL
+   (`/data/v3.json`) and a guessed field name (`min_height`). Both
+   wrong, confirmed via web search + direct doc fetch rather than
+   guessed again. Real URL: `/tiles/v4/tiles.json`. Real field: 
+   `height_min`, not `min_height` — this one wouldn't have errored at 
+   all, MapLibre just silently treats an unmatched property as 
+   undefined, so it would've shipped looking like it worked while every
+   building rendered flat.
+6. Even after that fix, buildings still didn't show on load — root
+   cause: the height ramp started at zoom 15 but the app's default zoom
+   was 12, so buildings were rendering, just at height 0. Combined
+   with plain OSM raster tiles looking nothing like the app's dark
+   theme, that's the full "old and ugly, no 3D buildings" report.
+7. **Final fix**: dropped OSM raster entirely, single MapTiler vector
+   source (`v4`, their Planet tileset) for everything, hand-built a
+   proper dark style: full road hierarchy by class, water, landcover,
+   buildings that ramp 13→16 instead of 15→15.05, underground
+   buildings filtered out, buildings layered after roads (matches
+   MapLibre's own official 3D-buildings pattern), real labels (Noto
+   Sans, confirmed hosted on MapTiler's glyph service, not gambled on
+   Inter being available there), subtle directional light on the
+   extrusions. Default zoom bumped 12→16, pitch 45→55, so the 3D
+   buildings sell themselves immediately on load instead of needing the
+   user to go find them.
+
+**Current state**: live, deployed, confirmed booting clean in Render's
+logs. The overall approach and every field/layer name is checked
+against MapTiler's actual published schema
+(docs.maptiler.com/schema/planet-v4/), not pattern-matched. What's
+**not** independently confirmed: how it actually looks. There's no
+browser available from this environment, so colors, label density,
+layer ordering, and general polish are based on careful spec-level
+review, not a real look at the rendered map. If a future session picks
+this up and something looks visually off, check `Map.tsx`'s `darkStyle()`
+and `satelliteStyle()` functions first, that's the entire cartography
+in two functions.
 
 ## Why the MCP connector keeps dropping
 
@@ -100,14 +149,26 @@ here:
 
 ## To-Do
 
-- [ ] **Map tiles (the main open item, confirmed blocked from this
-      environment).** No real `.pmtiles` file exists yet, and this sandbox
-      cannot reach any real basemap tile source (confirmed via direct
-      test, see above). Needs the user to run `pmtiles extract` on their
-      own machine and upload the result, or provide a hosted URL some
-      other way. Once the file exists, committing it to
-      `client/public/tiles/region.pmtiles` needs zero extra config, that's
-      already the code's documented default path.
+- [ ] **Get real eyes on the live map.** Everything about the new style
+      (colors, road hierarchy, label density, whether the 3D buildings
+      actually look good and not just technically present) is based on
+      spec-level review, not a real look, there's no browser available
+      from this environment. This is the single highest-value thing a
+      human or a session with actual visual verification can do.
+- [ ] Move the MapTiler key (`wbQhKmIrXoSFpnzJmV4w`, hardcoded in
+      `Map.tsx`) to an env var (`VITE_MAPTILER_KEY`), same reasoning as
+      the original `.env.example` files, secrets shouldn't sit directly
+      in committed source even for a free-tier key.
+- [ ] Remove now-unused dependencies from `client/package.json`:
+      `pmtiles` and `@protomaps/basemaps` are no longer imported
+      anywhere (confirmed via grep) since the switch away from
+      self-hosted tiles. Not bundled either way since nothing imports
+      them, but worth cleaning up the manifest.
+- [ ] `README.md` still describes the old self-hosted Protomaps/pmtiles
+      architecture in detail (Tiles section, deployment steps
+      referencing `VITE_PMTILES_URL`, "Why not Apple/Google Maps"
+      section). All of it is now inaccurate and needs a rewrite to
+      match the actual MapTiler-based setup.
 - [ ] Decide how to handle the MCP connector dropping after Render's free
       tier spins down idle (see "Why the MCP connector keeps dropping"
       above), leave as-is, add a keep-alive ping, or pay for always-on.
@@ -131,12 +192,14 @@ here:
 
 ## Plan
 
-Once a region comes in: build or receive the pmtiles extract, commit it,
-redeploy, and confirm the map actually renders real tiles, this is the one
-thing that's been unverifiable all session since there's no way to
-browser-test the live app directly from here. That closes out a genuine v1.
-After that, LobsterID auth is the next real priority before this goes in
-front of anyone besides the person running it.
+Map/tiles/style is functionally done and deployed. What's left there is
+verification, not more building, someone needs to actually look at it
+and report back what's wrong, the same way the last two rounds of bugs
+got found ("map didn't load" → wrong URL, "no 3D buildings" → wrong
+zoom math). Once it visually checks out, move the API key to an env
+var and clean up the README, both are quick. After that, LobsterID auth
+is the next real priority before this goes in front of anyone besides
+the person running it.
 
 ## For a future agent picking this up
 
