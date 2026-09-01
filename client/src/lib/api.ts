@@ -9,6 +9,7 @@ export type Business = {
   phone?: string | null;
   website?: string | null;
   hours?: Record<string, string> | null;
+  imageUrls?: string[] | null;
   verified: boolean;
 };
 

@@ -18,6 +18,7 @@ export const businesses = pgTable(
     phone: text('phone'),
     website: text('website'),
     hours: jsonb('hours').$type<Record<string, string>>(),
+    imageUrls: text('image_urls').array().$type<string[]>(),
     verified: boolean('verified').default(false).notNull(),
     submittedAt: timestamp('submitted_at', { withTimezone: true }).defaultNow().notNull(),
   },

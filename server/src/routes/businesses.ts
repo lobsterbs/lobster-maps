@@ -31,6 +31,7 @@ const newBusinessSchema = z.object({
   phone: z.string().max(50).optional(),
   website: z.string().url().max(300).optional(),
   hours: z.record(z.string()).optional(),
+  imageUrls: z.array(z.string().url().max(500)).max(5).optional(),
 });
 
 // Express 4 doesn't catch rejected promises from async handlers on its

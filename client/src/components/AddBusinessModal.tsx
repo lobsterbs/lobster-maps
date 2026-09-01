@@ -19,7 +19,7 @@ export function AddBusinessModal({ open, onClose, onCreated, mapCenter }: Props)
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<GeocodeResult[]>([]);
   const [picked, setPicked] = useState<{ lat: number; lon: number; label: string } | null>(null);
-  const [form, setForm] = useState({ name: '', category: '', description: '', phone: '', website: '' });
+  const [form, setForm] = useState({ name: '', category: '', description: '', phone: '', website: '', imageUrl: '' });
   const submitRipple = useRipple();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -38,7 +38,7 @@ export function AddBusinessModal({ open, onClose, onCreated, mapCenter }: Props)
     setQuery('');
     setResults([]);
     setPicked(null);
-    setForm({ name: '', category: '', description: '', phone: '', website: '' });
+    setForm({ name: '', category: '', description: '', phone: '', website: '', imageUrl: '' });
     setError(null);
   }, [open]);
 
@@ -80,6 +80,7 @@ export function AddBusinessModal({ open, onClose, onCreated, mapCenter }: Props)
         longitude: picked.lon,
         phone: form.phone || undefined,
         website: form.website || undefined,
+        imageUrls: form.imageUrl ? [form.imageUrl] : undefined,
       });
       onCreated(form.name);
       onClose();
@@ -185,6 +186,21 @@ export function AddBusinessModal({ open, onClose, onCreated, mapCenter }: Props)
                 onChange={(e) => setForm({ ...form, website: e.target.value })}
                 style={inputStyle}
               />
+              <input
+                placeholder="Photo URL (optional)"
+                value={form.imageUrl}
+                onChange={(e) => setForm({ ...form, imageUrl: e.target.value })}
+                style={inputStyle}
+              />
+              {form.imageUrl && (
+                <img
+                  src={form.imageUrl}
+                  alt="Preview"
+                  style={imagePreviewStyle}
+                  onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                  onLoad={(e) => { (e.target as HTMLImageElement).style.display = 'block'; }}
+                />
+              )}
               {error && <p style={{ color: 'var(--lobster-red)', fontSize: 13 }}>{error}</p>}
               {submitting && (
                 <div style={{ display: 'flex', justifyContent: 'center', margin: '12px 0 4px' }}>
@@ -222,6 +238,17 @@ const inputStyle: CSSProperties = {
   color: 'var(--lobster-text)',
   fontFamily: 'var(--font-body)',
   fontSize: 14,
+};
+
+const imagePreviewStyle: CSSProperties = {
+  width: '100%',
+  height: 120,
+  objectFit: 'cover',
+  borderRadius: 10,
+  marginTop: 8,
+  // display starts as 'block' via inline style below in the onLoad
+  // handler; onError hides it entirely rather than showing a broken
+  // image icon for a bad URL
 };
 
 const resultStyle: CSSProperties = {

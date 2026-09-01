@@ -76,8 +76,24 @@ export function BusinessDetailSheet({ business, onClose }: Props) {
               style={{ ...sheetStyle, transform: style.transform, opacity: style.opacity }}
             >
               <div style={handleStyle} />
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
-                <div style={{ minWidth: 0 }}>
+              
+              {/* Image gallery if images exist */}
+              {!loadingFull && full?.imageUrls && full.imageUrls.length > 0 && (
+                <div style={imageGalleryStyle}>
+                  <img 
+                    src={full.imageUrls[0]} 
+                    alt={biz.name}
+                    style={imageStyle}
+                    onError={(e) => {
+                      // Hide broken images
+                      (e.target as HTMLImageElement).style.display = 'none';
+                    }}
+                  />
+                </div>
+              )}
+
+              <div style={{ padding: '16px 16px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
+                <div style={{ minWidth: 0, flex: 1 }}>
                   <h2 style={titleStyle}>{biz.name}</h2>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
                     <span style={{ color: 'var(--lobster-text-dim)', fontSize: 13 }}>{biz.category}</span>
@@ -89,37 +105,59 @@ export function BusinessDetailSheet({ business, onClose }: Props) {
                 </button>
               </div>
 
-              <p style={addressStyle}>{biz.address}</p>
+              <div style={{ padding: '0 16px', marginTop: 8 }}>
+                <p style={addressStyle}>{biz.address}</p>
 
-              {loadingFull && <div style={skeletonBlockStyle} />}
+                {loadingFull && <div style={skeletonBlockStyle} />}
 
-              {!loadingFull && full?.description && <p style={descriptionStyle}>{full.description}</p>}
+                {!loadingFull && full?.description && <p style={descriptionStyle}>{full.description}</p>}
 
-              {!loadingFull && (full?.phone || full?.website) && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 12 }}>
-                  {full.phone && (
-                    <a href={`tel:${full.phone}`} style={linkRowStyle}>
-                      {full.phone}
-                    </a>
-                  )}
-                  {full.website && (
-                    <a href={full.website} target="_blank" rel="noreferrer" style={linkRowStyle}>
-                      {full.website.replace(/^https?:\/\//, '')}
-                    </a>
-                  )}
-                </div>
-              )}
+                {/* Contact & Actions — directions always shows once loaded, phone/website only if present */}
+                {!loadingFull && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 12 }}>
+                    {full?.phone && (
+                      <a href={`tel:${full.phone}`} style={linkRowStyle}>
+                        <span style={{ marginRight: 8 }}>📞</span>
+                        {full.phone}
+                      </a>
+                    )}
+                    {full?.website && (
+                      <a href={full.website} target="_blank" rel="noreferrer" style={linkRowStyle}>
+                        <span style={{ marginRight: 8 }}>🌐</span>
+                        {full.website.replace(/^https?:\/\//, '')}
+                      </a>
+                    )}
+                    {biz && (
+                      <a 
+                        href={`https://maps.google.com/?q=${encodeURIComponent(biz.address)}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        style={linkRowStyle}
+                      >
+                        <span style={{ marginRight: 8 }}>📍</span>
+                        Directions
+                      </a>
+                    )}
+                  </div>
+                )}
 
-              {!loadingFull && full?.hours && Object.keys(full.hours).length > 0 && (
-                <div style={hoursGridStyle}>
-                  {Object.entries(full.hours).map(([day, range]) => (
-                    <div key={day} style={hoursRowStyle}>
-                      <span style={{ color: 'var(--lobster-text-dim)' }}>{day}</span>
-                      <span>{range}</span>
+                {/* Hours of operation */}
+                {!loadingFull && full?.hours && Object.keys(full.hours).length > 0 && (
+                  <div style={{ marginTop: 16 }}>
+                    <h3 style={{ fontSize: 13, fontWeight: 600, color: 'var(--lobster-text)', marginBottom: 8 }}>Hours</h3>
+                    <div style={hoursGridStyle}>
+                      {Object.entries(full.hours).map(([day, range]) => (
+                        <div key={day} style={hoursRowStyle}>
+                          <span style={{ color: 'var(--lobster-text-dim)', fontSize: 12, minWidth: 60 }}>{day}</span>
+                          <span style={{ fontSize: 12 }}>{range}</span>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-              )}
+                  </div>
+                )}
+              </div>
+              
+              <div style={{ height: 16 }} />
             </animated.div>
           )
       )}
@@ -148,7 +186,7 @@ const sheetStyle: CSSProperties = {
   borderTop: '1px solid rgba(255,255,255,0.08)',
   borderTopLeftRadius: 28,
   borderTopRightRadius: 28,
-  padding: '12px 20px 28px',
+  padding: '12px 0 0',
   boxShadow: '0 -8px 32px rgba(0,0,0,0.45)',
 };
 
@@ -157,7 +195,21 @@ const handleStyle: CSSProperties = {
   height: 4,
   borderRadius: 999,
   background: 'rgba(255,255,255,0.2)',
-  margin: '0 auto 16px',
+  margin: '0 auto 12px',
+};
+
+const imageGalleryStyle: CSSProperties = {
+  width: '100%',
+  height: 180,
+  overflow: 'hidden',
+  background: '#0f0f0f', // shows while the image loads, and if it fails to load entirely
+};
+
+const imageStyle: CSSProperties = {
+  width: '100%',
+  height: '100%',
+  objectFit: 'cover',
+  display: 'block',
 };
 
 const titleStyle: CSSProperties = {
