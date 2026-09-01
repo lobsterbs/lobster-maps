@@ -11,7 +11,42 @@ import { BusinessDetailSheet } from './components/BusinessDetailSheet';
 import { LoadingMorph } from './components/LoadingMorph';
 import { SearchBar } from './components/SearchBar';
 import { Snackbar } from './components/Snackbar';
+import { RouteInfoCard } from './components/RouteInfoCard';
 import { fetchBusinessesInView, type Business } from './lib/api';
+import { getRoute } from './lib/routing';
+
+const ROUTE_SOURCE_ID = 'lobster-route';
+const ROUTE_LAYER_ID = 'lobster-route-line';
+
+function drawRouteOnMap(map: MapLibreMap, coordinates: [number, number][]) {
+  const geojson = {
+    type: 'Feature' as const,
+    properties: {},
+    geometry: { type: 'LineString' as const, coordinates },
+  };
+  const existing = map.getSource(ROUTE_SOURCE_ID) as maplibregl.GeoJSONSource | undefined;
+  if (existing) {
+    existing.setData(geojson);
+  } else {
+    map.addSource(ROUTE_SOURCE_ID, { type: 'geojson', data: geojson });
+    map.addLayer({
+      id: ROUTE_LAYER_ID,
+      type: 'line',
+      source: ROUTE_SOURCE_ID,
+      layout: { 'line-cap': 'round', 'line-join': 'round' },
+      paint: { 'line-color': '#d4a574', 'line-width': 5, 'line-opacity': 0.9 },
+    });
+  }
+}
+
+// Best-effort: if the map's style got swapped (Map/Satellite toggle)
+// since the route was drawn, the source/layer are already gone, this
+// just avoids throwing on a getLayer/getSource call against a stale id.
+function clearRouteFromMap(map: MapLibreMap | null) {
+  if (!map) return;
+  if (map.getLayer(ROUTE_LAYER_ID)) map.removeLayer(ROUTE_LAYER_ID);
+  if (map.getSource(ROUTE_SOURCE_ID)) map.removeSource(ROUTE_SOURCE_ID);
+}
 
 type BusinessPointProps = {
   businessId: string;
@@ -31,6 +66,9 @@ export default function App() {
   const [center, setCenter] = useState<[number, number]>([-73.9857, 40.7484]);
   const [selectedBusiness, setSelectedBusiness] = useState<Business | null>(null);
   const [snackbarMessage, setSnackbarMessage] = useState<string | null>(null);
+  const [routeInfo, setRouteInfo] = useState<{ distanceMeters: number; durationSeconds: number; destinationAddress: string } | null>(null);
+  const [routeLoading, setRouteLoading] = useState(false);
+  const [routeError, setRouteError] = useState<string | null>(null);
 
   const syncMarkers = useCallback(async (bounds: [number, number, number, number]) => {
     const map = mapRef.current;
@@ -157,6 +195,65 @@ export default function App() {
     setSnackbarMessage(null);
   }, []);
 
+  const handleClearRoute = useCallback(() => {
+    clearRouteFromMap(mapRef.current);
+    setRouteInfo(null);
+    setRouteError(null);
+    setRouteLoading(false);
+  }, []);
+
+  const handleGetDirections = useCallback((business: Business) => {
+    setRouteError(null);
+    setRouteInfo(null);
+    setRouteLoading(true);
+    setSelectedBusiness(null); // close the sheet so the route is visible
+
+    if (!navigator.geolocation) {
+      setRouteLoading(false);
+      setRouteError('Location access is not available in this browser.');
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const from: [number, number] = [position.coords.longitude, position.coords.latitude];
+        const to: [number, number] = [business.longitude, business.latitude];
+        try {
+          const route = await getRoute(from, to);
+          const map = mapRef.current;
+          if (!route || !map) {
+            setRouteLoading(false);
+            setRouteError('Could not find a route to this address.');
+            return;
+          }
+          drawRouteOnMap(map, route.coordinates);
+          setRouteInfo({
+            distanceMeters: route.distanceMeters,
+            durationSeconds: route.durationSeconds,
+            destinationAddress: business.address,
+          });
+          setRouteLoading(false);
+
+          const bounds = route.coordinates.reduce(
+            (b, coord) => b.extend(coord as [number, number]),
+            new maplibregl.LngLatBounds(route.coordinates[0], route.coordinates[0])
+          );
+          map.fitBounds(bounds, { padding: 64, duration: 500 });
+        } catch (err) {
+          console.error('Routing failed:', err);
+          setRouteLoading(false);
+          setRouteError('Could not find a route to this address.');
+        }
+      },
+      (err) => {
+        console.error('Geolocation failed:', err);
+        setRouteLoading(false);
+        setRouteError('Could not get your location — check location permissions.');
+      },
+      { enableHighAccuracy: false, timeout: 10_000 }
+    );
+  }, []);
+
   return (
     <div style={{ position: 'fixed', inset: 0 }}>
       <MapCanvas onMapReady={handleMapReady} onMoveEnd={handleMoveEnd} onError={handleMapError} />
@@ -188,6 +285,7 @@ export default function App() {
         </div>
       )}
       <SearchBar onSelect={handleSearchSelect} />
+      <RouteInfoCard route={routeInfo} loading={routeLoading} error={routeError} onClear={handleClearRoute} />
       <AddBusinessFAB onClick={() => setModalOpen(true)} />
       <AddBusinessModal
         open={modalOpen}
@@ -195,7 +293,11 @@ export default function App() {
         onCreated={handleCreated}
         mapCenter={center}
       />
-      <BusinessDetailSheet business={selectedBusiness} onClose={() => setSelectedBusiness(null)} />
+      <BusinessDetailSheet
+        business={selectedBusiness}
+        onClose={() => setSelectedBusiness(null)}
+        onGetDirections={handleGetDirections}
+      />
       <Snackbar message={snackbarMessage} onDismiss={handleSnackbarDismiss} />
     </div>
   );

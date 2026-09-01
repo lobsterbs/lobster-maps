@@ -2,10 +2,12 @@ import { useEffect, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { animated, useTransition } from '@react-spring/web';
 import { fetchBusinessById, type Business } from '../lib/api';
+import { isRoutingConfigured } from '../lib/routing';
 
 type Props = {
   business: Business | null;
   onClose: () => void;
+  onGetDirections: (business: Business) => void;
 };
 
 // Business as passed in from a marker click only has the columns the
@@ -13,7 +15,7 @@ type Props = {
 // phone, website, or hours. Those get fetched here, on demand, via the
 // /:id endpoint, which already existed server-side but wasn't called
 // from anywhere in the frontend until now.
-export function BusinessDetailSheet({ business, onClose }: Props) {
+export function BusinessDetailSheet({ business, onClose, onGetDirections }: Props) {
   const [full, setFull] = useState<Business | null>(null);
   const [loadingFull, setLoadingFull] = useState(false);
 
@@ -128,15 +130,25 @@ export function BusinessDetailSheet({ business, onClose }: Props) {
                       </a>
                     )}
                     {biz && (
-                      <a 
-                        href={`https://maps.google.com/?q=${encodeURIComponent(biz.address)}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        style={linkRowStyle}
-                      >
-                        <span style={{ marginRight: 8 }}>📍</span>
-                        Directions
-                      </a>
+                      isRoutingConfigured() ? (
+                        <button
+                          onClick={() => onGetDirections(biz)}
+                          style={{ ...linkRowStyle, background: 'none', border: 'none', textAlign: 'left', padding: 0, cursor: 'pointer', font: 'inherit' }}
+                        >
+                          <span style={{ marginRight: 8 }}>📍</span>
+                          Directions
+                        </button>
+                      ) : (
+                        <a
+                          href={`https://maps.google.com/?q=${encodeURIComponent(biz.address)}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          style={linkRowStyle}
+                        >
+                          <span style={{ marginRight: 8 }}>📍</span>
+                          Directions
+                        </a>
+                      )
                     )}
                   </div>
                 )}

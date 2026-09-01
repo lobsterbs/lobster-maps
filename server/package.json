@@ -10,7 +10,8 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:postgis": "tsx src/db/apply-postgis.ts",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "drizzle-kit studio",
+    "seed:overpass": "tsx src/scripts/seed-from-overpass.ts"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.30.0",
