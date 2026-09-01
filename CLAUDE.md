@@ -71,7 +71,83 @@ the API, and an MCP endpoint all from one port. Database on Neon.
 > URLs before wiring them into anything production-facing, especially env
 > vars baked into a client build.
 
-## Major update: map tiles and style completely rebuilt
+## Real business data, in-app routing, and why transit isn't started
+
+User asked for three things in one message: real business data, bus
+routes, and real navigation with time estimates. Handled each
+differently, worth knowing why:
+
+**Businesses**: built `server/src/scripts/seed-from-overpass.ts`,
+pulling from OSM's Overpass API rather than scraping any business
+directory site, this is the exact path the README's "Where to get
+business data, and where not to" section already laid out. Run it with
+`npm run seed:overpass -- --bbox=...` or `--place="..."`. Imported rows
+get `verified: true`, meaningfully distinct from unverified
+self-submissions, gives that flag actual purpose. The dedup logic (skip
+anything within 15m with the same name, reusing the existing
+GIST-indexed `geog` column) got tested against the real live DB through
+Neon's MCP tool, insert + near-match + far-non-match + cleanup, before
+trusting it. What's **not** tested: the actual Overpass HTTP call
+itself, this sandbox's network allowlist doesn't reach
+`overpass-api.de`. First real run needs watching.
+
+**Bus routes**: the literal ask ("fetched from their sites") was
+pointed at the wrong approach, scraping individual transit agencies'
+websites is fragile and often against their terms. Real transit data
+comes from **GTFS**, a standard feed format virtually every agency
+publishes specifically so third-party apps can consume it. Not built
+yet, see "not started" below for why.
+
+**Navigation with time estimates**: built on OpenRouteService
+(openrouteservice.org), not a self-hosted routing engine. Same
+reasoning as the MapTiler pivot: self-hosting OSRM/Valhalla needs a
+real OSM extract, meaningful RAM to build the routing graph, and an
+always-on server process, all the same practical walls that killed
+self-hosted tiles. ORS has a real free tier (~2000 directions
+requests/day per their own docs), is itself built on OSM data, and
+needs zero new infrastructure, just an API key.
+`client/src/lib/routing.ts` is the client, `RouteInfoCard.tsx` shows
+the result. Gated behind `VITE_ORS_KEY` (not set yet, needs signup,
+same pattern as `VITE_MAPTILER_KEY`), falls back to a Google Maps
+deep-link when unset, not a broken feature either way. The endpoint
+shape, auth header format, and coordinate order are verified against
+ORS's own client library source. What's **not** verified: an actual
+live response's exact JSON field names, there's no key to test
+against yet, parsing is defensive on purpose because of that. Known
+gap: switching Map/Satellite while a route is showing clears the
+route line (`map.setStyle()` wipes custom layers, no re-add-on-style-
+swap listener yet), minor, not fixed this pass.
+
+**Why transit routing isn't started**: proper transit directions (walk
+to a stop, ride, transfer, real schedule-based times) needs something
+like OpenTripPlanner, which loads both an OSM extract AND GTFS feeds
+into an in-memory routing graph. That's meaningfully heavier than what
+ORS needs and likely doesn't fit Render's free tier at all. There's
+also a real open question ORS-style hosted APIs don't have for transit:
+*which* transit agency's GTFS feed, that's a per-agency, per-region
+decision, not a global "get all bus routes" switch. Needs an actual
+hosting decision, and probably a decision about which region/agency to
+support first, before any code gets written here, not a good thing to
+start blind.
+
+## Street View — started, not finished
+
+Researched and confirmed Mapillary as the right fit (crowdsourced
+street-level imagery, real free API, coverage will be spotty compared
+to Google's actual Street View but that's the honest tradeoff of not
+using Google). Confirmed real: coverage vector tiles at
+`https://tiles.mapillary.com/maps/vtp/mly1_public/2/{z}/{x}/{y}?access_token=`,
+the `mapillary-js` npm package (already installed) for the actual photo
+viewer, and a Graph API radius-search endpoint
+(`https://graph.mapillary.com/images?access_token=&fields=id&lat=&lng=&radius=50&limit=1`,
+added just this past April per their docs) for finding the nearest
+photo to a clicked point, sidesteps needing to guess at vector-tile
+point-layer field names. **Not yet built**: the actual
+`StreetViewLayer` component, wiring it into `App.tsx`, or a
+`VITE_MAPILLARY_TOKEN` env var. Got deep into research and installed
+the dependency, then a context switch happened before writing the
+component. Next session: pick this back up, the research is done, it's
+just implementation now.
 
 The original plan (self-hosted Protomaps `.pmtiles` regional extract)
 got abandoned entirely over the course of one long session. Here's the
@@ -149,26 +225,27 @@ here:
 
 ## To-Do
 
-- [ ] **Get real eyes on the live map.** Everything about the new style
-      (colors, road hierarchy, label density, whether the 3D buildings
-      actually look good and not just technically present) is based on
-      spec-level review, not a real look, there's no browser available
-      from this environment. This is the single highest-value thing a
-      human or a session with actual visual verification can do.
-- [ ] Move the MapTiler key (`wbQhKmIrXoSFpnzJmV4w`, hardcoded in
-      `Map.tsx`) to an env var (`VITE_MAPTILER_KEY`), same reasoning as
-      the original `.env.example` files, secrets shouldn't sit directly
-      in committed source even for a free-tier key.
-- [ ] Remove now-unused dependencies from `client/package.json`:
-      `pmtiles` and `@protomaps/basemaps` are no longer imported
-      anywhere (confirmed via grep) since the switch away from
-      self-hosted tiles. Not bundled either way since nothing imports
-      them, but worth cleaning up the manifest.
-- [ ] `README.md` still describes the old self-hosted Protomaps/pmtiles
-      architecture in detail (Tiles section, deployment steps
-      referencing `VITE_PMTILES_URL`, "Why not Apple/Google Maps"
-      section). All of it is now inaccurate and needs a rewrite to
-      match the actual MapTiler-based setup.
+- [ ] **Get an ORS API key** (openrouteservice.org, free signup) and set
+      `VITE_ORS_KEY` on Render, then actually test in-app directions
+      live, this has never round-tripped a real response.
+- [ ] Get a Mapillary access token and finish `StreetViewLayer.tsx`
+      (research done, see "Street View" above, just needs the actual
+      component written and wired into `App.tsx`).
+- [ ] **Watch the first real `npm run seed:overpass` run closely.** The
+      Overpass HTTP call has never been tested end-to-end from any
+      environment that built it.
+- [ ] Decide on a transit-routing approach (OpenTripPlanner needs real
+      hosting decisions, likely not Render's free tier) and which
+      transit agency/region's GTFS feed to start with, before writing
+      any transit code.
+- [ ] Fix the route-line-disappears-on-Map/Satellite-toggle gap (minor,
+      documented in "Navigation with time estimates" above).
+- [ ] **Get real eyes on the live map in general.** Colors, road
+      hierarchy, label density, whether the 3D buildings actually look
+      good and not just technically present, none of that's been
+      confirmed by an actual look, there's no browser in this
+      environment. Same for the business detail sheet's new image
+      gallery layout and the routing UI.
 - [ ] Decide how to handle the MCP connector dropping after Render's free
       tier spins down idle (see "Why the MCP connector keeps dropping"
       above), leave as-is, add a keep-alive ping, or pay for always-on.
@@ -186,20 +263,29 @@ here:
       registered since the repo was connected by public URL rather than
       through Render's GitHub App. Manual `trigger_deploy` is needed after
       each push unless this gets connected properly in Render's dashboard.
+- [ ] Real file upload for business photos — current version is a URL
+      field, honest interim step, not the finished feature. Needs actual
+      object storage (S3/R2/etc), no credentials for that set up yet.
 - [ ] Feature backlog from the README, not started: category filters,
       "near me" geolocation, duplicate detection on submit, moderation view
-      for the `verified` flag, directions/routing, terrain/elevation.
+      for the `verified` flag, terrain/elevation.
 
 ## Plan
 
-Map/tiles/style is functionally done and deployed. What's left there is
-verification, not more building, someone needs to actually look at it
-and report back what's wrong, the same way the last two rounds of bugs
-got found ("map didn't load" → wrong URL, "no 3D buildings" → wrong
-zoom math). Once it visually checks out, move the API key to an env
-var and clean up the README, both are quick. After that, LobsterID auth
-is the next real priority before this goes in front of anyone besides
-the person running it.
+Core map/tiles/style work is done and deployed, business detail sheet
+has real content now (images, directions, hours), businesses can be
+seeded from real OSM data instead of only user submissions, and
+point-to-point routing with real time estimates exists gated behind a
+key that needs signing up for. None of the new stuff (routing,
+Overpass import, business sheet layout) has been visually or
+end-to-end verified, same story as the map style, that's the standing
+highest-priority item every session: get real eyes on it, report back
+what's actually broken. Transit/bus routing is a deliberately deferred,
+separately-scoped decision, not an oversight, see "Why transit routing
+isn't started" above before picking it up. After routing gets verified
+and Street View gets finished, LobsterID auth is still the next real
+priority before this goes in front of anyone besides the person
+running it.
 
 ## For a future agent picking this up
 
