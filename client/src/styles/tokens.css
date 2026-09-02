@@ -60,3 +60,10 @@ h3,
     background-position: 0% 50%;
   }
 }
+
+/* Category filter chip row scrolls horizontally but shouldn't show a
+ * scrollbar, scrollbarWidth:'none' (set inline in the component)
+ * covers Firefox, this covers Chrome/Safari/Edge. */
+.lobster-chip-scroll::-webkit-scrollbar {
+  display: none;
+}

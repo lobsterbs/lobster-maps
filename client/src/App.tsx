@@ -12,6 +12,8 @@ import { LoadingMorph } from './components/LoadingMorph';
 import { SearchBar } from './components/SearchBar';
 import { Snackbar } from './components/Snackbar';
 import { RouteInfoCard } from './components/RouteInfoCard';
+import { StreetViewLayer } from './components/StreetViewLayer';
+import { CategoryFilterChips } from './components/CategoryFilterChips';
 import { fetchBusinessesInView, type Business } from './lib/api';
 import { getRoute } from './lib/routing';
 
@@ -60,6 +62,7 @@ export default function App() {
   const businessMarkersRef = useRef(new Map<string, maplibregl.Marker>());
   const clusterMarkersRef = useRef<maplibregl.Marker[]>([]);
   const businessLookupRef = useRef(new Map<string, Business>());
+  const lastItemsRef = useRef<Business[]>([]); // raw, unfiltered — lets category toggles re-render without a fresh fetch
   const [modalOpen, setModalOpen] = useState(false);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [mapError, setMapError] = useState<string | null>(null);
@@ -69,24 +72,25 @@ export default function App() {
   const [routeInfo, setRouteInfo] = useState<{ distanceMeters: number; durationSeconds: number; destinationAddress: string } | null>(null);
   const [routeLoading, setRouteLoading] = useState(false);
   const [routeError, setRouteError] = useState<string | null>(null);
+  const [availableCategories, setAvailableCategories] = useState<string[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const selectedCategoryRef = useRef<string | null>(null); // mirrors selectedCategory — see note on syncMarkers below
 
-  const syncMarkers = useCallback(async (bounds: [number, number, number, number]) => {
+  // renderMarkers is the shared second half of syncMarkers below —
+  // clustering + marker diffing against whatever's currently in
+  // lastItemsRef, filtered by the active category. Pulled out so a
+  // category toggle can re-render instantly against already-fetched
+  // data instead of hitting the network again.
+  const renderMarkers = useCallback((categoryFilter: string | null) => {
     const map = mapRef.current;
     if (!map) return;
 
-    let items: Business[] = [];
-    try {
-      items = await fetchBusinessesInView(bounds);
-    } catch (err) {
-      console.error('Failed to load businesses in view:', err);
-      return;
-    }
+    const items = categoryFilter
+      ? lastItemsRef.current.filter((b) => b.category === categoryFilter)
+      : lastItemsRef.current;
 
     businessLookupRef.current = new Map(items.map((b) => [b.id, b]));
 
-    // Rebuilt on every sync — cheap at hobby scale (supercluster is built
-    // to handle millions of points; this is hundreds), and simpler than
-    // maintaining a persistent index across pans/zooms.
     const index = new Supercluster<BusinessPointProps>({ radius: 50, maxZoom: 16 }).load(
       items.map((b) => ({
         type: 'Feature',
@@ -95,12 +99,11 @@ export default function App() {
       }))
     );
 
+    const bounds = map.getBounds();
+    const bbox: [number, number, number, number] = [bounds.getWest(), bounds.getSouth(), bounds.getEast(), bounds.getNorth()];
     const zoom = Math.round(map.getZoom());
-    const clusters = index.getClusters(bounds, zoom);
+    const clusters = index.getClusters(bbox, zoom);
 
-    // Clusters have no stable identity across rebuilds (a fresh index is
-    // built every sync), so they're fully torn down and re-added each
-    // time rather than diffed like individual business markers below.
     for (const m of clusterMarkersRef.current) m.remove();
     clusterMarkersRef.current = [];
 
@@ -153,6 +156,23 @@ export default function App() {
     }
   }, []);
 
+  const syncMarkers = useCallback(async (bounds: [number, number, number, number]) => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    let items: Business[] = [];
+    try {
+      items = await fetchBusinessesInView(bounds);
+    } catch (err) {
+      console.error('Failed to load businesses in view:', err);
+      return;
+    }
+
+    lastItemsRef.current = items;
+    setAvailableCategories([...new Set(items.map((b) => b.category))].sort());
+    renderMarkers(selectedCategoryRef.current);
+  }, [renderMarkers]);
+
   const handleMapReady = useCallback(
     (map: MapLibreMap) => {
       mapRef.current = map;
@@ -190,6 +210,15 @@ export default function App() {
   const handleSearchSelect = useCallback((lat: number, lon: number) => {
     mapRef.current?.flyTo({ center: [lon, lat], zoom: 15, essential: true });
   }, []);
+
+  const handleCategorySelect = useCallback(
+    (category: string | null) => {
+      setSelectedCategory(category);
+      selectedCategoryRef.current = category;
+      renderMarkers(category);
+    },
+    [renderMarkers]
+  );
 
   const handleSnackbarDismiss = useCallback(() => {
     setSnackbarMessage(null);
@@ -285,6 +314,8 @@ export default function App() {
         </div>
       )}
       <SearchBar onSelect={handleSearchSelect} />
+      <CategoryFilterChips categories={availableCategories} selected={selectedCategory} onSelect={handleCategorySelect} />
+      <StreetViewLayer map={mapLoaded ? mapRef.current : null} />
       <RouteInfoCard route={routeInfo} loading={routeLoading} error={routeError} onClear={handleClearRoute} />
       <AddBusinessFAB onClick={() => setModalOpen(true)} />
       <AddBusinessModal
