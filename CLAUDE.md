@@ -118,17 +118,27 @@ gap: switching Map/Satellite while a route is showing clears the
 route line (`map.setStyle()` wipes custom layers, no re-add-on-style-
 swap listener yet), minor, not fixed this pass.
 
-**Why transit routing isn't started**: proper transit directions (walk
-to a stop, ride, transfer, real schedule-based times) needs something
-like OpenTripPlanner, which loads both an OSM extract AND GTFS feeds
-into an in-memory routing graph. That's meaningfully heavier than what
-ORS needs and likely doesn't fit Render's free tier at all. There's
-also a real open question ORS-style hosted APIs don't have for transit:
-*which* transit agency's GTFS feed, that's a per-agency, per-region
-decision, not a global "get all bus routes" switch. Needs an actual
-hosting decision, and probably a decision about which region/agency to
-support first, before any code gets written here, not a good thing to
-start blind.
+**Transit routing — DONE, not just researched anymore.** Found a real
+working example query in the wild (an ESP8266 hobby project's README)
+confirming the actual `trip { tripPatterns { legs { line { name } } } }`
+shape, and Entur's own official `@entur/sdk` npm package docs
+confirming `from`/`to` accept raw `coordinates: {latitude, longitude}`
+directly — no StopPlace ID lookup needed for a basic version.
+`client/src/lib/transit.ts` is built. Business sheet now shows both
+"🚗 Drive" and "🚌 Transit" as separate buttons — Transit needs no key
+at all (unlike Drive/ORS), so it's always available. `RouteInfoCard`
+shows a leg-by-leg breakdown (walk → bus → walk, line names, mode
+icons) for transit vs. a simple duration/distance line for driving.
+
+**What's still not verified**: an actual live response. GraphQL is
+less forgiving than the ORS situation, it fails the ENTIRE query if
+even one requested field doesn't exist, not just missing data on one
+field. The query was kept deliberately conservative because of
+that — stuck close to what's directly confirmed working
+(`startTime`/`duration`/`legs.line.name`), plus a small number of very
+standard, high-confidence additions (`mode`, `distance`, `endTime` on
+legs). First real transit request from the live app needs watching
+closely, same as the Overpass import's first run.
 
 ## Street View finished, category filters, and where transit actually stands
 
@@ -275,18 +285,18 @@ here:
 
 ## To-Do
 
+- [ ] **Watch the first real transit request closely** (tap "🚌
+      Transit" on any business). The GraphQL query has never round-
+      tripped a real response, and GraphQL fails the whole query on
+      one wrong field, not just missing data. First real test either
+      confirms it works or shows exactly what to fix.
 - [ ] **Get an ORS API key** (openrouteservice.org, sign up, now via a
       HeiGIT account, then Dashboard → generate a key) and set
-      `VITE_ORS_KEY` on Render, then actually test in-app directions
-      live, this has never round-tripped a real response.
+      `VITE_ORS_KEY` on Render, then actually test in-app driving
+      directions live, this has never round-tripped a real response.
 - [ ] Get a Mapillary access token (mapillary.com/dashboard/developers)
       and set `VITE_MAPILLARY_TOKEN` on Render to activate Street View
       — the component itself is done now, just needs the token.
-- [ ] **Get the real Entur JourneyPlanner GraphQL query shape** (see
-      "Street View finished, category filters, and where transit
-      actually stands" above) and build transit routing. Endpoint and
-      auth are confirmed, no key needed at all, the trip-query field
-      names are the only missing piece.
 - [ ] **Watch the first real `npm run seed:overpass` run closely.** The
       Overpass HTTP call has never been tested end-to-end from any
       environment that built it.
