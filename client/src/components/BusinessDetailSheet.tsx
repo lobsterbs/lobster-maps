@@ -7,7 +7,7 @@ import { isRoutingConfigured } from '../lib/routing';
 type Props = {
   business: Business | null;
   onClose: () => void;
-  onGetDirections: (business: Business) => void;
+  onGetDirections: (business: Business, mode: 'driving' | 'transit') => void;
 };
 
 // Business as passed in from a marker click only has the columns the
@@ -130,25 +130,32 @@ export function BusinessDetailSheet({ business, onClose, onGetDirections }: Prop
                       </a>
                     )}
                     {biz && (
-                      isRoutingConfigured() ? (
+                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                        {isRoutingConfigured() ? (
+                          <button
+                            onClick={() => onGetDirections(biz, 'driving')}
+                            style={{ ...linkRowStyle, ...directionsButtonStyle }}
+                          >
+                            🚗 Drive
+                          </button>
+                        ) : (
+                          <a
+                            href={`https://maps.google.com/?q=${encodeURIComponent(biz.address)}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            style={{ ...linkRowStyle, ...directionsButtonStyle }}
+                          >
+                            🚗 Drive
+                          </a>
+                        )}
+                        {/* Transit needs no API key at all (Entur, see lib/transit.ts), always available */}
                         <button
-                          onClick={() => onGetDirections(biz)}
-                          style={{ ...linkRowStyle, background: 'none', border: 'none', textAlign: 'left', padding: 0, cursor: 'pointer', font: 'inherit' }}
+                          onClick={() => onGetDirections(biz, 'transit')}
+                          style={{ ...linkRowStyle, ...directionsButtonStyle }}
                         >
-                          <span style={{ marginRight: 8 }}>📍</span>
-                          Directions
+                          🚌 Transit
                         </button>
-                      ) : (
-                        <a
-                          href={`https://maps.google.com/?q=${encodeURIComponent(biz.address)}`}
-                          target="_blank"
-                          rel="noreferrer"
-                          style={linkRowStyle}
-                        >
-                          <span style={{ marginRight: 8 }}>📍</span>
-                          Directions
-                        </a>
-                      )
+                      </div>
                     )}
                   </div>
                 )}
@@ -271,6 +278,18 @@ const linkRowStyle: CSSProperties = {
   fontSize: 14,
   color: 'var(--lobster-gold)',
   textDecoration: 'none',
+};
+
+const directionsButtonStyle: CSSProperties = {
+  background: 'rgba(255,255,255,0.06)',
+  border: '1px solid rgba(255,255,255,0.1)',
+  borderRadius: 10,
+  padding: '8px 14px',
+  cursor: 'pointer',
+  font: 'inherit',
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: 6,
 };
 
 const skeletonBlockStyle: CSSProperties = {

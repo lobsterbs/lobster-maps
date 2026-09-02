@@ -11,11 +11,12 @@ import { BusinessDetailSheet } from './components/BusinessDetailSheet';
 import { LoadingMorph } from './components/LoadingMorph';
 import { SearchBar } from './components/SearchBar';
 import { Snackbar } from './components/Snackbar';
-import { RouteInfoCard } from './components/RouteInfoCard';
+import { RouteInfoCard, type RouteResult } from './components/RouteInfoCard';
 import { StreetViewLayer } from './components/StreetViewLayer';
 import { CategoryFilterChips } from './components/CategoryFilterChips';
 import { fetchBusinessesInView, type Business } from './lib/api';
 import { getRoute } from './lib/routing';
+import { getTransitTrip } from './lib/transit';
 
 const ROUTE_SOURCE_ID = 'lobster-route';
 const ROUTE_LAYER_ID = 'lobster-route-line';
@@ -69,7 +70,7 @@ export default function App() {
   const [center, setCenter] = useState<[number, number]>([-73.9857, 40.7484]);
   const [selectedBusiness, setSelectedBusiness] = useState<Business | null>(null);
   const [snackbarMessage, setSnackbarMessage] = useState<string | null>(null);
-  const [routeInfo, setRouteInfo] = useState<{ distanceMeters: number; durationSeconds: number; destinationAddress: string } | null>(null);
+  const [routeInfo, setRouteInfo] = useState<RouteResult | null>(null);
   const [routeLoading, setRouteLoading] = useState(false);
   const [routeError, setRouteError] = useState<string | null>(null);
   const [availableCategories, setAvailableCategories] = useState<string[]>([]);
@@ -231,11 +232,12 @@ export default function App() {
     setRouteLoading(false);
   }, []);
 
-  const handleGetDirections = useCallback((business: Business) => {
+  const handleGetDirections = useCallback((business: Business, mode: 'driving' | 'transit') => {
     setRouteError(null);
     setRouteInfo(null);
     setRouteLoading(true);
     setSelectedBusiness(null); // close the sheet so the route is visible
+    clearRouteFromMap(mapRef.current); // clear any previous drawn line before fetching a new one
 
     if (!navigator.geolocation) {
       setRouteLoading(false);
@@ -245,33 +247,46 @@ export default function App() {
 
     navigator.geolocation.getCurrentPosition(
       async (position) => {
-        const from: [number, number] = [position.coords.longitude, position.coords.latitude];
-        const to: [number, number] = [business.longitude, business.latitude];
-        try {
-          const route = await getRoute(from, to);
-          const map = mapRef.current;
-          if (!route || !map) {
-            setRouteLoading(false);
-            setRouteError('Could not find a route to this address.');
-            return;
-          }
-          drawRouteOnMap(map, route.coordinates);
-          setRouteInfo({
-            distanceMeters: route.distanceMeters,
-            durationSeconds: route.durationSeconds,
-            destinationAddress: business.address,
-          });
-          setRouteLoading(false);
+        const fromLat = position.coords.latitude;
+        const fromLon = position.coords.longitude;
+        const map = mapRef.current;
 
-          const bounds = route.coordinates.reduce(
-            (b, coord) => b.extend(coord as [number, number]),
-            new maplibregl.LngLatBounds(route.coordinates[0], route.coordinates[0])
-          );
-          map.fitBounds(bounds, { padding: 64, duration: 500 });
+        try {
+          if (mode === 'driving') {
+            const route = await getRoute([fromLon, fromLat], [business.longitude, business.latitude]);
+            if (!route || !map) {
+              setRouteLoading(false);
+              setRouteError('Could not find a driving route to this address.');
+              return;
+            }
+            drawRouteOnMap(map, route.coordinates);
+            setRouteInfo({ mode: 'driving', distanceMeters: route.distanceMeters, durationSeconds: route.durationSeconds, destinationAddress: business.address });
+            const bounds = route.coordinates.reduce(
+              (b, coord) => b.extend(coord as [number, number]),
+              new maplibregl.LngLatBounds(route.coordinates[0], route.coordinates[0])
+            );
+            map.fitBounds(bounds, { padding: 64, duration: 500 });
+          } else {
+            const trip = await getTransitTrip(
+              { lat: fromLat, lon: fromLon },
+              { lat: business.latitude, lon: business.longitude }
+            );
+            if (!trip) {
+              setRouteLoading(false);
+              setRouteError('No transit route found — Entur covers all of Norway, but coverage or connections may be limited for this trip.');
+              return;
+            }
+            setRouteInfo({ mode: 'transit', trip, destinationAddress: business.address });
+            // No line geometry from this query (only requested summary
+            // fields, see lib/transit.ts) — flies to the destination
+            // instead of fitting a route line, since there isn't one to draw yet.
+            map?.flyTo({ center: [business.longitude, business.latitude], zoom: 14, duration: 500 });
+          }
+          setRouteLoading(false);
         } catch (err) {
           console.error('Routing failed:', err);
           setRouteLoading(false);
-          setRouteError('Could not find a route to this address.');
+          setRouteError(`Could not find a ${mode === 'driving' ? 'driving' : 'transit'} route to this address.`);
         }
       },
       (err) => {
