@@ -130,24 +130,74 @@ hosting decision, and probably a decision about which region/agency to
 support first, before any code gets written here, not a good thing to
 start blind.
 
-## Street View — started, not finished
+## Street View finished, category filters, and where transit actually stands
 
-Researched and confirmed Mapillary as the right fit (crowdsourced
-street-level imagery, real free API, coverage will be spotty compared
-to Google's actual Street View but that's the honest tradeoff of not
-using Google). Confirmed real: coverage vector tiles at
-`https://tiles.mapillary.com/maps/vtp/mly1_public/2/{z}/{x}/{y}?access_token=`,
-the `mapillary-js` npm package (already installed) for the actual photo
-viewer, and a Graph API radius-search endpoint
-(`https://graph.mapillary.com/images?access_token=&fields=id&lat=&lng=&radius=50&limit=1`,
-added just this past April per their docs) for finding the nearest
-photo to a clicked point, sidesteps needing to guess at vector-tile
-point-layer field names. **Not yet built**: the actual
-`StreetViewLayer` component, wiring it into `App.tsx`, or a
-`VITE_MAPILLARY_TOKEN` env var. Got deep into research and installed
-the dependency, then a context switch happened before writing the
-component. Next session: pick this back up, the research is done, it's
-just implementation now.
+Picked back up from the "started, not finished" note above.
+`StreetViewLayer.tsx` is done: toggle button, Mapillary coverage lines,
+click one to open the nearest photo via `mapillary-js`. Gated behind
+`VITE_MAPILLARY_TOKEN`. Bundle size roughly doubled since the library
+ships unconditionally even when unused, worth code-splitting later.
+
+Also added `CategoryFilterChips.tsx`, the README's own #1 backlog
+item. Derived dynamically from whatever's in the current viewport.
+Building this required splitting marker rendering into fetch (network)
+and render (clustering + DOM) so a filter toggle doesn't need a fresh
+API call — and that split almost introduced a real bug worth
+understanding if touching this code again: **`MapCanvas`'s map-setup
+effect (`Map.tsx`) has an intentionally empty dependency array**, it
+registers `onMoveEnd` once at mount and never updates that closure. Any
+callback passed to it needs a *stable identity for the life of the
+component*, not just "correct at the time it's created." Making
+`syncMarkers` depend on `selectedCategory` state broke that, every chip
+tap would've given `syncMarkers` a new identity, which cascades up
+through `handleMoveEnd` — but `MapCanvas` would've kept calling the
+ORIGINAL stale version forever, silently reverting any active filter
+the moment the map got panned. Fixed with a ref
+(`selectedCategoryRef`) that mirrors the state; `syncMarkers` reads the
+ref instead of closing over the state directly, so its own identity
+never changes. **Any future prop passed into `MapCanvas` needs this
+same treatment** if it depends on state that changes over the
+component's lifetime, a ref that mirrors the state, not the state
+itself in the dependency chain.
+
+**Transit routing — where it actually stands now, this is a real
+update to "Why transit routing isn't started" above**: user's own
+region is Skyss (Vestland/Bergen, Norway). Researched properly rather
+than guessing: Skyss doesn't need its own integration at all, it's one
+of ~27 operators already feeding into **Entur**, Norway's national
+transit data aggregator. Entur already runs a full OpenTripPlanner-
+based journey planner covering ALL Norwegian public transport,
+including real-time data, as a free, open, hosted GraphQL API. This
+**completely changes** the earlier assessment that transit needs
+self-hosted OpenTripPlanner and probably doesn't fit Render's free
+tier, for this specific user's region, that infrastructure problem is
+already solved by Entur.
+
+Confirmed, real:
+- Endpoint: `POST https://api.entur.io/journey-planner/v3/graphql`
+  (also a stable v2 at `/v2/graphql` if v3's BETA status matters)
+- Auth: **no API key, no signup at all** — just a self-identifying
+  `ET-Client-Name: <company>-<application>` header (e.g.
+  `lobstermaps-directions`), open under NLOD licence
+- Body: standard GraphQL POST, `{"query": "...", "variables": {...}}`
+- It's Transmodel-based (a specific GraphQL schema built on the
+  NeTEx/Transmodel European transit data standard), not a generic
+  "give me directions" shape
+
+**Not confirmed yet**: the actual `trip` query's field-level shape
+(how to specify from/to, what an itinerary/leg looks like in the
+response). Ran out of research time this round before nailing that
+down, and deliberately didn't write code against a schema I wasn't
+sure of, same discipline as everything else tonight. Next session:
+get the real query shape (try the GraphQL IDE at
+`api.entur.io/journey-planner/v3/ide`, or search their example-queries
+page, or just query the schema's `__schema` introspection directly
+against the live endpoint, no auth needed), then build it. This is a
+genuinely separate, bigger feature than what fit alongside Street View
+and category filters this round, worth its own focused pass rather
+than a rushed bolt-on.
+
+## Major update: map tiles and style completely rebuilt
 
 The original plan (self-hosted Protomaps `.pmtiles` regional extract)
 got abandoned entirely over the course of one long session. Here's the
@@ -225,27 +275,33 @@ here:
 
 ## To-Do
 
-- [ ] **Get an ORS API key** (openrouteservice.org, free signup) and set
+- [ ] **Get an ORS API key** (openrouteservice.org, sign up, now via a
+      HeiGIT account, then Dashboard → generate a key) and set
       `VITE_ORS_KEY` on Render, then actually test in-app directions
       live, this has never round-tripped a real response.
-- [ ] Get a Mapillary access token and finish `StreetViewLayer.tsx`
-      (research done, see "Street View" above, just needs the actual
-      component written and wired into `App.tsx`).
+- [ ] Get a Mapillary access token (mapillary.com/dashboard/developers)
+      and set `VITE_MAPILLARY_TOKEN` on Render to activate Street View
+      — the component itself is done now, just needs the token.
+- [ ] **Get the real Entur JourneyPlanner GraphQL query shape** (see
+      "Street View finished, category filters, and where transit
+      actually stands" above) and build transit routing. Endpoint and
+      auth are confirmed, no key needed at all, the trip-query field
+      names are the only missing piece.
 - [ ] **Watch the first real `npm run seed:overpass` run closely.** The
       Overpass HTTP call has never been tested end-to-end from any
       environment that built it.
-- [ ] Decide on a transit-routing approach (OpenTripPlanner needs real
-      hosting decisions, likely not Render's free tier) and which
-      transit agency/region's GTFS feed to start with, before writing
-      any transit code.
 - [ ] Fix the route-line-disappears-on-Map/Satellite-toggle gap (minor,
       documented in "Navigation with time estimates" above).
+- [ ] Code-split `mapillary-js` out of the main bundle — it ships
+      unconditionally even when `VITE_MAPILLARY_TOKEN` is unset, only
+      the rendering is gated, not the import. Bundle size roughly
+      doubled when it was added.
 - [ ] **Get real eyes on the live map in general.** Colors, road
       hierarchy, label density, whether the 3D buildings actually look
       good and not just technically present, none of that's been
       confirmed by an actual look, there's no browser in this
-      environment. Same for the business detail sheet's new image
-      gallery layout and the routing UI.
+      environment. Same for the business detail sheet, the routing UI,
+      the new category chips, and Street View.
 - [ ] Decide how to handle the MCP connector dropping after Render's free
       tier spins down idle (see "Why the MCP connector keeps dropping"
       above), leave as-is, add a keep-alive ping, or pay for always-on.
