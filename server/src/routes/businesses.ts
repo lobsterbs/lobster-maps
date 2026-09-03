@@ -5,6 +5,9 @@ import { sql, eq } from 'drizzle-orm';
 import rateLimit from 'express-rate-limit';
 import { db } from '../db/client.js';
 import { businesses } from '../db/schema.js';
+import { liveMergeOverpass } from '../lib/liveOverpass.js';
+
+const USER_AGENT = process.env.NOMINATIM_USER_AGENT || 'LobsterMaps/0.1 (set NOMINATIM_USER_AGENT in .env)';
 
 const router = Router();
 
@@ -60,6 +63,13 @@ router.get(
         return res.status(400).json({ error: 'bbox must be "minLng,minLat,maxLng,maxLat"' });
       }
       const [minLng, minLat, maxLng, maxLat] = parts;
+
+      // Businesses "not from us" — real OSM data — get merged in live
+      // here, not just via the manual seed script. Cached by grid
+      // cell so this doesn't hammer Overpass on every pan, see
+      // lib/liveOverpass.ts. Failures here are non-fatal by design,
+      // the DB query below still runs either way.
+      await liveMergeOverpass([minLng, minLat, maxLng, maxLat], USER_AGENT);
 
       // Relies on the generated `geog` column + GIST index from db/postgis.sql
       const result = await db.execute(sql`

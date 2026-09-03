@@ -109,17 +109,20 @@ export async function getTransitTrip(
   };
 }
 
-// Emoji is deliberate here, not a placeholder — no icon set/sprite
-// sheet in this app yet, and these read fine at small sizes without one.
-export function modeEmoji(mode: string): string {
+import { Bus, TramFront, TrainFront, TrainFrontTunnel, Ship, Bike, Footprints, MapPin, type LucideIcon } from 'lucide-react';
+
+// Real icons, not emoji — lucide-react, MIT licensed, already used
+// elsewhere in the app (TripPlanner.tsx). Returns the icon component
+// itself so callers can size/color it like any other lucide icon.
+export function modeIcon(mode: string): LucideIcon {
   switch (mode) {
-    case 'foot': return '🚶';
-    case 'bus': return '🚌';
-    case 'tram': return '🚊';
-    case 'rail': return '🚆';
-    case 'metro': return '🚇';
-    case 'water': return '⛴';
-    case 'bicycle': return '🚲';
-    default: return '•';
+    case 'foot': return Footprints;
+    case 'bus': return Bus;
+    case 'tram': return TramFront;
+    case 'rail': return TrainFront;
+    case 'metro': return TrainFrontTunnel;
+    case 'water': return Ship;
+    case 'bicycle': return Bike;
+    default: return MapPin;
   }
 }

@@ -11,12 +11,10 @@ import { BusinessDetailSheet } from './components/BusinessDetailSheet';
 import { LoadingMorph } from './components/LoadingMorph';
 import { SearchBar } from './components/SearchBar';
 import { Snackbar } from './components/Snackbar';
-import { RouteInfoCard, type RouteResult } from './components/RouteInfoCard';
 import { StreetViewLayer } from './components/StreetViewLayer';
 import { CategoryFilterChips } from './components/CategoryFilterChips';
+import { TripPlanner, type TripPlace } from './components/TripPlanner';
 import { fetchBusinessesInView, type Business } from './lib/api';
-import { getRoute } from './lib/routing';
-import { getTransitTrip } from './lib/transit';
 
 const ROUTE_SOURCE_ID = 'lobster-route';
 const ROUTE_LAYER_ID = 'lobster-route-line';
@@ -70,12 +68,11 @@ export default function App() {
   const [center, setCenter] = useState<[number, number]>([-73.9857, 40.7484]);
   const [selectedBusiness, setSelectedBusiness] = useState<Business | null>(null);
   const [snackbarMessage, setSnackbarMessage] = useState<string | null>(null);
-  const [routeInfo, setRouteInfo] = useState<RouteResult | null>(null);
-  const [routeLoading, setRouteLoading] = useState(false);
-  const [routeError, setRouteError] = useState<string | null>(null);
   const [availableCategories, setAvailableCategories] = useState<string[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const selectedCategoryRef = useRef<string | null>(null); // mirrors selectedCategory — see note on syncMarkers below
+  const [tripPlannerOpen, setTripPlannerOpen] = useState(false);
+  const [tripPlannerTo, setTripPlannerTo] = useState<TripPlace | null>(null);
 
   // renderMarkers is the shared second half of syncMarkers below —
   // clustering + marker diffing against whatever's currently in
@@ -208,8 +205,36 @@ export default function App() {
     [syncMarkers]
   );
 
-  const handleSearchSelect = useCallback((lat: number, lon: number) => {
+  const handleSearchSelect = useCallback((lat: number, lon: number, label: string) => {
     mapRef.current?.flyTo({ center: [lon, lat], zoom: 15, essential: true });
+    setTripPlannerTo({ label, lat, lon });
+    setTripPlannerOpen(true);
+  }, []);
+
+  const handleOpenDirections = useCallback((business: Business) => {
+    setSelectedBusiness(null); // close the detail sheet so the planner is visible
+    setTripPlannerTo({ label: business.name, lat: business.latitude, lon: business.longitude });
+    setTripPlannerOpen(true);
+  }, []);
+
+  const handleRouteFound = useCallback((geometry: [number, number][] | null, destination: { lat: number; lon: number }) => {
+    const map = mapRef.current;
+    if (!map) return;
+    if (!geometry) {
+      // (0,0) is TripPlanner's deliberate "just clear, don't fly" sentinel, not a real destination
+      clearRouteFromMap(map);
+      if (destination.lat !== 0 || destination.lon !== 0) {
+        // transit result — no line geometry to fit to, just center on the destination
+        map.flyTo({ center: [destination.lon, destination.lat], zoom: 14, duration: 500 });
+      }
+      return;
+    }
+    drawRouteOnMap(map, geometry);
+    const bounds = geometry.reduce(
+      (b, coord) => b.extend(coord),
+      new maplibregl.LngLatBounds(geometry[0], geometry[0])
+    );
+    map.fitBounds(bounds, { padding: 64, duration: 500 });
   }, []);
 
   const handleCategorySelect = useCallback(
@@ -223,79 +248,6 @@ export default function App() {
 
   const handleSnackbarDismiss = useCallback(() => {
     setSnackbarMessage(null);
-  }, []);
-
-  const handleClearRoute = useCallback(() => {
-    clearRouteFromMap(mapRef.current);
-    setRouteInfo(null);
-    setRouteError(null);
-    setRouteLoading(false);
-  }, []);
-
-  const handleGetDirections = useCallback((business: Business, mode: 'driving' | 'transit') => {
-    setRouteError(null);
-    setRouteInfo(null);
-    setRouteLoading(true);
-    setSelectedBusiness(null); // close the sheet so the route is visible
-    clearRouteFromMap(mapRef.current); // clear any previous drawn line before fetching a new one
-
-    if (!navigator.geolocation) {
-      setRouteLoading(false);
-      setRouteError('Location access is not available in this browser.');
-      return;
-    }
-
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        const fromLat = position.coords.latitude;
-        const fromLon = position.coords.longitude;
-        const map = mapRef.current;
-
-        try {
-          if (mode === 'driving') {
-            const route = await getRoute([fromLon, fromLat], [business.longitude, business.latitude]);
-            if (!route || !map) {
-              setRouteLoading(false);
-              setRouteError('Could not find a driving route to this address.');
-              return;
-            }
-            drawRouteOnMap(map, route.coordinates);
-            setRouteInfo({ mode: 'driving', distanceMeters: route.distanceMeters, durationSeconds: route.durationSeconds, destinationAddress: business.address });
-            const bounds = route.coordinates.reduce(
-              (b, coord) => b.extend(coord as [number, number]),
-              new maplibregl.LngLatBounds(route.coordinates[0], route.coordinates[0])
-            );
-            map.fitBounds(bounds, { padding: 64, duration: 500 });
-          } else {
-            const trip = await getTransitTrip(
-              { lat: fromLat, lon: fromLon },
-              { lat: business.latitude, lon: business.longitude }
-            );
-            if (!trip) {
-              setRouteLoading(false);
-              setRouteError('No transit route found — Entur covers all of Norway, but coverage or connections may be limited for this trip.');
-              return;
-            }
-            setRouteInfo({ mode: 'transit', trip, destinationAddress: business.address });
-            // No line geometry from this query (only requested summary
-            // fields, see lib/transit.ts) — flies to the destination
-            // instead of fitting a route line, since there isn't one to draw yet.
-            map?.flyTo({ center: [business.longitude, business.latitude], zoom: 14, duration: 500 });
-          }
-          setRouteLoading(false);
-        } catch (err) {
-          console.error('Routing failed:', err);
-          setRouteLoading(false);
-          setRouteError(`Could not find a ${mode === 'driving' ? 'driving' : 'transit'} route to this address.`);
-        }
-      },
-      (err) => {
-        console.error('Geolocation failed:', err);
-        setRouteLoading(false);
-        setRouteError('Could not get your location — check location permissions.');
-      },
-      { enableHighAccuracy: false, timeout: 10_000 }
-    );
   }, []);
 
   return (
@@ -328,10 +280,17 @@ export default function App() {
           </div>
         </div>
       )}
-      <SearchBar onSelect={handleSearchSelect} />
-      <CategoryFilterChips categories={availableCategories} selected={selectedCategory} onSelect={handleCategorySelect} />
+      {!tripPlannerOpen && <SearchBar onSelect={handleSearchSelect} />}
+      {!tripPlannerOpen && (
+        <CategoryFilterChips categories={availableCategories} selected={selectedCategory} onSelect={handleCategorySelect} />
+      )}
       <StreetViewLayer map={mapLoaded ? mapRef.current : null} />
-      <RouteInfoCard route={routeInfo} loading={routeLoading} error={routeError} onClear={handleClearRoute} />
+      <TripPlanner
+        open={tripPlannerOpen}
+        initialTo={tripPlannerTo}
+        onClose={() => { setTripPlannerOpen(false); clearRouteFromMap(mapRef.current); }}
+        onRouteFound={handleRouteFound}
+      />
       <AddBusinessFAB onClick={() => setModalOpen(true)} />
       <AddBusinessModal
         open={modalOpen}
@@ -342,7 +301,7 @@ export default function App() {
       <BusinessDetailSheet
         business={selectedBusiness}
         onClose={() => setSelectedBusiness(null)}
-        onGetDirections={handleGetDirections}
+        onGetDirections={handleOpenDirections}
       />
       <Snackbar message={snackbarMessage} onDismiss={handleSnackbarDismiss} />
     </div>

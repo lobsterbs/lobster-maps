@@ -67,3 +67,21 @@ h3,
 .lobster-chip-scroll::-webkit-scrollbar {
   display: none;
 }
+
+/* Loading spinner for TripPlanner's "Get Directions" button (lucide's
+ * Loader2 icon, animated by hand — lucide ships icons unanimated by
+ * design, this is the standard spin treatment for that icon). */
+@keyframes lobster-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+.lobster-spin {
+  animation: lobster-spin 0.8s linear infinite;
+}
+
+/* Used by BusinessDetailSheet's website-favicon fallback: the Globe
+ * icon starts hidden while a real favicon is being attempted, and
+ * gets revealed via classList removal if that favicon 404s. */
+.lobster-hidden {
+  display: none;
+}

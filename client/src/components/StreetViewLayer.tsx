@@ -3,6 +3,7 @@ import type { CSSProperties } from 'react';
 import type { Map as MapLibreMap } from 'maplibre-gl';
 import { Viewer } from 'mapillary-js';
 import 'mapillary-js/dist/mapillary.css';
+import { Eye } from 'lucide-react';
 
 // Real street-level imagery via Mapillary, not Google Street View —
 // consistent with this project's whole "no Apple/Google" stance (see
@@ -131,12 +132,16 @@ export function StreetViewLayer({ map }: Props) {
     <>
       <button
         onClick={() => setEnabled((v) => !v)}
-        style={{ ...toggleButtonStyle, background: enabled ? 'var(--lobster-gold)' : 'rgba(21, 21, 21, 0.72)' }}
+        style={{
+          ...toggleButtonStyle,
+          background: enabled ? 'var(--lobster-gold)' : 'rgba(21, 21, 21, 0.72)',
+          color: enabled ? '#0a0a0a' : 'var(--lobster-text)',
+        }}
         title="Toggle Street View coverage"
         aria-label="Toggle Street View coverage"
         aria-pressed={enabled}
       >
-        <span style={{ fontSize: 16 }}>👁</span>
+        <Eye size={17} />
       </button>
 
       {(viewerLoading || viewerError) && !viewerImageId && (

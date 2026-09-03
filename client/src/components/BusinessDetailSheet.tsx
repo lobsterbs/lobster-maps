@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { animated, useTransition } from '@react-spring/web';
+import { Phone, Globe, Navigation } from 'lucide-react';
 import { fetchBusinessById, type Business } from '../lib/api';
-import { isRoutingConfigured } from '../lib/routing';
+import { getFaviconUrl } from '../lib/favicon';
 
 type Props = {
   business: Business | null;
   onClose: () => void;
-  onGetDirections: (business: Business, mode: 'driving' | 'transit') => void;
+  onGetDirections: (business: Business) => void;
 };
 
 // Business as passed in from a marker click only has the columns the
@@ -119,43 +120,35 @@ export function BusinessDetailSheet({ business, onClose, onGetDirections }: Prop
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 12 }}>
                     {full?.phone && (
                       <a href={`tel:${full.phone}`} style={linkRowStyle}>
-                        <span style={{ marginRight: 8 }}>📞</span>
+                        <Phone size={15} style={{ marginRight: 8, flexShrink: 0 }} />
                         {full.phone}
                       </a>
                     )}
                     {full?.website && (
                       <a href={full.website} target="_blank" rel="noreferrer" style={linkRowStyle}>
-                        <span style={{ marginRight: 8 }}>🌐</span>
+                        {getFaviconUrl(full.website) ? (
+                          <img
+                            src={getFaviconUrl(full.website)!}
+                            alt=""
+                            width={15}
+                            height={15}
+                            style={{ marginRight: 8, flexShrink: 0, borderRadius: 3 }}
+                            onError={(e) => {
+                              // No favicon found for this site — fall back to the generic globe icon instead of a broken image
+                              (e.target as HTMLImageElement).style.display = 'none';
+                              (e.target as HTMLImageElement).nextElementSibling?.classList.remove('lobster-hidden');
+                            }}
+                          />
+                        ) : null}
+                        <Globe size={15} className={getFaviconUrl(full.website) ? 'lobster-hidden' : ''} style={{ marginRight: 8, flexShrink: 0 }} />
                         {full.website.replace(/^https?:\/\//, '')}
                       </a>
                     )}
                     {biz && (
-                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                        {isRoutingConfigured() ? (
-                          <button
-                            onClick={() => onGetDirections(biz, 'driving')}
-                            style={{ ...linkRowStyle, ...directionsButtonStyle }}
-                          >
-                            🚗 Drive
-                          </button>
-                        ) : (
-                          <a
-                            href={`https://maps.google.com/?q=${encodeURIComponent(biz.address)}`}
-                            target="_blank"
-                            rel="noreferrer"
-                            style={{ ...linkRowStyle, ...directionsButtonStyle }}
-                          >
-                            🚗 Drive
-                          </a>
-                        )}
-                        {/* Transit needs no API key at all (Entur, see lib/transit.ts), always available */}
-                        <button
-                          onClick={() => onGetDirections(biz, 'transit')}
-                          style={{ ...linkRowStyle, ...directionsButtonStyle }}
-                        >
-                          🚌 Transit
-                        </button>
-                      </div>
+                      <button onClick={() => onGetDirections(biz)} style={{ ...linkRowStyle, ...directionsButtonStyle }}>
+                        <Navigation size={15} style={{ marginRight: 8 }} />
+                        Directions
+                      </button>
                     )}
                   </div>
                 )}

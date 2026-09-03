@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, doublePrecision, timestamp, boolean, jsonb, index } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, doublePrecision, timestamp, boolean, jsonb, index, integer, primaryKey } from 'drizzle-orm/pg-core';
 
 // latitude/longitude are the source of truth Drizzle manages directly.
 // A generated PostGIS `geog` column + GIST index sits on top of these
@@ -29,3 +29,21 @@ export const businesses = pgTable(
 
 export type Business = typeof businesses.$inferSelect;
 export type NewBusiness = typeof businesses.$inferInsert;
+
+// Tracks which coarse grid cells (see server/src/lib/liveOverpass.ts)
+// have recently had a live Overpass query run for them, so panning
+// around the same neighborhood doesn't trigger a fresh Overpass call
+// on every single map move — Overpass's public instance is a shared,
+// free resource. cellCol/cellRow together are the primary key, one
+// row per grid cell, upserted with a fresh timestamp on each query.
+export const overpassQueryCache = pgTable(
+  'overpass_query_cache',
+  {
+    cellCol: integer('cell_col').notNull(),
+    cellRow: integer('cell_row').notNull(),
+    queriedAt: timestamp('queried_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.cellCol, table.cellRow] }),
+  })
+);
