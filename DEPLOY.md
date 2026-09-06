@@ -86,7 +86,7 @@ After merge, Render auto-deploys (no user action)
 
 **GitHub:**
 - Repo: https://github.com/lobsterbs/lobster-maps
-- PAT: [REDACTED_OLD_PAT]
+- PAT: [REDACTED_PAT]
 - Branch: feature/custom-router (13 commits)
 
 **Render:**

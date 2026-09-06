@@ -14,7 +14,7 @@ GIT_USER="LobsterMaps-Deploy"
 GIT_EMAIL="deploy@lobster-maps.dev"
 REPO="https://github.com/lobsterbs/lobster-maps.git"
 BRANCH="feature/custom-router"
-PAT="[REDACTED_OLD_PAT]"
+PAT="[REDACTED_PAT]"
 
 echo "Step 1: Configure git"
 git config --global user.name "$GIT_USER"

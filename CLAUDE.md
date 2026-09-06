@@ -40,7 +40,7 @@
 ### GitHub & Deployment
 - **Repo:** https://github.com/lobsterbs/lobster-maps
 - **Branch:** feature/custom-router (12 commits, ready to merge)
-- **PAT:** `[REDACTED_OLD_PAT]` (saved in memory, embedded in scripts)
+- **PAT:** `[REDACTED_PAT]` (saved in memory, embedded in scripts)
 
 ### Render & Database
 - **Service ID:** srv-da77r72d0e5s73dl976g

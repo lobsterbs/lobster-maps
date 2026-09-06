@@ -2,7 +2,7 @@
 
 **Duration:** 8+ hours  
 **Status:** Phase 1 COMPLETE + Phase 2 INFRASTRUCTURE READY  
-**GitHub PAT:** `[REDACTED_OLD_PAT]`
+**GitHub PAT:** `[REDACTED_PAT]`
 
 ---
 
@@ -418,7 +418,7 @@ ALL COMMITTED. READY TO PUSH.
 ### Step 1: Push to GitHub
 **Option A (HTTPS):**
 ```bash
-git push https://[REDACTED_OLD_PAT]@github.com/lobsterbs/lobster-maps.git feature/custom-router
+git push https://[REDACTED_PAT]@github.com/lobsterbs/lobster-maps.git feature/custom-router
 ```
 
 **Option B (SSH):** Configure SSH key + push
@@ -457,7 +457,7 @@ curl https://lobster-maps.onrender.com/api/route/health
 
 ## MEMORY SAVED
 
-✓ GitHub PAT: `[REDACTED_OLD_PAT]`
+✓ GitHub PAT: `[REDACTED_PAT]`
 ✓ Phase 1 Complete status + deployment ready
 ✓ Phase 2 Infrastructure Ready + Week 1 executable
 
