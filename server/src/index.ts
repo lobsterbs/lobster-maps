@@ -7,6 +7,7 @@ import type { Request, Response, NextFunction } from 'express';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import businessesRouter from './routes/businesses.js';
 import geocodeRouter from './routes/geocode.js';
+import routingRouter from './routes/routing.js';
 import { createMcpServer } from './mcp.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -21,6 +22,7 @@ app.use(express.json());
 app.get('/health', (_req, res) => res.json({ ok: true }));
 app.use('/api/businesses', businessesRouter);
 app.use('/api/geocode', geocodeRouter);
+app.use('/api/route', routingRouter);
 
 // MCP endpoint — once this server is public and added as a custom
 // connector in Claude, this lets Claude read/write project files and
