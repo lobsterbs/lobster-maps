@@ -1,0 +1,58 @@
+GNU AFFERO GENERAL PUBLIC LICENSE
+Version 3, 19 November 2007
+
+Copyright (C) 2026 LobsterMaps Contributors
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as
+published by the Free Software Foundation, either version 3 of the
+License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+---
+
+TERMS AND CONDITIONS FOR COPYING, DISTRIBUTION AND MODIFICATION
+
+13. Use with Network Services
+
+If you develop a modified version of this Program, or any work based
+on the Program, you must cause your modified version to prominently
+display the following notices:
+
+(a) The work must carry prominent notices stating that you modified it,
+and giving a relevant date.
+
+(b) The work must carry prominent notices stating that it is released
+under this License and any conditions added under section 7. This
+requirement modifies the requirement in section 4 to "keep intact all
+notices".
+
+(c) You must license the entire work, as a whole, under this License to
+anyone who comes into possession of a copy. This License will therefore
+apply, along with any applicable section 7 additional terms, to the
+whole of the work, and all its parts, regardless of how they are packaged.
+
+If the program, as you use it, interacts with users remotely through a
+computer network, you should also get the opportunity for the users to
+receive the source code of your version by some standard or usual means
+of facilitating copying of software. This applies whether or not you
+create a modified version.
+
+---
+
+This License is chosen for LobsterMaps because:
+
+1. Privacy-first software should remain open and community-owned
+2. Copyleft ensures derivative works stay open
+3. Network clause (AGPLv3 specific) prevents SaaS loopholes
+4. If you run this as a service, you must share improvements
+5. Users' privacy is protected by code, not hidden by proprietary forks
+
+For questions about licensing, contact the LobsterMaps project maintainers.
