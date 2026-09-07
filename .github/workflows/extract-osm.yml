@@ -1,0 +1,74 @@
+name: Extract OSM Graph (Post-Deploy)
+
+on:
+  workflow_run:
+    workflows: ["Deploy"]
+    types: [completed]
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  extract-osm:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        working-directory: ./server
+        run: npm ci
+
+      - name: Setup environment
+        working-directory: ./server
+        run: |
+          echo "DATABASE_URL=${{ secrets.DATABASE_URL }}" > .env
+          echo "ORS_KEY=${{ secrets.ORS_KEY }}" >> .env
+          echo "VITE_API_URL=${{ secrets.VITE_API_URL }}" >> .env
+
+      - name: Extract OSM graph
+        working-directory: ./server
+        timeout-minutes: 45  # OSM extraction ~30 min
+        run: npm run extract:osm
+
+      - name: Verify extraction
+        working-directory: ./server
+        run: |
+          if [ -f data/bergen-routing-graph.json ]; then
+            echo "✓ OSM graph extracted successfully"
+            ls -lh data/bergen-routing-graph.json
+          else
+            echo "✗ OSM graph not found"
+            exit 1
+          fi
+
+      - name: Test routing health
+        run: |
+          sleep 10
+          curl -s https://lobster-maps.onrender.com/api/route/health | jq .
+          
+      - name: Notify Slack (optional)
+        if: always()
+        uses: slackapi/slack-github-action@v1.24.0
+        with:
+          payload: |
+            {
+              "text": "OSM Extraction: ${{ job.status }}",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*LobsterMaps OSM Extraction*\nStatus: ${{ job.status }}\nBranch: ${{ github.ref }}"
+                  }
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
