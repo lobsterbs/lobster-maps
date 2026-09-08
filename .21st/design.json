@@ -1,0 +1,27 @@
+{
+  "projectName": "LobsterMaps",
+  "description": "Privacy-first maps & navigation for Bergen/Vestland",
+  "stack": {
+    "frontend": ["React", "TypeScript", "Vite"],
+    "styling": ["Tailwind CSS", "Material Design 3"],
+    "animation": ["Framer Motion"],
+    "maps": "MapLibre"
+  },
+  "designTokens": {
+    "colorScheme": "Material You",
+    "theme": "dark",
+    "primaryColor": "emerald",
+    "typography": "Roboto Flex (Material 3)"
+  },
+  "components": [
+    "Route Planner Card",
+    "Travel Route Card",
+    "Timeline Rail",
+    "Location Card",
+    "Speed Indicator",
+    "Weather Alert",
+    "Toll Info",
+    "Bike Route Card",
+    "Park & Ride Card"
+  ]
+}
