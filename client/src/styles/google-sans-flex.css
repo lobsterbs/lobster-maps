@@ -1,0 +1,105 @@
+/**
+ * Google Sans Flex - Self-Hosted
+ * All weights: 100 (Thin) → 900 (Black)
+ * Download from: https://fonts.google.com/download?family=Google%20Sans%20Flex
+ */
+
+@font-face {
+  font-family: 'Google Sans Flex';
+  font-style: normal;
+  font-weight: 100;
+  font-display: swap;
+  src: url('/fonts/GoogleSansFlex-Thin.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Google Sans Flex';
+  font-style: normal;
+  font-weight: 200;
+  font-display: swap;
+  src: url('/fonts/GoogleSansFlex-ExtraLight.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Google Sans Flex';
+  font-style: normal;
+  font-weight: 300;
+  font-display: swap;
+  src: url('/fonts/GoogleSansFlex-Light.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Google Sans Flex';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/GoogleSansFlex-Regular.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Google Sans Flex';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('/fonts/GoogleSansFlex-Medium.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Google Sans Flex';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('/fonts/GoogleSansFlex-SemiBold.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Google Sans Flex';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/fonts/GoogleSansFlex-Bold.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Google Sans Flex';
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+  src: url('/fonts/GoogleSansFlex-ExtraBold.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Google Sans Flex';
+  font-style: normal;
+  font-weight: 900;
+  font-display: swap;
+  src: url('/fonts/GoogleSansFlex-Black.woff2') format('woff2');
+}
+
+/* Apply to all body text */
+html, body {
+  font-family: 'Google Sans Flex', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* MD3 Typography with Google Sans Flex */
+.text-display-large { font-size: 3.5rem; font-weight: 400; line-height: 3.25rem; }
+.text-display-medium { font-size: 2.8125rem; font-weight: 400; line-height: 2.5rem; }
+.text-display-small { font-size: 2.25rem; font-weight: 400; line-height: 2rem; }
+
+.text-headline-large { font-size: 2rem; font-weight: 400; line-height: 2.5rem; }
+.text-headline-medium { font-size: 1.75rem; font-weight: 500; line-height: 2.25rem; }
+.text-headline-small { font-size: 1.5rem; font-weight: 500; line-height: 2rem; }
+
+.text-title-large { font-size: 1.375rem; font-weight: 500; line-height: 1.75rem; }
+.text-title-medium { font-size: 1.125rem; font-weight: 500; line-height: 1.5rem; }
+.text-title-small { font-size: 1rem; font-weight: 500; line-height: 1.5rem; }
+
+.text-body-large { font-size: 1rem; font-weight: 400; line-height: 1.5rem; }
+.text-body-medium { font-size: 0.875rem; font-weight: 500; line-height: 1.25rem; }
+.text-body-small { font-size: 0.75rem; font-weight: 500; line-height: 1rem; }
+
+.text-label-large { font-size: 0.875rem; font-weight: 500; line-height: 1.25rem; letter-spacing: 0.5px; }
+.text-label-medium { font-size: 0.75rem; font-weight: 500; line-height: 1rem; letter-spacing: 0.5px; }
+.text-label-small { font-size: 0.625rem; font-weight: 500; line-height: 0.75rem; letter-spacing: 0.5px; }
