@@ -19,6 +19,7 @@ import {
   Zap,
   ChevronRight,
 } from 'lucide-react';
+import { MD3Button } from './MD3Button';
 
 export interface RouteWithRisk {
   id: string;
@@ -262,25 +263,28 @@ export const MD3EnhancedRouteSelectorCard: React.FC<
 
             {/* CTA Buttons */}
             <div className="flex gap-2">
-              <button
+              <MD3Button
+                variant="filled"
+                size="medium"
+                fullWidth
                 onClick={(e) => {
                   e.stopPropagation();
                   onNavigate?.(route.id);
                 }}
-                className="flex-1 py-2.5 px-4 bg-white text-slate-900 rounded-lg font-semibold hover:bg-white/90 transition-colors"
               >
                 Navigate
-              </button>
+              </MD3Button>
               {currentLocation && (
-                <button
+                <MD3Button
+                  variant="outlined"
+                  size="medium"
                   onClick={(e) => {
                     e.stopPropagation();
                     setExpanded(isExpanded ? null : route.id);
                   }}
-                  className="px-4 py-2.5 bg-white/20 text-white rounded-lg hover:bg-white/30 transition-colors text-sm"
                 >
                   {isExpanded ? 'Less' : 'More'}
-                </button>
+                </MD3Button>
               )}
             </div>
 

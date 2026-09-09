@@ -10,6 +10,7 @@ import React, { useState } from 'react';
 import { MapPin, Navigation } from 'lucide-react';
 import { MD3AdvancedSearchBar, SearchSuggestion } from './MD3AdvancedSearchBar';
 import { MD3EnhancedRouteSelectorCard, RouteWithRisk } from './MD3EnhancedRouteSelectorCard';
+import { MD3Button } from './MD3Button';
 
 export interface NavigationFlowProps {
   businesses?: SearchSuggestion[];
@@ -126,13 +127,12 @@ export const MD3NavigationFlow: React.FC<NavigationFlowProps> = ({
 
         {/* Swap button */}
         <div className="flex justify-center mb-4">
-          <button
+          <MD3Button
+            variant="text"
+            icon={<Navigation size={18} />}
             onClick={handleSwapLocations}
-            className="p-2 hover:bg-slate-700 rounded-full transition-colors text-slate-400 hover:text-slate-200"
             title="Swap locations"
-          >
-            <Navigation size={18} />
-          </button>
+          />
         </div>
 
         {/* Destination Search */}

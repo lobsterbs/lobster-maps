@@ -8,6 +8,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Search, MapPin, Clock, Star, X } from 'lucide-react';
+import { MD3Button } from './MD3Button';
 
 export interface SearchSuggestion {
   id: string;
@@ -162,16 +163,17 @@ export const MD3AdvancedSearchBar: React.FC<MD3AdvancedSearchBarProps> = ({
           className="w-full pl-12 pr-10 py-3 bg-slate-800 text-slate-100 rounded-lg border border-slate-700 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-400 outline-none transition-all text-sm placeholder-slate-500"
         />
         {query && (
-          <button
+          <MD3Button
+            variant="text"
+            size="small"
+            icon={<X size={18} />}
             onClick={() => {
               setQuery('');
               setSuggestions([]);
               inputRef.current?.focus();
             }}
-            className="absolute right-3 top-3.5 text-slate-400 hover:text-slate-200"
-          >
-            <X size={18} />
-          </button>
+            className="absolute right-3 top-3.5"
+          />
         )}
       </div>
 
