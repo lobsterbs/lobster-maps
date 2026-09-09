@@ -1,0 +1,7 @@
+# Font files can be downloaded from Google Fonts
+# See FONTS_DOWNLOAD.sh for instructions
+# We don't commit binary font files to reduce repo size
+# System fonts provide fallback (see google-sans-flex.css)
+
+client/public/fonts/*.woff2
+!client/public/fonts/.gitkeep

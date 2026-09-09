@@ -1,16 +1,14 @@
 /**
- * Google Sans Flex - Self-Hosted (Privacy-First)
+ * Google Sans Flex - Self-Hosted on LobsterMaps Server
  * 
- * This CSS declares Google Sans Flex but falls back to system fonts
- * if font files are not available. ZERO external CDN requests.
+ * Fonts are hosted locally to ensure:
+ * - Zero external tracking (no Google CDN)
+ * - Fast delivery (served from Render)
+ * - Complete privacy (no IP exposure to third parties)
+ * - Offline capability (fonts bundled in repo)
  * 
- * To enable self-hosted fonts:
- * 1. Run: bash FONTS_DOWNLOAD.sh (from repo root)
- * 2. Download from: https://fonts.google.com/download?family=Google+Sans+Flex
- * 3. Extract .woff2 files to: client/public/fonts/
- * 4. Fonts will load automatically (no IP exposure after first download)
- * 
- * Fallback chain: Google Sans Flex → System fonts (privacy-respecting)
+ * Using TTF format for maximum browser compatibility
+ * Fallback to system fonts if files are unavailable
  */
 
 @font-face {
@@ -18,7 +16,7 @@
   font-style: normal;
   font-weight: 100;
   font-display: swap;
-  src: url('/fonts/GoogleSansFlex-Thin.woff2') format('woff2'), 
+  src: url('/fonts/GoogleSansFlex-Thin.ttf') format('truetype'),
        local('Arial'), local('Helvetica');
 }
 
@@ -27,7 +25,7 @@
   font-style: normal;
   font-weight: 200;
   font-display: swap;
-  src: url('/fonts/GoogleSansFlex-ExtraLight.woff2') format('woff2'),
+  src: url('/fonts/GoogleSansFlex-ExtraLight.ttf') format('truetype'),
        local('Arial Light'), local('Helvetica Neue');
 }
 
@@ -36,7 +34,7 @@
   font-style: normal;
   font-weight: 300;
   font-display: swap;
-  src: url('/fonts/GoogleSansFlex-Light.woff2') format('woff2'),
+  src: url('/fonts/GoogleSansFlex-Light.ttf') format('truetype'),
        local('Arial Light'), local('Helvetica Neue');
 }
 
@@ -45,7 +43,7 @@
   font-style: normal;
   font-weight: 400;
   font-display: swap;
-  src: url('/fonts/GoogleSansFlex-Regular.woff2') format('woff2'),
+  src: url('/fonts/GoogleSansFlex-Regular.ttf') format('truetype'),
        local('Arial'), local('Helvetica');
 }
 
@@ -54,7 +52,7 @@
   font-style: normal;
   font-weight: 500;
   font-display: swap;
-  src: url('/fonts/GoogleSansFlex-Medium.woff2') format('woff2'),
+  src: url('/fonts/GoogleSansFlex-Medium.ttf') format('truetype'),
        local('Arial'), local('Helvetica');
 }
 
@@ -63,7 +61,7 @@
   font-style: normal;
   font-weight: 600;
   font-display: swap;
-  src: url('/fonts/GoogleSansFlex-SemiBold.woff2') format('woff2'),
+  src: url('/fonts/GoogleSansFlex-SemiBold.ttf') format('truetype'),
        local('Arial Black'), local('Arial Bold');
 }
 
@@ -72,7 +70,7 @@
   font-style: normal;
   font-weight: 700;
   font-display: swap;
-  src: url('/fonts/GoogleSansFlex-Bold.woff2') format('woff2'),
+  src: url('/fonts/GoogleSansFlex-Bold.ttf') format('truetype'),
        local('Arial Black'), local('Arial Bold');
 }
 
@@ -81,7 +79,7 @@
   font-style: normal;
   font-weight: 800;
   font-display: swap;
-  src: url('/fonts/GoogleSansFlex-ExtraBold.woff2') format('woff2'),
+  src: url('/fonts/GoogleSansFlex-ExtraBold.ttf') format('truetype'),
        local('Arial Black'), local('Arial Bold');
 }
 
@@ -90,18 +88,18 @@
   font-style: normal;
   font-weight: 900;
   font-display: swap;
-  src: url('/fonts/GoogleSansFlex-Black.woff2') format('woff2'),
+  src: url('/fonts/GoogleSansFlex-Black.ttf') format('truetype'),
        local('Arial Black'), local('Arial Bold');
 }
 
-/* Apply to all body text - privacy-first fallback chain */
+/* Apply to all body text - self-hosted + local fallback */
 html, body {
   font-family: 'Google Sans Flex', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* MD3 Typography with Google Sans Flex (or system fallback) */
+/* MD3 Typography with Google Sans Flex */
 .text-display-large { font-size: 3.5rem; font-weight: 400; line-height: 3.25rem; letter-spacing: 0; }
 .text-display-medium { font-size: 2.8125rem; font-weight: 400; line-height: 2.5rem; letter-spacing: 0; }
 .text-display-small { font-size: 2.25rem; font-weight: 400; line-height: 2rem; letter-spacing: 0; }
@@ -121,3 +119,4 @@ html, body {
 .text-label-large { font-size: 0.875rem; font-weight: 500; line-height: 1.25rem; letter-spacing: 0.05rem; }
 .text-label-medium { font-size: 0.75rem; font-weight: 500; line-height: 1rem; letter-spacing: 0.03rem; }
 .text-label-small { font-size: 0.625rem; font-weight: 500; line-height: 0.75rem; letter-spacing: 0.03rem; }
+

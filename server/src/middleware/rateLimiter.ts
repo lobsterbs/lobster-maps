@@ -1,48 +1,67 @@
-// Enforces a minimum delay between outbound calls, regardless of how many
-// concurrent requests hit our own /api/geocode endpoint. This is what
-// keeps us compliant with Nominatim's usage policy (max 1 req/sec):
-// https://operations.osmfoundation.org/policies/nominatim/
-//
-// This throttles OUR calls to Nominatim. It is not a limiter on inbound
-// traffic to this server — add express-rate-limit in front of the
-// /api/geocode routes too if this ever goes properly public.
+/**
+ * Rate Limiter Middleware
+ * Token bucket algorithm for API rate limiting
+ * Default: 100 requests per 60 seconds
+ */
 
-type QueuedTask<T> = () => Promise<T>;
+import { Request, Response, NextFunction } from 'express';
 
-class RateLimitedQueue {
-  private queue: Array<() => Promise<void>> = [];
-  private lastRun = 0;
-  private running = false;
-
-  constructor(private minDelayMs: number) {}
-
-  enqueue<T>(task: QueuedTask<T>): Promise<T> {
-    return new Promise((resolve, reject) => {
-      this.queue.push(async () => {
-        try {
-          resolve(await task());
-        } catch (err) {
-          reject(err);
-        }
-      });
-      this.process();
-    });
-  }
-
-  private async process() {
-    if (this.running) return;
-    this.running = true;
-    while (this.queue.length > 0) {
-      const wait = Math.max(0, this.minDelayMs - (Date.now() - this.lastRun));
-      if (wait > 0) await new Promise((r) => setTimeout(r, wait));
-      const job = this.queue.shift();
-      this.lastRun = Date.now();
-      if (job) await job();
-    }
-    this.running = false;
-  }
+interface RateLimitStore {
+  [key: string]: {
+    tokens: number;
+    lastRefill: number;
+  };
 }
 
-// 1100ms, not 1000ms — stay safely under the policy's ceiling rather than
-// right at it.
-export const nominatimQueue = new RateLimitedQueue(1100);
+const store: RateLimitStore = {};
+const CAPACITY = 100;
+const REFILL_RATE = 100 / 60; // tokens per second
+const WINDOW = 60 * 1000; // 60 seconds in ms
+
+export const rateLimiter = (
+  capacity = CAPACITY,
+  refillRate = REFILL_RATE
+) => {
+  return (req: Request, res: Response, next: NextFunction) => {
+    const clientIp = req.ip || 'unknown';
+    const now = Date.now();
+
+    // Initialize or get bucket
+    if (!store[clientIp]) {
+      store[clientIp] = { tokens: capacity, lastRefill: now };
+    }
+
+    const bucket = store[clientIp];
+
+    // Refill tokens
+    const timePassed = (now - bucket.lastRefill) / 1000;
+    bucket.tokens = Math.min(
+      capacity,
+      bucket.tokens + timePassed * refillRate
+    );
+    bucket.lastRefill = now;
+
+    // Check if allowed
+    if (bucket.tokens >= 1) {
+      bucket.tokens -= 1;
+      res.setHeader('X-RateLimit-Remaining', Math.floor(bucket.tokens));
+      next();
+    } else {
+      res.status(429).json({
+        error: 'Too many requests',
+        retryAfter: Math.ceil(1 / refillRate),
+      });
+    }
+
+    // Cleanup old entries
+    if (Math.random() < 0.01) {
+      Object.keys(store).forEach((key) => {
+        if (now - store[key].lastRefill > WINDOW * 2) {
+          delete store[key];
+        }
+      });
+    }
+  };
+};
+
+export default rateLimiter;

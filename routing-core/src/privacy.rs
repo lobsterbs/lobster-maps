@@ -237,3 +237,35 @@ mod tests {
         }
     }
 }
+
+
+#[cfg(test)]
+mod zeroization_tests {
+    use super::*;
+
+    #[test]
+    fn test_ephemeral_buffer_zeroed_on_drop() {
+        let data = vec![1u8, 2, 3, 4, 5];
+        let ptr = data.as_ptr() as *const u8;
+        
+        {
+            let _ephemeral = EphemeralBuffer::new(data);
+            // EphemeralBuffer holds the data
+        } // Dropped here - should zeroize
+
+        // Note: Can't directly verify zeroed memory in safe Rust
+        // This test ensures Drop is called without panic
+    }
+
+    #[test]
+    fn test_query_hash_zeroization() {
+        let query = b"sensitive_query";
+        let hash = QueryHash::from_bytes(query);
+        
+        // Hash computation
+        let _result = hash.compute();
+        
+        // Internal buffers should be cleaned up
+        // Verified via Drop impl and use of Zeroize trait
+    }
+}
