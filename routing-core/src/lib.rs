@@ -157,3 +157,7 @@ mod tests {
         assert_eq!(router.status(), "No graph loaded");
     }
 }
+
+// WASM Modules
+pub mod rate_limiter;
+pub mod search_scorer;
