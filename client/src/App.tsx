@@ -349,10 +349,11 @@ export default function App() {
         <div style={{ position: 'fixed', top: 16, left: 0, right: 0, zIndex: 10 }}>
           <SearchBarEnhanced
             onSearch={(query) => {
-              // Handle search query - for now, just log it
               console.log('Search query:', query);
-              // In a full implementation, this would geocode the query
-              // and call handleSearchSelect with the results
+            }}
+            onLocationSelect={(lat, lon, name) => {
+              console.log(`Selected: ${name} at ${lat}, ${lon}`);
+              handleSearchSelect(lat, lon, name);
             }}
           />
         </div>
