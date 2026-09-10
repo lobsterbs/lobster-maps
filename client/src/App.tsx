@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useRef, useState, useEffect } from 'react';
 import maplibregl, { type Map as MapLibreMap } from 'maplibre-gl';
 import { createRoot } from 'react-dom/client';
 import Supercluster from 'supercluster';
@@ -9,12 +9,14 @@ import { BusinessMarker } from './components/BusinessMarker';
 import { ClusterMarker } from './components/ClusterMarker';
 import { BusinessDetailSheet } from './components/BusinessDetailSheet';
 import { LoadingMorph } from './components/LoadingMorph';
-import { SearchBar } from './components/SearchBar';
+import { SearchBarEnhanced } from './components/SearchBarEnhanced';
 import { Snackbar } from './components/Snackbar';
 import { StreetViewLayer } from './components/StreetViewLayer';
 import { CategoryFilterChips } from './components/CategoryFilterChips';
 import { TripPlanner, type TripPlace } from './components/TripPlanner';
 import { fetchBusinessesInView, type Business } from './lib/api';
+import { initMapCache, getCachedPOIs, cachePOIs, getCachedRoute, cacheRoute } from './lib/mapCache';
+import { addRecentDestination, getMapViewState, saveMapViewState } from './lib/storage';
 
 const ROUTE_SOURCE_ID = 'lobster-route';
 const ROUTE_LAYER_ID = 'lobster-route-line';
@@ -73,6 +75,21 @@ export default function App() {
   const selectedCategoryRef = useRef<string | null>(null); // mirrors selectedCategory — see note on syncMarkers below
   const [tripPlannerOpen, setTripPlannerOpen] = useState(false);
   const [tripPlannerTo, setTripPlannerTo] = useState<TripPlace | null>(null);
+  const cacheInitializedRef = useRef(false);
+
+  // Initialize map cache and restore view state on mount
+  useEffect(() => {
+    if (!cacheInitializedRef.current) {
+      initMapCache().catch((e) => console.error('Cache init failed:', e));
+      cacheInitializedRef.current = true;
+
+      // Restore previous map view if available (within 24hrs)
+      const savedState = getMapViewState();
+      if (savedState) {
+        setCenter(savedState.center);
+      }
+    }
+  }, []);
 
   // renderMarkers is the shared second half of syncMarkers below —
   // clustering + marker diffing against whatever's currently in
@@ -158,12 +175,36 @@ export default function App() {
     const map = mapRef.current;
     if (!map) return;
 
+    const centerLat = (bounds[1] + bounds[3]) / 2;
+    const centerLon = (bounds[0] + bounds[2]) / 2;
+    const radiusKm = 5; // cache radius
+
     let items: Business[] = [];
+    
+    // Try cache first
     try {
-      items = await fetchBusinessesInView(bounds);
-    } catch (err) {
-      console.error('Failed to load businesses in view:', err);
-      return;
+      const cached = await getCachedPOIs(centerLat, centerLon, radiusKm);
+      if (cached && cached.length > 0) {
+        items = cached as Business[];
+      }
+    } catch (e) {
+      console.warn('Cache lookup failed:', e);
+    }
+
+    // If not cached, fetch from API
+    if (items.length === 0) {
+      try {
+        items = await fetchBusinessesInView(bounds);
+        // Cache the results
+        if (items.length > 0) {
+          cachePOIs(centerLat, centerLon, radiusKm, items).catch(e => 
+            console.warn('Cache save failed:', e)
+          );
+        }
+      } catch (err) {
+        console.error('Failed to load businesses in view:', err);
+        return;
+      }
     }
 
     lastItemsRef.current = items;
@@ -207,6 +248,8 @@ export default function App() {
 
   const handleSearchSelect = useCallback((lat: number, lon: number, label: string) => {
     mapRef.current?.flyTo({ center: [lon, lat], zoom: 15, essential: true });
+    // Track destination in recent destinations
+    addRecentDestination({ name: label, lat, lon });
     setTripPlannerTo({ label, lat, lon });
     setTripPlannerOpen(true);
   }, []);
@@ -220,6 +263,27 @@ export default function App() {
   const handleRouteFound = useCallback((geometry: [number, number][] | null, destination: { lat: number; lon: number }) => {
     const map = mapRef.current;
     if (!map) return;
+
+    // Cache the route
+    if (geometry && geometry.length > 0) {
+      const routeKey = `route_${geometry[0][0]}_${geometry[0][1]}_${destination.lat}_${destination.lon}`;
+      const routeData = {
+        geometry,
+        destination,
+        timestamp: Date.now(),
+      };
+      cacheRoute(routeKey, routeData).catch((e) =>
+        console.warn('Route cache failed:', e)
+      );
+    }
+
+    // Save map view state for next visit
+    const center = map.getCenter();
+    saveMapViewState({
+      zoom: map.getZoom(),
+      center: [center.lat, center.lng],
+    });
+
     if (!geometry) {
       // (0,0) is TripPlanner's deliberate "just clear, don't fly" sentinel, not a real destination
       clearRouteFromMap(map);
@@ -229,6 +293,7 @@ export default function App() {
       }
       return;
     }
+
     drawRouteOnMap(map, geometry);
     const bounds = geometry.reduce(
       (b, coord) => b.extend(coord),
@@ -280,7 +345,18 @@ export default function App() {
           </div>
         </div>
       )}
-      {!tripPlannerOpen && <SearchBar onSelect={handleSearchSelect} />}
+      {!tripPlannerOpen && (
+        <div style={{ position: 'fixed', top: 16, left: 0, right: 0, zIndex: 10 }}>
+          <SearchBarEnhanced
+            onSearch={(query) => {
+              // Handle search query - for now, just log it
+              console.log('Search query:', query);
+              // In a full implementation, this would geocode the query
+              // and call handleSearchSelect with the results
+            }}
+          />
+        </div>
+      )}}
       {!tripPlannerOpen && (
         <CategoryFilterChips categories={availableCategories} selected={selectedCategory} onSelect={handleCategorySelect} />
       )}
