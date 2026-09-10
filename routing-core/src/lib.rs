@@ -161,3 +161,6 @@ mod tests {
 // WASM Modules
 pub mod rate_limiter;
 pub mod search_scorer;
+
+// Weather Cache WASM
+pub mod weather_cache;
