@@ -20,7 +20,7 @@ interface MD3ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;
   size?: ButtonSize;
   icon?: React.ReactNode;
-  children: React.ReactNode;
+  children?: React.ReactNode;
   fullWidth?: boolean;
   loading?: boolean;
 }

@@ -4,9 +4,9 @@
  */
 
 import { Router, Request, Response } from 'express';
-import { geocode } from '../lib/geocoding';
-import { searchBusinessesWasm } from '../lib/searchScorerWasm';
-import { fetchBusinessesInView } from '../lib/api'; // Assuming exists
+import { geocode } from '../lib/geocoding.js';
+import { searchBusinessesWasm } from '../lib/searchScorerWasm.js';
+import { fetchBusinessesInView } from '../lib/api.js'; // Assuming exists
 
 const router = Router();
 

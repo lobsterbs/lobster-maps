@@ -1,9 +1,9 @@
 import { Router } from 'express';
-import { Router as RoutingEngine, RouteResult } from '../routing/router';
-import { nvdbClient } from '../routing/nvdbClient';
-import { weatherClient } from '../routing/weatherClient';
-import { routeQualityScorer } from '../routing/routeQualityScorer';
-import { routeCache, healthMonitor } from '../routing/cache';
+import { Router as RoutingEngine, RouteResult } from '../routing/router.js';
+import { nvdbClient } from '../routing/nvdbClient.js';
+import { weatherClient } from '../routing/weatherClient.js';
+import { routeQualityScorer } from '../routing/routeQualityScorer.js';
+import { routeCache, healthMonitor } from '../routing/cache.js';
 import { join } from 'path';
 
 const router = Router();

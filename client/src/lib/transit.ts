@@ -5,6 +5,9 @@
 // No API key needed — just ET-Client-Name header for identification.
 // Coordinates-based queries work directly (no StopPlace ID lookup).
 
+import React from 'react';
+import { Bus, Train, TrendingUp, Footprints } from 'lucide-react';
+
 const ENTUR_URL = 'https://api.entur.io/journey-planner/v2/trips';
 const CLIENT_NAME = 'lobstermaps-directions';
 
@@ -24,6 +27,28 @@ export type TransitTrip = {
   durationSeconds: number;
   legs: TransitLeg[];
 };
+
+/**
+ * Get icon for transit mode
+ */
+export function modeIcon(mode: string): React.ReactNode {
+  const iconProps = { size: 16, className: 'text-emerald-600' };
+  
+  switch ((mode || '').toLowerCase()) {
+    case 'bus':
+      return React.createElement(Bus, iconProps);
+    case 'tram':
+    case 'train':
+    case 'metro':
+    case 'rail':
+      return React.createElement(Train, iconProps);
+    case 'foot':
+    case 'walk':
+      return React.createElement(Footprints, iconProps);
+    default:
+      return React.createElement(TrendingUp, iconProps);
+  }
+}
 
 export async function getTransitTrip(
   from: { lat: number; lon: number },

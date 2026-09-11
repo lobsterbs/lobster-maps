@@ -12,7 +12,7 @@
 
 import React from 'react';
 
-interface MD3SwitchProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'onChange'> {
+interface MD3SwitchProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'onChange' | 'size'> {
   checked?: boolean;
   onChange?: (checked: boolean) => void;
   label?: string;

@@ -1,6 +1,22 @@
 import { readFileSync } from 'fs';
 import { join } from 'path';
-import PriorityQueue from 'js-priority-queue';
+// Simple priority queue implementation (replaces js-priority-queue)
+class PriorityQueue<T> {
+  private items: Array<{ item: T; priority: number }> = [];
+
+  push(item: T, priority: number) {
+    this.items.push({ item, priority });
+    this.items.sort((a, b) => a.priority - b.priority);
+  }
+
+  pop(): T | undefined {
+    return this.items.shift()?.item;
+  }
+
+  isEmpty(): boolean {
+    return this.items.length === 0;
+  }
+}
 
 export interface RouteNode {
   id: string;
@@ -258,9 +274,7 @@ export class Router {
     duration: number;
     trafficFactors: TrafficFactor[];
   } {
-    const openSet = new PriorityQueue({
-      comparator: (a: AStarNode, b: AStarNode) => a.fScore - b.fScore,
-    });
+    const openSet = new PriorityQueue<AStarNode>();
 
     const cameFrom = new Map<string, string>();
     const gScore = new Map<string, number>();
@@ -274,10 +288,10 @@ export class Router {
     gScore.set(startId, 0);
     fScore.set(startId, h);
 
-    openSet.queue({ id: startId, fScore: h } as AStarNode);
+    openSet.push({ id: startId, fScore: h } as AStarNode, h);
 
-    while (openSet.length > 0) {
-      const current = openSet.dequeue() as AStarNode;
+    while (!openSet.isEmpty()) {
+      const current = openSet.pop() as AStarNode;
 
       if (current.id === goalId) {
         return this.reconstructPath(
@@ -318,10 +332,11 @@ export class Router {
           const hCost = this.heuristic(neighbor, goal);
           fScore.set(edge.to, tentativeGScore + hCost);
 
-          openSet.queue({
+          const newFScore = tentativeGScore + hCost;
+          openSet.push({
             id: edge.to,
-            fScore: tentativeGScore + hCost,
-          } as AStarNode);
+            fScore: newFScore,
+          } as AStarNode, newFScore);
 
           trafficFactors.push({
             edgeId: edge.from,

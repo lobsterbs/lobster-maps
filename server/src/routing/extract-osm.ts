@@ -7,7 +7,7 @@
  * Time: ~30 minutes (depends on OSM server load)
  */
 
-import { extractBergenOSM } from './osmPreprocessor';
+import { extractBergenOSM } from './osmPreprocessor.js';
 import { mkdir } from 'fs/promises';
 import { join } from 'path';
 

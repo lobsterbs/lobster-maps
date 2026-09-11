@@ -4,7 +4,7 @@
  * 100x faster than Node.js implementation
  */
 
-import { getSearchScorer } from '../wasm/index';
+import { getSearchScorer } from '../wasm/index.js';
 
 interface ScoredBusiness {
   id: string;

@@ -5,7 +5,7 @@
  */
 
 import { Request, Response, NextFunction } from 'express';
-import { createRateLimiter } from '../wasm/index';
+import { createRateLimiter } from '../wasm/index.js';
 
 // Per-IP rate limiters
 const limiters = new Map<string, any>();

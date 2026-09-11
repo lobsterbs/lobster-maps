@@ -249,11 +249,11 @@ export function TripPlanner({ open, initialTo, onClose, onRouteFound }: Props) {
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 4 }}>
                 {transitResult.legs.map((leg, i) => {
-                  const LegIcon = modeIcon(leg.mode);
+                  const legIcon = modeIcon(leg.mode);
                   return (
-                    <span key={i} style={{ display: 'inline-flex', alignItems: 'center', fontSize: 12, color: 'var(--lobster-text-dim)' }}>
-                      <LegIcon size={13} />
-                      {leg.lineName && <span style={{ marginLeft: 3 }}>{leg.lineName}</span>}
+                    <span key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--lobster-text-dim)' }}>
+                      {legIcon}
+                      {leg.lineName && <span>{leg.lineName}</span>}
                       {i < transitResult.legs.length - 1 && <span style={{ margin: '0 4px' }}>→</span>}
                     </span>
                   );

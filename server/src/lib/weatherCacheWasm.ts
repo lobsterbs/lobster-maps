@@ -5,7 +5,7 @@
  * 10-50x faster than Yr.no per-request approach
  */
 
-import { createWeatherCache } from '../wasm/index';
+import { createWeatherCache } from '../wasm/index.js';
 
 interface WeatherCondition {
   code: number;
