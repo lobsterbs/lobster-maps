@@ -1,0 +1,52 @@
+name: Build WASM Modules
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'routing-core/**'
+      - '.github/workflows/build-wasm.yml'
+  workflow_dispatch:
+
+jobs:
+  build-wasm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Install wasm-pack
+        run: curl https://rustwasm.org/wasm-pack/installer/init.sh -sSf | sh
+
+      - name: Build WASM (release)
+        working-directory: ./routing-core
+        run: wasm-pack build --target bundler --release --out-dir pkg
+
+      - name: Check WASM output
+        run: |
+          echo "✅ WASM Build Complete"
+          ls -lh routing-core/pkg/
+          echo ""
+          echo "Files generated:"
+          ls -la routing-core/pkg/ | grep -E '\.(wasm|js|d\.ts)$'
+
+      - name: Commit WASM artifacts
+        if: github.event_name == 'push'
+        run: |
+          git config user.name "CI Bot"
+          git config user.email "ci@lobstermaps.local"
+          git add routing-core/pkg/
+          git commit -m "build: WASM modules updated" || echo "No changes to commit"
+          git push || echo "Push failed (no new commits)"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload WASM artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: wasm-modules
+          path: routing-core/pkg/
