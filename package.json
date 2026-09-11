@@ -1,29 +1,55 @@
 {
-  "name": "lobster-maps-client",
-  "version": "0.1.0",
+  "name": "lobster-maps",
+  "version": "2.0.0-wasm",
+  "description": "Privacy-first maps and navigation for Bergen, Norway. Powered by Rust/WASM routing and Material Design 3.",
   "private": true,
   "type": "module",
+  "license": "AGPL-3.0",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
-    "preview": "vite preview"
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:server": "cd server && npm run dev",
+    "dev:client": "cd client && npm run dev",
+    "build": "npm run build:client && npm run build:server",
+    "build:client": "cd client && npm run build",
+    "build:server": "cd server && npm run build",
+    "build:wasm": "./BUILD_WASM_LOCAL.sh",
+    "start": "npm run start:server",
+    "start:server": "cd server && npm run start",
+    "db:generate": "cd server && npm run db:generate",
+    "db:migrate": "cd server && npm run db:migrate",
+    "db:postgis": "cd server && npm run db:postgis",
+    "db:studio": "cd server && npm run db:studio",
+    "seed:overpass": "cd server && npm run seed:overpass",
+    "extract:osm": "cd server && npm run extract:osm",
+    "test": "npm run test:server && npm run test:client",
+    "test:server": "cd server && npm run test 2>/dev/null || echo 'No server tests'",
+    "test:client": "cd client && npm run test 2>/dev/null || echo 'No client tests'",
+    "lint": "npm run lint:server && npm run lint:client",
+    "lint:server": "cd server && npm run lint 2>/dev/null || echo 'No server linter'",
+    "lint:client": "cd client && npm run lint 2>/dev/null || echo 'No client linter'"
   },
-  "dependencies": {
-    "@alerix/m3-loading-indicator": "^1.0.5",
-    "@react-spring/web": "^9.7.5",
-    "lucide-react": "^1.39.0",
-    "mapillary-js": "^4.1.2",
-    "maplibre-gl": "^4.7.1",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "supercluster": "^9.0.0"
-  },
+  "dependencies": {},
   "devDependencies": {
-    "@types/react": "^18.3.17",
-    "@types/react-dom": "^18.3.5",
-    "@types/supercluster": "^7.1.3",
-    "@vitejs/plugin-react": "^4.3.4",
-    "typescript": "^5.7.2",
-    "vite": "^6.0.5"
+    "concurrently": "^9.0.0"
+  },
+  "keywords": [
+    "maps",
+    "navigation",
+    "routing",
+    "privacy",
+    "bergen",
+    "norway",
+    "rust",
+    "wasm",
+    "maplibre",
+    "material-design"
+  ],
+  "author": "Lobster",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/lobsterbs/lobster-maps"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }
