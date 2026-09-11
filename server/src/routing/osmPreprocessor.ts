@@ -275,7 +275,7 @@ export class OSMPreprocessor {
 
   private extractRestrictions(
     way: OSMWay
-  ): { noUTurn?: boolean; maxWeight?: number; maxHeight?: number; access?: string } {
+  ): { noUTurn?: boolean; maxWeight?: number; maxHeight?: number; access?: string } | undefined {
     const restrictions: any = {};
 
     if (way.tags.maxweight) {

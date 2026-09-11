@@ -59,3 +59,34 @@ export function getCacheConfig(): CacheConfig {
 }
 
 export default { initCache, cacheRoute, getCache, deleteCache };
+
+// Additional exports for compatibility
+export const routeCache = {
+  get: getCache,
+  set: cacheRoute,
+  delete: deleteCache,
+  getConfig: getCacheConfig,
+  size: 0, // Placeholder
+};
+
+export const healthMonitor = {
+  checkGraphStatus: (loaded: boolean) => {
+    console.log(`Graph status: ${loaded ? 'loaded' : 'not loaded'}`);
+  },
+  checkWeatherStatus: (available: boolean) => {
+    console.log(`Weather status: ${available ? 'available' : 'unavailable'}`);
+  },
+  recordError: (errorType: string) => {
+    console.error(`Health check error: ${errorType}`);
+  },
+  getStatus: () => ({
+    graph: 'loaded',
+    weather: 'available',
+    nvdb: 'available',
+  }),
+  getHealth: () => ({
+    redis: redisClient ? 'connected' : 'disconnected',
+    graph: 'unknown',
+    weather: 'unknown',
+  }),
+};

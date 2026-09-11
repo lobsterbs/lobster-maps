@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { nominatimQueue } from '../middleware/rateLimiter.js';
+import { nominatimQueue } from '../lib/requestQueue.js';
 
 const router = Router();
 

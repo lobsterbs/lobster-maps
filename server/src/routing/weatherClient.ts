@@ -99,3 +99,12 @@ export async function getWeatherDelay(lat: number, lon: number): Promise<number>
 }
 
 export default getWeatherDelay;
+
+// Object export for destructuring
+export const weatherClient = {
+  getDelay: getWeatherDelay,
+  getDelayMultiplier: (delay: number) => {
+    // Convert ms delay to multiplier (e.g., 1000ms = 1.1x slower)
+    return 1 + delay / 10000;
+  },
+};
