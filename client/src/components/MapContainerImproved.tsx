@@ -72,7 +72,7 @@ export const MapContainerImproved: React.FC<MapContainerImprovedProps> = ({
         style={{ zIndex: 0 }}
       >
         <TileLayer
-          url="https://api.mapbox.com/styles/v1/mapbox/dark-v10/static/{lng},{lat},{zoom},0,0/600x400@2x?access_token=pk.eyJ1IjoibG9ic3RlcmJzIiwiYSI6ImNsczRweHQybjAxaDYycWtndWo0dWMyMWoifQ.XQ3-N7gZ4Q3dF8j8qPLYjA"
+          url={`https://api.mapbox.com/styles/v1/mapbox/dark-v10/static/{lng},{lat},{zoom},0,0/600x400@2x?access_token=${import.meta.env.VITE_MAPBOX_TOKEN || ''}`}
           attribution='&copy; <a href="https://www.mapbox.com/">Mapbox</a>'
         />
         <MapCacheHandler />
