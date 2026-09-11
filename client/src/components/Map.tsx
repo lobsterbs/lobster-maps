@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import maplibregl, { type Map as MapLibreMap, type StyleSpecification } from 'maplibre-gl';
 import { animated, useSpring } from '@react-spring/web';
+import { VersionIndicator } from './VersionIndicator';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
 // Maptiler vector tiles: single source for the entire basemap now, not
@@ -270,6 +271,7 @@ export function MapCanvas({ onMapReady, onMoveEnd, onError }: Props) {
       center: [-73.9857, 40.7484],
       zoom: 16,
       pitch: DEFAULT_PITCH,
+      attributionControl: false, // Hide MapLibre/MapTiler attribution
     });
 
     // Without this, a bad or unreachable tiles source (wrong URL, no
@@ -308,6 +310,7 @@ export function MapCanvas({ onMapReady, onMoveEnd, onError }: Props) {
   return (
     <div style={{ position: 'absolute', inset: 0 }}>
       <div ref={containerRef} style={{ position: 'absolute', inset: 0 }} />
+      <VersionIndicator />
       <div style={togglePillStyle}>
         {(['map', 'satellite'] as const).map((m) => (
           <ModeToggleButton
