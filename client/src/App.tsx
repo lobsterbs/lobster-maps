@@ -357,7 +357,7 @@ export default function App() {
             }}
           />
         </div>
-      )}}
+      )}
       {!tripPlannerOpen && (
         <CategoryFilterChips categories={availableCategories} selected={selectedCategory} onSelect={handleCategorySelect} />
       )}
