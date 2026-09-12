@@ -60,16 +60,21 @@ router.post('/search', async (req: Request, res: Response) => {
           userLat + radius / 111,
         ];
 
-        const businesses = await fetchBusinessesInView(bounds).catch(() => []);
+        const businesses = await fetchBusinessesInView(bounds).catch((err) => {
+          console.error('Business search failed:', err);
+          return [];
+        });
         console.log(`Found ${businesses.length} businesses`);
 
         // Score with WASM if available
         if (searchBusinessesWasm) {
           const scored = searchBusinessesWasm(q, businesses, userLat, userLon, 10);
           results.push(...scored);
+        } else {
+          results.push(...businesses);
         }
       } catch (err) {
-        console.error('Business search failed:', err);
+        console.error('Business search error:', err);
       }
     }
 
@@ -77,10 +82,15 @@ router.post('/search', async (req: Request, res: Response) => {
       results,
       center: { lat: userLat, lon: userLon },
       count: results.length,
+      error: null,
     });
   } catch (err) {
     console.error('Search error:', err);
-    res.status(500).json({ error: 'Search failed', details: String(err) });
+    res.status(500).json({ 
+      error: 'Search failed', 
+      details: (err as Error).message,
+      results: [],
+    });
   }
 });
 

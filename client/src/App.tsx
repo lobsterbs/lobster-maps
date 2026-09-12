@@ -10,12 +10,14 @@ import { ClusterMarker } from './components/ClusterMarker';
 import { BusinessDetailSheet } from './components/BusinessDetailSheet';
 import { LoadingMorph } from './components/LoadingMorph';
 import SearchBarEnhanced from './components/SearchBarEnhanced';
+import DirectionsPanel from './components/DirectionsPanel';
 import { Snackbar } from './components/Snackbar';
 import { StreetViewLayer } from './components/StreetViewLayer';
 import { TripPlanner, type TripPlace } from './components/TripPlanner';
 import { fetchBusinessesInView, type Business } from './lib/api';
 import { initMapCache, getCachedPOIs, cachePOIs, getCachedRoute, cacheRoute } from './lib/mapCache';
 import { addRecentDestination, getMapViewState, saveMapViewState } from './lib/storage';
+import { setupLazyLoading } from './lib/lazyLoadBusinesses';
 
 const ROUTE_SOURCE_ID = 'lobster-route';
 const ROUTE_LAYER_ID = 'lobster-route-line';
@@ -360,6 +362,13 @@ export default function App() {
         initialTo={tripPlannerTo}
         onClose={() => { setTripPlannerOpen(false); clearRouteFromMap(mapRef.current); }}
         onRouteFound={handleRouteFound}
+      />
+      <DirectionsPanel
+        from="Current location"
+        to={typeof tripPlannerTo === 'string' ? tripPlannerTo : tripPlannerTo?.lat?.toString()}
+        loading={false}
+        routes={[]}
+        onSelect={() => {}}
       />
       <AddBusinessFAB onClick={() => setModalOpen(true)} />
       <AddBusinessModal
