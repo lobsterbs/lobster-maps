@@ -1,8 +1,3 @@
-/**
- * Enhanced Search Bar
- * Dark, glassy design matching the rest of the site
- */
-
 import React, { useRef, useState } from 'react';
 import { Search, Loader, X } from 'lucide-react';
 
@@ -11,208 +6,139 @@ interface SearchResult {
   lon: number;
   name?: string;
   address?: string;
-  type?: 'place' | 'business';
 }
 
 interface SearchBarEnhancedProps {
-  onSearch?: (query: string) => void;
   onLocationSelect?: (lat: number, lon: number, name: string) => void;
-  placeholder?: string;
 }
 
-const SearchBarEnhanced: React.FC<SearchBarEnhancedProps> = ({
-  onSearch = () => {},
-  onLocationSelect = () => {},
-  placeholder = 'Search locations...',
-}) => {
+const SearchBarEnhanced: React.FC<SearchBarEnhancedProps> = ({ onLocationSelect = () => {} }) => {
   const [query, setQuery] = useState('');
-  const [isFocused, setIsFocused] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [results, setResults] = useState<SearchResult[]>([]);
+  const [showResults, setShowResults] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
-  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>();
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
 
-  const performSearch = async (q: string) => {
+  const search = async (q: string) => {
     if (!q.trim()) {
-      setSearchResults([]);
+      setResults([]);
       return;
     }
 
     setIsLoading(true);
     try {
-      const response = await fetch('/api/search', {
+      const res = await fetch('/api/search', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ q }),
       });
-      if (!response.ok) throw new Error('Search failed');
-      const data = await response.json();
-      setSearchResults(data.results || []);
+      const data = await res.json();
+      setResults(data.results || []);
     } catch (err) {
-      console.error('Search error:', err);
-      setSearchResults([]);
+      console.error('Search failed:', err);
+      setResults([]);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleQueryChange = (value: string) => {
-    setQuery(value);
-    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
-    debounceTimerRef.current = setTimeout(() => {
-      performSearch(value);
-    }, 300);
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setQuery(val);
+    setShowResults(true);
+    
+    clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => search(val), 300);
   };
 
-  const handleSelectResult = (result: SearchResult) => {
-    const name = result.name || result.address || 'Unknown';
-    onSearch(name);
-    if (result.lat !== 0 || result.lon !== 0) {
-      onLocationSelect(result.lat, result.lon, name);
-    }
-    setQuery('');
-    setSearchResults([]);
-    setIsFocused(false);
-  };
-
-  const handleClear = () => {
-    setQuery('');
-    setSearchResults([]);
-    inputRef.current?.focus();
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && query.trim()) {
-      handleSelectResult({
-        lat: 0,
-        lon: 0,
-        name: query,
-        type: 'place',
-      });
-    }
+  const handleSelect = (result: SearchResult) => {
+    const name = result.name || result.address || 'Location';
+    onLocationSelect(result.lat, result.lon, name);
+    setQuery(name);
+    setResults([]);
+    setShowResults(false);
   };
 
   return (
-    <div style={{ width: '100%', maxWidth: '40rem', margin: '0 auto', padding: '0 1rem' }}>
+    <div style={{ position: 'relative', width: '100%' }}>
       <div
         style={{
-          position: 'relative',
-          transition: 'all 300ms ease',
-          backgroundColor: 'rgba(30, 41, 59, 0.6)',
-          backdropFilter: 'blur(10px)',
-          border: '1px solid rgba(148, 163, 184, 0.15)',
-          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
-          borderRadius: '0.375rem',
-          height: '40px',
           display: 'flex',
           alignItems: 'center',
+          gap: '8px',
+          padding: '8px 12px',
+          backgroundColor: 'rgba(15, 23, 42, 0.7)',
+          backdropFilter: 'blur(12px)',
+          border: '1px solid rgba(148, 163, 184, 0.1)',
+          borderRadius: '8px',
+          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)',
+          transition: 'all 200ms ease',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0 1rem', width: '100%' }}>
-          <Search
-            size={18}
-            style={{
-              color: 'rgba(203, 213, 225, 0.6)',
-              flexShrink: 0,
-            }}
-          />
-
-          <input
-            ref={inputRef}
-            type="text"
-            value={query}
-            onChange={(e) => handleQueryChange(e.target.value)}
-            onFocus={() => setIsFocused(true)}
-            onBlur={() => setTimeout(() => setIsFocused(false), 200)}
-            onKeyDown={handleKeyDown}
-            placeholder={placeholder}
-            style={{
-              flex: 1,
-              backgroundColor: 'transparent',
-              outline: 'none',
-              color: '#f1f5f9',
-              fontSize: '0.875rem',
-              border: 'none',
-              fontFamily: '"Google Sans Flex", sans-serif',
-              height: '100%',
-            }}
-          />
-
-          {isLoading && (
-            <Loader
-              size={16}
-              style={{
-                color: '#f1f5f9',
-                animation: 'spin 0.8s linear infinite',
-                flexShrink: 0,
-              }}
-            />
-          )}
-
-          {query && !isLoading && (
-            <button
-              onClick={handleClear}
-              style={{
-                padding: '0.25rem',
-                backgroundColor: 'transparent',
-                border: 'none',
-                borderRadius: '2px',
-                cursor: 'pointer',
-              }}
-            >
-              <X size={16} style={{ color: 'rgba(203, 213, 225, 0.6)' }} />
-            </button>
-          )}
-        </div>
-
-        {/* Results dropdown */}
-        {isFocused && searchResults.length > 0 && (
-          <div
-            style={{
-              position: 'absolute',
-              top: '100%',
-              left: 0,
-              right: 0,
-              marginTop: '0.5rem',
-              backgroundColor: 'rgba(30, 41, 59, 0.8)',
-              backdropFilter: 'blur(10px)',
-              border: '1px solid rgba(148, 163, 184, 0.15)',
-              borderRadius: '0.375rem',
-              maxHeight: '300px',
-              overflowY: 'auto',
-              zIndex: 50,
-            }}
-          >
-            {searchResults.map((result, idx) => (
-              <button
-                key={idx}
-                onClick={() => handleSelectResult(result)}
-                style={{
-                  width: '100%',
-                  padding: '0.75rem 1rem',
-                  backgroundColor: 'transparent',
-                  border: 'none',
-                  borderBottom: idx < searchResults.length - 1 ? '1px solid rgba(148, 163, 184, 0.1)' : 'none',
-                  color: '#f1f5f9',
-                  textAlign: 'left',
-                  cursor: 'pointer',
-                  transition: 'background-color 200ms ease',
-                  fontSize: '0.875rem',
-                }}
-                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'rgba(148, 163, 184, 0.05)')}
-                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
-              >
-                <div style={{ fontWeight: '500' }}>{result.name || result.address || 'Unknown'}</div>
-                {result.type && (
-                  <div style={{ fontSize: '0.75rem', color: 'rgba(203, 213, 225, 0.5)' }}>
-                    {result.type === 'business' ? '🏢 Business' : '📍 Place'}
-                  </div>
-                )}
-              </button>
-            ))}
-          </div>
+        <Search size={18} color="rgba(203, 213, 225, 0.6)" />
+        <input
+          ref={inputRef}
+          type="text"
+          value={query}
+          onChange={handleChange}
+          onFocus={() => setShowResults(!!results.length)}
+          placeholder="Search..."
+          style={{
+            flex: 1,
+            backgroundColor: 'transparent',
+            outline: 'none',
+            color: '#f1f5f9',
+            border: 'none',
+            fontFamily: '"Google Sans Flex", sans-serif',
+            fontSize: '14px',
+          }}
+        />
+        {isLoading && <Loader size={16} style={{ animation: 'spin 1s linear infinite', color: '#f1f5f9' }} />}
+        {query && !isLoading && (
+          <button onClick={() => { setQuery(''); setResults([]); }} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
+            <X size={16} color="rgba(203, 213, 225, 0.6)" />
+          </button>
         )}
       </div>
+
+      {showResults && results.length > 0 && (
+        <div style={{
+          position: 'absolute',
+          top: 'calc(100% + 4px)',
+          left: 0,
+          right: 0,
+          backgroundColor: 'rgba(15, 23, 42, 0.8)',
+          backdropFilter: 'blur(12px)',
+          border: '1px solid rgba(148, 163, 184, 0.1)',
+          borderRadius: '8px',
+          maxHeight: '300px',
+          overflowY: 'auto',
+          zIndex: 1000,
+        }}>
+          {results.map((r, i) => (
+            <button
+              key={i}
+              onClick={() => handleSelect(r)}
+              style={{
+                width: '100%',
+                padding: '12px',
+                backgroundColor: 'transparent',
+                border: 'none',
+                borderBottom: i < results.length - 1 ? '1px solid rgba(148, 163, 184, 0.05)' : 'none',
+                color: '#f1f5f9',
+                textAlign: 'left',
+                cursor: 'pointer',
+                fontSize: '14px',
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'rgba(148, 163, 184, 0.08)')}
+              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+            >
+              {r.name || r.address}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 };

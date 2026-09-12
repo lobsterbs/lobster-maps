@@ -12,7 +12,6 @@ import { LoadingMorph } from './components/LoadingMorph';
 import SearchBarEnhanced from './components/SearchBarEnhanced';
 import { Snackbar } from './components/Snackbar';
 import { StreetViewLayer } from './components/StreetViewLayer';
-import { CategoryFilterChips } from './components/CategoryFilterChips';
 import { TripPlanner, type TripPlace } from './components/TripPlanner';
 import { fetchBusinessesInView, type Business } from './lib/api';
 import { initMapCache, getCachedPOIs, cachePOIs, getCachedRoute, cacheRoute } from './lib/mapCache';
@@ -346,20 +345,14 @@ export default function App() {
         </div>
       )}
       {!tripPlannerOpen && (
-        <div style={{ position: 'fixed', top: 16, left: 0, right: 0, zIndex: 10 }}>
+        <div style={{ position: 'fixed', top: 16, left: 16, zIndex: 10, width: 'calc(100% - 32px)', maxWidth: '400px' }}>
           <SearchBarEnhanced
-            onSearch={(query: string) => {
-              console.log('Search query:', query);
-            }}
             onLocationSelect={(lat: number, lon: number, name: string) => {
               console.log(`Selected: ${name} at ${lat}, ${lon}`);
               handleSearchSelect(lat, lon, name);
             }}
           />
         </div>
-      )}
-      {!tripPlannerOpen && (
-        <CategoryFilterChips categories={availableCategories} selected={selectedCategory} onSelect={handleCategorySelect} />
       )}
       <StreetViewLayer map={mapLoaded ? mapRef.current : null} />
       <TripPlanner
