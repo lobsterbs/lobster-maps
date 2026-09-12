@@ -28,7 +28,6 @@ export const VersionIndicator: React.FC = () => {
 
   return (
     <div
-      className="fixed bottom-4 left-4 z-10"
       style={{
         position: 'fixed',
         bottom: 16,
@@ -39,29 +38,40 @@ export const VersionIndicator: React.FC = () => {
       {/* Expanded tooltip */}
       {expanded && (
         <div
-          className="absolute bottom-12 left-0 mb-2 bg-slate-900/95 backdrop-blur border border-slate-700 rounded-lg p-3 text-xs text-slate-400 space-y-2 w-64"
           style={{
+            position: 'absolute',
+            bottom: '100%',
+            left: 0,
+            marginBottom: 8,
+            backgroundColor: 'rgba(15, 23, 42, 0.95)',
+            backdropFilter: 'blur(10px)',
+            border: '1px solid rgb(71, 85, 105)',
+            borderRadius: '0.5rem',
+            padding: '0.75rem',
+            fontSize: '0.75rem',
+            color: 'rgb(148, 163, 184)',
             boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
+            width: '16rem',
           }}
         >
-          <div className="flex items-center gap-2">
-            <Package size={14} className="text-emerald-500" />
-            <span className="font-semibold text-emerald-400">LobsterMaps</span>
-            <span className="text-emerald-600 font-mono text-xs ml-auto">{VERSION_INFO.version}</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+            <Package size={14} style={{ color: '#10b981' }} />
+            <span style={{ fontWeight: '600', color: '#34d399' }}>LobsterMaps</span>
+            <span style={{ color: '#10b981', fontFamily: 'monospace', fontSize: '0.75rem', marginLeft: 'auto' }}>{VERSION_INFO.version}</span>
           </div>
 
-          <div className="text-slate-500 text-xs">
+          <div style={{ color: 'rgb(100, 116, 139)', fontSize: '0.75rem', marginBottom: '0.5rem' }}>
             {VERSION_INFO.phase}
           </div>
 
-          <div className="flex items-center justify-between text-slate-600 pt-1 border-t border-slate-700">
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: 'rgb(120, 113, 108)', paddingTop: '0.25rem', borderTop: '1px solid rgb(71, 85, 105)', marginBottom: '0.5rem' }}>
             <span>{VERSION_INFO.buildDate}</span>
             {VERSION_INFO.commit && (
-              <code className="font-mono text-slate-500">{VERSION_INFO.commit}</code>
+              <code style={{ fontFamily: 'monospace', color: 'rgb(100, 116, 139)' }}>{VERSION_INFO.commit}</code>
             )}
           </div>
 
-          <div className="text-slate-600 text-xs pt-1 border-t border-slate-700">
+          <div style={{ color: 'rgb(120, 113, 108)', fontSize: '0.75rem', paddingTop: '0.25rem', borderTop: '1px solid rgb(71, 85, 105)' }}>
             ✅ WASM ready (Rate Limiter, Search, Weather)
           </div>
         </div>
@@ -70,18 +80,42 @@ export const VersionIndicator: React.FC = () => {
       {/* Compact badge - lower left corner */}
       <button
         onClick={() => setExpanded(!expanded)}
-        className="flex items-center gap-1.5 px-3 py-2 bg-slate-900/80 backdrop-blur border border-slate-700 rounded-md text-xs text-slate-300 hover:text-emerald-400 hover:border-emerald-600 hover:bg-slate-800/80 transition-all cursor-pointer"
         title="Click for version details"
         style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.375rem',
+          padding: '0.5rem 0.75rem',
+          backgroundColor: 'rgba(15, 23, 42, 0.8)',
+          backdropFilter: 'blur(10px)',
+          border: '1px solid rgb(71, 85, 105)',
+          borderRadius: '0.375rem',
+          fontSize: '0.75rem',
+          color: 'rgb(203, 213, 225)',
+          cursor: 'pointer',
+          transition: 'all 300ms ease',
           boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+          fontFamily: 'monospace',
+          fontWeight: '600',
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.color = '#34d399';
+          e.currentTarget.style.borderColor = '#10b981';
+          e.currentTarget.style.backgroundColor = 'rgba(15, 23, 42, 0.9)';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.color = 'rgb(203, 213, 225)';
+          e.currentTarget.style.borderColor = 'rgb(71, 85, 105)';
+          e.currentTarget.style.backgroundColor = 'rgba(15, 23, 42, 0.8)';
         }}
       >
-        <Package size={12} className="text-emerald-500" />
-        <span className="font-mono font-semibold">v{VERSION_INFO.version.split('-')[0]}</span>
+        <Package size={12} style={{ color: '#10b981' }} />
+        <span>v{VERSION_INFO.version.split('-')[0]}</span>
         <ChevronUp
           size={12}
-          className="text-slate-600 transition-transform"
           style={{
+            color: 'rgb(100, 116, 139)',
+            transition: 'transform 300ms ease',
             transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)',
           }}
         />

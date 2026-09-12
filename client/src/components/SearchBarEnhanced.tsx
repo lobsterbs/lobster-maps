@@ -129,21 +129,26 @@ export const SearchBarEnhanced: React.FC<SearchBarEnhancedProps> = ({
   };
 
   return (
-    <div className="w-full max-w-2xl mx-auto px-4">
+    <div style={{ width: '100%', maxWidth: '40rem', margin: '0 auto', padding: '0 1rem' }}>
       <div
-        className={`relative transition-all duration-300 ${
-          isFocused
-            ? 'bg-white shadow-lg rounded-2xl'
-            : 'bg-white/80 shadow-md rounded-full'
-        }`}
+        style={{
+          position: 'relative',
+          transition: 'all 300ms ease',
+          backgroundColor: isFocused ? '#ffffff' : 'rgba(255, 255, 255, 0.8)',
+          boxShadow: isFocused
+            ? '0 10px 15px -3px rgba(0, 0, 0, 0.1)'
+            : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+          borderRadius: isFocused ? '1rem' : '9999px',
+        }}
       >
         {/* Search input */}
-        <div className="flex items-center gap-3 px-4 py-3">
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem 1rem' }}>
           <Search
             size={20}
-            className={`transition-colors ${
-              isFocused ? 'text-emerald-600' : 'text-gray-500'
-            }`}
+            style={{
+              transition: 'color 300ms ease',
+              color: isFocused ? '#10b981' : '#6b7280',
+            }}
           />
 
           <input
@@ -154,26 +159,49 @@ export const SearchBarEnhanced: React.FC<SearchBarEnhancedProps> = ({
             onFocus={() => setIsFocused(true)}
             onKeyDown={handleKeyDown}
             placeholder={placeholder}
-            className="flex-1 bg-transparent outline-none text-gray-800 placeholder-gray-400 text-sm"
+            style={{
+              flex: 1,
+              backgroundColor: 'transparent',
+              outline: 'none',
+              color: '#1f2937',
+              fontSize: '0.875rem',
+              border: 'none',
+              fontFamily: '"Google Sans Flex", sans-serif',
+            }}
           />
 
           {isLoading && (
-            <Loader size={18} className="text-emerald-600 animate-spin" />
+            <Loader
+              size={18}
+              style={{
+                color: '#10b981',
+                animation: 'spin 0.8s linear infinite',
+              }}
+            />
           )}
 
           {query && !isLoading && (
             <button
               onClick={handleClear}
-              className="p-1 hover:bg-gray-100 rounded-full transition-colors"
+              style={{
+                padding: '0.25rem',
+                backgroundColor: 'transparent',
+                border: 'none',
+                borderRadius: '9999px',
+                cursor: 'pointer',
+                transition: 'background-color 300ms ease',
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f3f4f6')}
+              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
             >
-              <X size={18} className="text-gray-500" />
+              <X size={18} style={{ color: '#6b7280' }} />
             </button>
           )}
         </div>
 
         {/* Search results dropdown */}
         {isFocused && (
-          <div className="border-t border-gray-100 divide-y divide-gray-100">
+          <div style={{ borderTop: '1px solid #f3f4f6' }}>
             {/* Results from API */}
             {searchResults.length > 0 ? (
               searchResults.map((result, idx) => (
