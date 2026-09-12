@@ -98,13 +98,11 @@ const SearchBarEnhanced: React.FC<SearchBarEnhancedProps> = ({
         style={{
           position: 'relative',
           transition: 'all 300ms ease',
-          backgroundColor: isFocused ? 'rgba(30, 41, 59, 0.8)' : 'rgba(30, 41, 59, 0.6)',
+          backgroundColor: 'rgba(30, 41, 59, 0.6)',
           backdropFilter: 'blur(10px)',
-          border: isFocused ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(148, 163, 184, 0.2)',
-          boxShadow: isFocused
-            ? '0 8px 32px rgba(0, 0, 0, 0.2)'
-            : '0 4px 12px rgba(0, 0, 0, 0.3)',
-          borderRadius: '0.5rem',
+          border: '1px solid rgba(148, 163, 184, 0.15)',
+          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+          borderRadius: '0.375rem',
           height: '40px',
           display: 'flex',
           alignItems: 'center',
@@ -114,8 +112,7 @@ const SearchBarEnhanced: React.FC<SearchBarEnhancedProps> = ({
           <Search
             size={18}
             style={{
-              transition: 'color 300ms ease',
-              color: isFocused ? '#10b981' : 'rgba(203, 213, 225, 0.6)',
+              color: 'rgba(203, 213, 225, 0.6)',
               flexShrink: 0,
             }}
           />
@@ -145,7 +142,7 @@ const SearchBarEnhanced: React.FC<SearchBarEnhancedProps> = ({
             <Loader
               size={16}
               style={{
-                color: '#10b981',
+                color: '#f1f5f9',
                 animation: 'spin 0.8s linear infinite',
                 flexShrink: 0,
               }}
@@ -159,12 +156,9 @@ const SearchBarEnhanced: React.FC<SearchBarEnhancedProps> = ({
                 padding: '0.25rem',
                 backgroundColor: 'transparent',
                 border: 'none',
-                borderRadius: '9999px',
+                borderRadius: '2px',
                 cursor: 'pointer',
-                transition: 'background-color 300ms ease',
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'rgba(148, 163, 184, 0.1)')}
-              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
             >
               <X size={16} style={{ color: 'rgba(203, 213, 225, 0.6)' }} />
             </button>
@@ -182,8 +176,8 @@ const SearchBarEnhanced: React.FC<SearchBarEnhancedProps> = ({
               marginTop: '0.5rem',
               backgroundColor: 'rgba(30, 41, 59, 0.8)',
               backdropFilter: 'blur(10px)',
-              border: '1px solid rgba(148, 163, 184, 0.2)',
-              borderRadius: '0.5rem',
+              border: '1px solid rgba(148, 163, 184, 0.15)',
+              borderRadius: '0.375rem',
               maxHeight: '300px',
               overflowY: 'auto',
               zIndex: 50,
@@ -205,7 +199,7 @@ const SearchBarEnhanced: React.FC<SearchBarEnhancedProps> = ({
                   transition: 'background-color 200ms ease',
                   fontSize: '0.875rem',
                 }}
-                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'rgba(148, 163, 184, 0.1)')}
+                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'rgba(148, 163, 184, 0.05)')}
                 onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
               >
                 <div style={{ fontWeight: '500' }}>{result.name || result.address || 'Unknown'}</div>
