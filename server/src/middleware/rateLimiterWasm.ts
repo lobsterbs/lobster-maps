@@ -38,8 +38,19 @@ export const rateLimiterWasm = (
   const limiter = getLimiter(key);
 
   // Check if allowed (WASM, <1ms)
-  const allowed = limiter.allow_request();
-  const remaining = limiter.get_remaining();
+  let allowed = true;
+  let remaining = CONFIG.capacity;
+
+  if (limiter?.allow_request && typeof limiter.allow_request === 'function') {
+    allowed = limiter.allow_request();
+    if (limiter?.get_remaining && typeof limiter.get_remaining === 'function') {
+      remaining = limiter.get_remaining();
+    }
+  } else {
+    // Fallback: always allow if WASM unavailable
+    console.warn('⚠️ Rate limiter unavailable, allowing all requests');
+    allowed = true;
+  }
 
   res.setHeader('X-RateLimit-Remaining', remaining);
   res.setHeader('X-RateLimit-Limit', CONFIG.capacity);

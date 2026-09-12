@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import maplibregl, { type Map as MapLibreMap, type StyleSpecification } from 'maplibre-gl';
 import { animated, useSpring } from '@react-spring/web';
-import { VersionIndicator } from './VersionIndicator';
+import VersionIndicator from './VersionIndicator';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
 // Maptiler vector tiles: single source for the entire basemap now, not

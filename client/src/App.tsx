@@ -9,7 +9,7 @@ import { BusinessMarker } from './components/BusinessMarker';
 import { ClusterMarker } from './components/ClusterMarker';
 import { BusinessDetailSheet } from './components/BusinessDetailSheet';
 import { LoadingMorph } from './components/LoadingMorph';
-import { SearchBarEnhanced } from './components/SearchBarEnhanced';
+import SearchBarEnhanced from './components/SearchBarEnhanced';
 import { Snackbar } from './components/Snackbar';
 import { StreetViewLayer } from './components/StreetViewLayer';
 import { CategoryFilterChips } from './components/CategoryFilterChips';
@@ -348,10 +348,10 @@ export default function App() {
       {!tripPlannerOpen && (
         <div style={{ position: 'fixed', top: 16, left: 0, right: 0, zIndex: 10 }}>
           <SearchBarEnhanced
-            onSearch={(query) => {
+            onSearch={(query: string) => {
               console.log('Search query:', query);
             }}
-            onLocationSelect={(lat, lon, name) => {
+            onLocationSelect={(lat: number, lon: number, name: string) => {
               console.log(`Selected: ${name} at ${lat}, ${lon}`);
               handleSearchSelect(lat, lon, name);
             }}

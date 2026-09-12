@@ -89,7 +89,10 @@ export class WeatherCacheManager {
    */
   isStale(): boolean {
     if (!this.initialized) return true;
-    return this.cache.is_stale();
+    if (this.cache?.is_stale) {
+      return this.cache.is_stale();
+    }
+    return true; // Fallback: assume stale if WASM unavailable
   }
 
   /**
@@ -97,7 +100,9 @@ export class WeatherCacheManager {
    */
   clear(): void {
     if (!this.initialized) return;
-    this.cache.clear();
+    if (this.cache?.clear) {
+      this.cache.clear();
+    }
   }
 
   /**
@@ -105,7 +110,10 @@ export class WeatherCacheManager {
    */
   getCellCount(): number {
     if (!this.initialized) return 0;
-    return this.cache.cell_count();
+    if (this.cache?.cell_count) {
+      return this.cache.cell_count();
+    }
+    return 0; // Fallback: no cells
   }
 }
 

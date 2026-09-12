@@ -1,65 +1,47 @@
 /**
- * Enhanced Search Bar - Material Design 3
- * Animated, with autocomplete and recent searches
- * Integrates with backend geocoding + search API
+ * Enhanced Search Bar
+ * Dark, glassy design matching the rest of the site
  */
 
-import React, { useState, useEffect, useRef } from 'react';
-import { Search, X, Clock, Loader } from 'lucide-react';
-
-interface SearchBarEnhancedProps {
-  onSearch: (query: string) => void;
-  onLocationSelect?: (lat: number, lon: number, name: string) => void;
-  placeholder?: string;
-}
+import React, { useEffect, useRef, useState } from 'react';
+import { Search, Loader, X } from 'lucide-react';
 
 interface SearchResult {
   lat: number;
   lon: number;
-  name: string;
-  type: 'address' | 'place' | 'business';
+  name?: string;
   address?: string;
-  score?: number;
+  type?: 'place' | 'business';
 }
 
-export const SearchBarEnhanced: React.FC<SearchBarEnhancedProps> = ({
-  onSearch,
-  onLocationSelect,
+interface SearchBarEnhancedProps {
+  onSearch?: (query: string) => void;
+  onLocationSelect?: (lat: number, lon: number, name: string) => void;
+  placeholder?: string;
+}
+
+const SearchBarEnhanced: React.FC<SearchBarEnhancedProps> = ({
+  onSearch = () => {},
+  onLocationSelect = () => {},
   placeholder = 'Search locations, businesses...',
 }) => {
   const [query, setQuery] = useState('');
   const [isFocused, setIsFocused] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>();
 
-  useEffect(() => {
-    const saved = localStorage.getItem('recentSearches');
-    if (saved) {
-      try {
-        setRecentSearches(JSON.parse(saved).slice(0, 5));
-      } catch (e) {
-        console.error('Failed to load recent searches', e);
-      }
-    }
-  }, []);
-
-  // Fetch search results with debounce
-  const performSearch = async (searchQuery: string) => {
-    if (searchQuery.trim().length < 2) {
+  const performSearch = async (q: string) => {
+    if (!q.trim()) {
       setSearchResults([]);
       return;
     }
 
     setIsLoading(true);
     try {
-      const response = await fetch(
-        `/api/search?q=${encodeURIComponent(searchQuery)}`
-      );
+      const response = await fetch(`/api/search?q=${encodeURIComponent(q)}`);
       if (!response.ok) throw new Error('Search failed');
-      
       const data = await response.json();
       setSearchResults(data.results || []);
     } catch (err) {
@@ -72,13 +54,7 @@ export const SearchBarEnhanced: React.FC<SearchBarEnhancedProps> = ({
 
   const handleQueryChange = (value: string) => {
     setQuery(value);
-
-    // Clear previous debounce timer
-    if (debounceTimerRef.current) {
-      clearTimeout(debounceTimerRef.current);
-    }
-
-    // Debounce search (300ms)
+    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
     debounceTimerRef.current = setTimeout(() => {
       performSearch(value);
     }, 300);
@@ -86,29 +62,13 @@ export const SearchBarEnhanced: React.FC<SearchBarEnhancedProps> = ({
 
   const handleSelectResult = (result: SearchResult) => {
     const name = result.name || result.address || 'Unknown';
-    
     onSearch(name);
-    if (onLocationSelect) {
+    if (result.lat !== 0 || result.lon !== 0) {
       onLocationSelect(result.lat, result.lon, name);
     }
-
-    // Save to recent
-    const updated = [
-      name,
-      ...recentSearches.filter((s) => s !== name),
-    ].slice(0, 5);
-    setRecentSearches(updated);
-    localStorage.setItem('recentSearches', JSON.stringify(updated));
-
-    // Clear UI
     setQuery('');
     setSearchResults([]);
     setIsFocused(false);
-  };
-
-  const handleSelectRecent = (recent: string) => {
-    setQuery(recent);
-    performSearch(recent);
   };
 
   const handleClear = () => {
@@ -134,20 +94,22 @@ export const SearchBarEnhanced: React.FC<SearchBarEnhancedProps> = ({
         style={{
           position: 'relative',
           transition: 'all 300ms ease',
-          backgroundColor: isFocused ? '#ffffff' : 'rgba(255, 255, 255, 0.8)',
+          backgroundColor: isFocused ? 'rgba(30, 41, 59, 0.8)' : 'rgba(30, 41, 59, 0.6)',
+          backdropFilter: 'blur(10px)',
+          border: isFocused ? '1px solid rgba(16, 185, 129, 0.5)' : '1px solid rgba(148, 163, 184, 0.2)',
           boxShadow: isFocused
-            ? '0 10px 15px -3px rgba(0, 0, 0, 0.1)'
-            : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-          borderRadius: isFocused ? '1rem' : '9999px',
+            ? '0 8px 32px rgba(16, 185, 129, 0.1)'
+            : '0 4px 12px rgba(0, 0, 0, 0.3)',
+          borderRadius: '0.75rem',
         }}
       >
-        {/* Search input */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem 1rem' }}>
           <Search
             size={20}
             style={{
               transition: 'color 300ms ease',
-              color: isFocused ? '#10b981' : '#6b7280',
+              color: isFocused ? '#10b981' : 'rgba(203, 213, 225, 0.6)',
+              flexShrink: 0,
             }}
           />
 
@@ -157,13 +119,14 @@ export const SearchBarEnhanced: React.FC<SearchBarEnhancedProps> = ({
             value={query}
             onChange={(e) => handleQueryChange(e.target.value)}
             onFocus={() => setIsFocused(true)}
+            onBlur={() => setTimeout(() => setIsFocused(false), 200)}
             onKeyDown={handleKeyDown}
             placeholder={placeholder}
             style={{
               flex: 1,
               backgroundColor: 'transparent',
               outline: 'none',
-              color: '#1f2937',
+              color: '#f1f5f9',
               fontSize: '0.875rem',
               border: 'none',
               fontFamily: '"Google Sans Flex", sans-serif',
@@ -176,6 +139,7 @@ export const SearchBarEnhanced: React.FC<SearchBarEnhancedProps> = ({
               style={{
                 color: '#10b981',
                 animation: 'spin 0.8s linear infinite',
+                flexShrink: 0,
               }}
             />
           )}
@@ -191,72 +155,53 @@ export const SearchBarEnhanced: React.FC<SearchBarEnhancedProps> = ({
                 cursor: 'pointer',
                 transition: 'background-color 300ms ease',
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f3f4f6')}
+              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'rgba(148, 163, 184, 0.2)')}
               onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
             >
-              <X size={18} style={{ color: '#6b7280' }} />
+              <X size={18} style={{ color: 'rgba(203, 213, 225, 0.6)' }} />
             </button>
           )}
         </div>
 
-        {/* Search results dropdown */}
-        {isFocused && (
-          <div style={{ borderTop: '1px solid #f3f4f6' }}>
-            {/* Results from API */}
-            {searchResults.length > 0 ? (
-              searchResults.map((result, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => handleSelectResult(result)}
-                  className="w-full px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2 transition-colors"
-                >
-                  <Search size={16} className="text-emerald-600" />
-                  <div className="flex-1">
-                    <div className="font-medium">{result.name}</div>
-                    {result.address && (
-                      <div className="text-xs text-gray-500">{result.address}</div>
-                    )}
+        {/* Results dropdown */}
+        {isFocused && searchResults.length > 0 && (
+          <div
+            style={{
+              borderTop: '1px solid rgba(148, 163, 184, 0.2)',
+              maxHeight: '300px',
+              overflowY: 'auto',
+            }}
+          >
+            {searchResults.map((result, idx) => (
+              <button
+                key={idx}
+                onClick={() => handleSelectResult(result)}
+                style={{
+                  width: '100%',
+                  padding: '0.75rem 1rem',
+                  backgroundColor: 'transparent',
+                  border: 'none',
+                  borderBottom: idx < searchResults.length - 1 ? '1px solid rgba(148, 163, 184, 0.1)' : 'none',
+                  color: '#f1f5f9',
+                  textAlign: 'left',
+                  cursor: 'pointer',
+                  transition: 'background-color 200ms ease',
+                  fontSize: '0.875rem',
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'rgba(16, 185, 129, 0.1)')}
+                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+              >
+                <div style={{ fontWeight: '500' }}>{result.name || result.address || 'Unknown'}</div>
+                {result.type && (
+                  <div style={{ fontSize: '0.75rem', color: 'rgba(203, 213, 225, 0.5)' }}>
+                    {result.type === 'business' ? '🏢 Business' : '📍 Place'}
                   </div>
-                  {result.type !== 'place' && (
-                    <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-1 rounded">
-                      {result.type}
-                    </span>
-                  )}
-                </button>
-              ))
-            ) : query.trim().length === 0 && recentSearches.length > 0 ? (
-              /* Recent searches */
-              recentSearches.map((search, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => handleSelectRecent(search)}
-                  className="w-full px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2 transition-colors"
-                >
-                  <Clock size={16} className="text-gray-400" />
-                  {search}
-                </button>
-              ))
-            ) : isLoading ? (
-              <div className="px-4 py-6 text-center text-gray-500 text-sm">
-                Searching...
-              </div>
-            ) : query.trim().length > 0 ? (
-              <div className="px-4 py-6 text-center text-gray-500 text-sm">
-                No results found
-              </div>
-            ) : null}
+                )}
+              </button>
+            ))}
           </div>
         )}
       </div>
-
-      {/* Helper text */}
-      {isFocused && (
-        <div className="mt-2 text-xs text-gray-500 px-4">
-          {query.trim().length === 0 && recentSearches.length > 0
-            ? 'Tap a recent search or type to search'
-            : 'Press Enter to search or tap a result'}
-        </div>
-      )}
     </div>
   );
 };
