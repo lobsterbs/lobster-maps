@@ -33,7 +33,7 @@ export const SearchBarEnhanced: React.FC<SearchBarEnhancedProps> = ({
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
-  const debounceTimerRef = useRef<NodeJS.Timeout>();
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>();
 
   useEffect(() => {
     const saved = localStorage.getItem('recentSearches');
