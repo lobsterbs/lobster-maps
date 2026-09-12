@@ -34,7 +34,12 @@ export class WeatherCacheManager {
     precipitationRate: number
   ): void {
     if (!this.initialized) throw new Error('Cache not initialized');
-    this.cache.add_condition(lat, lon, code, windSpeed, precipitationRate);
+    if (this.cache?.add_condition) {
+      this.cache.add_condition(lat, lon, code, windSpeed, precipitationRate);
+    } else {
+      // Fallback: no-op if WASM unavailable
+      console.warn('⚠️ Weather cache unavailable, skipping condition');
+    }
   }
 
   /**
@@ -43,7 +48,10 @@ export class WeatherCacheManager {
    */
   getEdgeDelay(lat: number, lon: number): number {
     if (!this.initialized) return 0;
-    return this.cache.get_delay_for_edge(lat, lon);
+    if (this.cache?.get_delay_for_edge) {
+      return this.cache.get_delay_for_edge(lat, lon);
+    }
+    return 0; // Fallback: no delay
   }
 
   /**
@@ -52,7 +60,10 @@ export class WeatherCacheManager {
   getRouteDelay(lats: number[], lons: number[]): number {
     if (!this.initialized) return 0;
     if (lats.length === 0 || lons.length === 0) return 0;
-    return this.cache.get_route_delay(lats, lons);
+    if (this.cache?.get_route_delay) {
+      return this.cache.get_route_delay(lats, lons);
+    }
+    return 0; // Fallback: no delay
   }
 
   /**

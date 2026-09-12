@@ -32,8 +32,14 @@ router.post('/search', async (req: Request, res: Response) => {
       return;
     }
 
+    console.log(`🔍 Search: "${q}"`);
+
     // Step 1: Geocode query
-    const geocoded = await geocode(q);
+    const geocoded = await geocode(q).catch((err) => {
+      console.error('Geocoding failed:', err);
+      return null;
+    });
+
     if (!geocoded) {
       res.json({ results: [], message: 'No results found' });
       return;
@@ -47,7 +53,6 @@ router.post('/search', async (req: Request, res: Response) => {
     // Step 2: Search businesses if requested
     if (type === 'business' || type === 'all') {
       try {
-        // Fetch businesses in radius
         const bounds: [number, number, number, number] = [
           userLon - radius / 111,
           userLat - radius / 111,
@@ -55,11 +60,14 @@ router.post('/search', async (req: Request, res: Response) => {
           userLat + radius / 111,
         ];
 
-        const businesses = await fetchBusinessesInView(bounds);
+        const businesses = await fetchBusinessesInView(bounds).catch(() => []);
+        console.log(`Found ${businesses.length} businesses`);
 
-        // Score with WASM
-        const scored = searchBusinessesWasm(q, businesses, userLat, userLon, 10);
-        results.push(...scored);
+        // Score with WASM if available
+        if (searchBusinessesWasm) {
+          const scored = searchBusinessesWasm(q, businesses, userLat, userLon, 10);
+          results.push(...scored);
+        }
       } catch (err) {
         console.error('Business search failed:', err);
       }
@@ -72,7 +80,7 @@ router.post('/search', async (req: Request, res: Response) => {
     });
   } catch (err) {
     console.error('Search error:', err);
-    res.status(500).json({ error: 'Search failed' });
+    res.status(500).json({ error: 'Search failed', details: String(err) });
   }
 });
 
