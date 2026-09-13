@@ -9,6 +9,7 @@ import businessesRouter from './routes/businesses.js';
 import geocodeRouter from './routes/geocode.js';
 import routingRouter from './routes/routing.js';
 import searchRouter from './routes/search.js';
+import scrapeRouter from './routes/scrape.js';
 import { createMcpServer } from './mcp.js';
 import { initializeWasmModules } from './wasm/index.js';
 import { rateLimiterWasm } from './middleware/rateLimiterWasm.js';
@@ -40,6 +41,7 @@ async function startServer() {
     app.use('/api/geocode', geocodeRouter);
     app.use('/api/route', routingRouter);
     app.use('/api', searchRouter); // Search endpoint
+    app.use('/api/scrape', scrapeRouter); // Scraping endpoint
 
     // Start weather cache refresh (every 10 minutes)
     console.log('🌤️  Starting weather cache refresh...');

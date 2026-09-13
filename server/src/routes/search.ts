@@ -7,6 +7,7 @@ import { Router, Request, Response } from 'express';
 import { geocode } from '../lib/geocoding.js';
 import { searchBusinessesWasm } from '../lib/searchScorerWasm.js';
 import { fetchBusinessesInView } from '../lib/api.js'; // Assuming exists
+import { searchLandmarks } from '../lib/landmarkSearch.js';
 
 const router = Router();
 
@@ -49,6 +50,21 @@ router.post('/search', async (req: Request, res: Response) => {
     const userLon = lon || geocoded.lon;
 
     const results: any[] = [geocoded];
+
+    // Step 1.5: Search global landmarks
+    const landmarks = searchLandmarks(q);
+    if (landmarks.length > 0) {
+      console.log(`Found ${landmarks.length} landmarks`);
+      results.push(...landmarks.map(l => ({
+        id: l.id,
+        name: l.name,
+        lat: l.lat,
+        lon: l.lon,
+        address: l.city,
+        category: l.category,
+        type: 'landmark',
+      })));
+    }
 
     // Step 2: Search businesses if requested
     if (type === 'business' || type === 'all') {
