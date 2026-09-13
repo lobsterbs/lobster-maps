@@ -365,9 +365,9 @@ export default function App() {
       />
       <DirectionsPanel
         from="Current location"
-        to={typeof tripPlannerTo === 'string' ? tripPlannerTo : tripPlannerTo?.lat?.toString()}
+        to={typeof tripPlannerTo === 'string' ? tripPlannerTo : undefined}
         loading={false}
-        routes={[]}
+        routes={tripPlannerOpen ? [] : undefined}
         onSelect={() => {}}
       />
       <AddBusinessFAB onClick={() => setModalOpen(true)} />

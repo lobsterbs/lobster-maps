@@ -31,6 +31,9 @@ const DirectionsPanel: React.FC<DirectionsPanelProps> = ({
 }) => {
   const [selectedIndex, setSelectedIndex] = useState(0);
 
+  // Only show if we have routes or are loading with a destination
+  if (!to && !loading) return null;
+
   const formatTime = (seconds: number) => {
     const mins = Math.round(seconds / 60);
     if (mins < 60) return `${mins} min`;
@@ -49,9 +52,9 @@ const DirectionsPanel: React.FC<DirectionsPanelProps> = ({
       style={{
         position: 'fixed',
         right: 16,
-        top: 16,
+        bottom: 16,
         width: '320px',
-        maxHeight: '70vh',
+        maxHeight: '50vh',
         backgroundColor: 'rgba(15, 23, 42, 0.8)',
         backdropFilter: 'blur(12px)',
         border: '1px solid rgba(148, 163, 184, 0.1)',
