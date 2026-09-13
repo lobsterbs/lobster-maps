@@ -147,10 +147,16 @@ export async function scrapeRegion(
 }
 
 /**
- * CLI Usage:
- * npx ts-node scrape-businesses.ts "Paris" "France" 48.8 2.2 48.9 2.4
+ * CLI tool for scraping can be called via API endpoint instead
+ * POST /api/scrape/region with { city, country, minLat, minLon, maxLat, maxLon }
  */
-if (require.main === module) {
-  const [city, country, minLat, minLon, maxLat, maxLon] = process.argv.slice(2);
-  scrapeRegion(city, country, parseFloat(minLat), parseFloat(minLon), parseFloat(maxLat), parseFloat(maxLon));
+export async function scrapeFromCLI(
+  city: string,
+  country: string,
+  minLat: number,
+  minLon: number,
+  maxLat: number,
+  maxLon: number
+) {
+  await scrapeRegion(city, country, minLat, minLon, maxLat, maxLon);
 }
