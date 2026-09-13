@@ -2,14 +2,22 @@ import React, { useRef, useState } from 'react';
 import { Search, Loader, X } from 'lucide-react';
 
 interface SearchResult {
+  id?: string;
   lat: number;
   lon: number;
   name?: string;
   address?: string;
+  category?: string;
+  rating?: number;
+  reviews?: number;
+  images?: string[];
+  phone?: string;
+  website?: string;
+  hours?: string;
 }
 
 interface SearchBarEnhancedProps {
-  onLocationSelect?: (lat: number, lon: number, name: string) => void;
+  onLocationSelect?: (result: SearchResult) => void;
 }
 
 const SearchBarEnhanced: React.FC<SearchBarEnhancedProps> = ({ onLocationSelect = () => {} }) => {
@@ -53,9 +61,9 @@ const SearchBarEnhanced: React.FC<SearchBarEnhancedProps> = ({ onLocationSelect 
   };
 
   const handleSelect = (result: SearchResult) => {
-    const name = result.name || result.address || 'Location';
-    onLocationSelect(result.lat, result.lon, name);
-    setQuery(name);
+    // Show detail sheet by calling onLocationSelect
+    onLocationSelect(result);
+    setQuery(result.name || '');
     setResults([]);
     setShowResults(false);
   };
@@ -83,7 +91,7 @@ const SearchBarEnhanced: React.FC<SearchBarEnhancedProps> = ({ onLocationSelect 
           value={query}
           onChange={handleChange}
           onFocus={() => setShowResults(!!results.length)}
-          placeholder="Search..."
+          placeholder="Search places, businesses..."
           style={{
             flex: 1,
             backgroundColor: 'transparent',
@@ -112,7 +120,7 @@ const SearchBarEnhanced: React.FC<SearchBarEnhancedProps> = ({ onLocationSelect 
           backdropFilter: 'blur(12px)',
           border: '1px solid rgba(148, 163, 184, 0.1)',
           borderRadius: '8px',
-          maxHeight: '300px',
+          maxHeight: '400px',
           overflowY: 'auto',
           zIndex: 1000,
         }}>
@@ -134,7 +142,12 @@ const SearchBarEnhanced: React.FC<SearchBarEnhancedProps> = ({ onLocationSelect 
               onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'rgba(148, 163, 184, 0.08)')}
               onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
             >
-              {r.name || r.address}
+              <div style={{ fontWeight: '500' }}>{r.name || r.address}</div>
+              {r.category && (
+                <div style={{ fontSize: '12px', color: 'rgba(203, 213, 225, 0.5)' }}>
+                  {r.category}
+                </div>
+              )}
             </button>
           ))}
         </div>

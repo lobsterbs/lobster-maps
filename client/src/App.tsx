@@ -10,6 +10,7 @@ import { ClusterMarker } from './components/ClusterMarker';
 import { BusinessDetailSheet } from './components/BusinessDetailSheet';
 import { LoadingMorph } from './components/LoadingMorph';
 import SearchBarEnhanced from './components/SearchBarEnhanced';
+import PlaceDetailSheet from './components/PlaceDetailSheet';
 import DirectionsPanel from './components/DirectionsPanel';
 import { Snackbar } from './components/Snackbar';
 import { StreetViewLayer } from './components/StreetViewLayer';
@@ -70,6 +71,7 @@ export default function App() {
   const [mapError, setMapError] = useState<string | null>(null);
   const [center, setCenter] = useState<[number, number]>([-73.9857, 40.7484]);
   const [selectedBusiness, setSelectedBusiness] = useState<Business | null>(null);
+  const [selectedPlace, setSelectedPlace] = useState<any>(null);
   const [snackbarMessage, setSnackbarMessage] = useState<string | null>(null);
   const [availableCategories, setAvailableCategories] = useState<string[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -349,9 +351,11 @@ export default function App() {
       {!tripPlannerOpen && (
         <div style={{ position: 'fixed', top: 16, left: 16, zIndex: 10, width: 'calc(100% - 32px)', maxWidth: '400px' }}>
           <SearchBarEnhanced
-            onLocationSelect={(lat: number, lon: number, name: string) => {
-              console.log(`Selected: ${name} at ${lat}, ${lon}`);
-              handleSearchSelect(lat, lon, name);
+            onLocationSelect={(result: any) => {
+              setSelectedPlace(result);
+              if (result.lat && result.lon) {
+                mapRef.current?.flyTo({ center: [result.lon, result.lat], zoom: 15 });
+              }
             }}
           />
         </div>
@@ -381,6 +385,14 @@ export default function App() {
         business={selectedBusiness}
         onClose={() => setSelectedBusiness(null)}
         onGetDirections={handleOpenDirections}
+      />
+      <PlaceDetailSheet
+        place={selectedPlace}
+        onClose={() => setSelectedPlace(null)}
+        onNavigate={(lat, lon, name) => {
+          handleSearchSelect(lat, lon, name);
+          setSelectedPlace(null);
+        }}
       />
       <Snackbar message={snackbarMessage} onDismiss={handleSnackbarDismiss} />
     </div>
