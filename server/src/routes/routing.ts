@@ -32,8 +32,15 @@ router.post('/route', async (req: Request, res: Response) => {
     const { lat: fromLat, lon: fromLng } = from;
     const { lat: toLat, lon: toLng } = to;
 
+    // Normalize departure time to hour bucket for cache key
+    // Routes computed at 9:15 AM and 9:45 AM share the same cache entry (hour 9)
+    // This avoids cache explosion while still capturing rush-hour vs off-peak traffic
+    const departureDate = departureTime ? new Date(departureTime) : new Date();
+    const hourBucket = departureDate.getUTCHours();
+    const dateBucket = departureDate.toISOString().split('T')[0]; // YYYY-MM-DD
+    
     // Check cache
-    const cacheKey = `route:${fromLat}:${fromLng}:${toLat}:${toLng}`;
+    const cacheKey = `route:${fromLat}:${fromLng}:${toLat}:${toLng}:${dateBucket}:${hourBucket}`;
     const cached = await routeCache.get(cacheKey);
     if (cached) {
       return res.json({
@@ -53,7 +60,7 @@ router.post('/route', async (req: Request, res: Response) => {
       fromLng,
       toLat,
       toLng,
-      departureTime ? new Date(departureTime) : new Date()
+      departureDate
     );
 
     // Apply weather delay

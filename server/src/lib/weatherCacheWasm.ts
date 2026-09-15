@@ -13,6 +13,60 @@ interface WeatherCondition {
   precipitationRate: number;
 }
 
+/**
+ * MET Norway symbol_code to WMO weather code mapping
+ * MET returns human-readable strings; WASM expects WMO numeric codes
+ * Reference: https://www.met.no/en/weather/weather-and-climate-services/about-met/faq/what-do-the-weather-symbols-mean/
+ */
+const MET_SYMBOL_TO_WMO: Record<string, number> = {
+  // Clear conditions
+  'clearsky_day': 0,
+  'clearsky_night': 0,
+  'fair_day': 1,
+  'fair_night': 1,
+  
+  // Cloudy conditions
+  'partlycloudy_day': 2,
+  'partlycloudy_night': 2,
+  'cloudy': 3,
+  'overcast': 3,
+  
+  // Rain
+  'rain': 80,
+  'lightrain': 80,
+  'rainshowers_day': 80,
+  'rainshowers_night': 80,
+  'heavyrainshowers_day': 82,
+  'heavyrainshowers_night': 82,
+  
+  // Snow
+  'lightsnow': 71,
+  'snow': 75,
+  'heavysnow': 77,
+  'snowshowers_day': 75,
+  'snowshowers_night': 75,
+  
+  // Sleet
+  'sleet': 66,
+  'lightsleet': 66,
+  
+  // Default fallback
+  'unknown': 0,
+};
+
+/**
+ * Convert MET Norway symbol_code string to WMO numeric weather code
+ */
+function symbolCodeToWmo(symbolCode: string | undefined): number {
+  if (!symbolCode) return 0;
+  const code = MET_SYMBOL_TO_WMO[symbolCode];
+  if (code === undefined) {
+    console.warn(`Unknown weather symbol: ${symbolCode}, defaulting to clear sky`);
+    return 0;
+  }
+  return code;
+}
+
 export class WeatherCacheManager {
   private cache: any = null;
   private initialized = false;
@@ -147,7 +201,7 @@ export async function refreshWeatherCache(): Promise<void> {
     const forecast = data.properties.timeseries.map((ts: any) => ({
       lat: 60.4,
       lon: 5.3,
-      weatherCode: ts.data.next_1_hours?.summary?.symbol_code || 0,
+      weatherCode: symbolCodeToWmo(ts.data.next_1_hours?.summary?.symbol_code),
       windSpeed: ts.data.instant?.details?.wind_speed || 0,
       precipitation: ts.data.next_1_hours?.details?.precipitation_amount || 0,
     }));

@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
-import maplibregl, { type Map as MapLibreMap, type StyleSpecification } from 'maplibre-gl';
+import { Map as MapLibreMapClass, type Map as MapLibreMap, type StyleSpecification } from 'maplibre-gl';
 import { animated, useSpring } from '@react-spring/web';
 import VersionIndicator from './VersionIndicator';
+import { enable3DTerrain, disable3DTerrain } from '../lib/mapbox3dTerrain';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
 // Maptiler vector tiles: single source for the entire basemap now, not
@@ -251,25 +252,38 @@ type Props = {
   onMapReady?: (map: MapLibreMap) => void;
   onMoveEnd?: (bounds: [number, number, number, number]) => void;
   onError?: (message: string) => void;
+  terrainEnabled?: boolean;
+  onTerrainToggle?: (enabled: boolean) => void;
+  initialCenter?: [number, number];
+  initialZoom?: number;
 };
 
 type ViewMode = 'map' | 'satellite';
 
 // Exported as MapCanvas, not Map, so it doesn't shadow the built-in
 // Map constructor wherever this gets imported alongside marker tracking.
-export function MapCanvas({ onMapReady, onMoveEnd, onError }: Props) {
+export function MapCanvas({ 
+  onMapReady, 
+  onMoveEnd, 
+  onError, 
+  terrainEnabled = false, 
+  onTerrainToggle,
+  initialCenter = [-73.9857, 40.7484],
+  initialZoom = 16,
+}: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   const [mode, setMode] = useState<ViewMode>('map');
+  const [terrain, setTerrain] = useState(terrainEnabled);
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
 
-    const map = new maplibregl.Map({
+    const map = new MapLibreMapClass({
       container: containerRef.current,
       style: darkStyle(),
-      center: [-73.9857, 40.7484],
-      zoom: 16,
+      center: initialCenter,
+      zoom: initialZoom,
       pitch: DEFAULT_PITCH,
       attributionControl: false, // Hide MapLibre/MapTiler attribution
     });
@@ -307,6 +321,19 @@ export function MapCanvas({ onMapReady, onMoveEnd, onError }: Props) {
     map.easeTo({ pitch: next === 'satellite' ? 0 : DEFAULT_PITCH, duration: 500 });
   }
 
+  function handleTerrainToggle() {
+    const map = mapRef.current;
+    if (!map) return;
+    const newTerrainState = !terrain;
+    setTerrain(newTerrainState);
+    onTerrainToggle?.(newTerrainState);
+    if (newTerrainState) {
+      enable3DTerrain(map);
+    } else {
+      disable3DTerrain(map);
+    }
+  }
+
   return (
     <div style={{ position: 'absolute', inset: 0 }}>
       <div ref={containerRef} style={{ position: 'absolute', inset: 0 }} />
@@ -322,6 +349,30 @@ export function MapCanvas({ onMapReady, onMoveEnd, onError }: Props) {
           />
         ))}
       </div>
+      <button
+        onClick={handleTerrainToggle}
+        title={terrain ? 'Disable terrain' : 'Enable terrain'}
+        style={{
+          position: 'absolute',
+          top: 72,
+          right: 16,
+          zIndex: 5,
+          width: 40,
+          height: 40,
+          borderRadius: '50%',
+          border: '1px solid rgba(255,255,255,0.08)',
+          backdropFilter: 'blur(20px) saturate(180%)',
+          background: terrain ? 'rgba(16, 185, 129, 0.2)' : 'rgba(21, 21, 21, 0.72)',
+          color: terrain ? '#10b981' : 'rgba(255,255,255,0.5)',
+          cursor: 'pointer',
+          display: 'grid',
+          placeItems: 'center',
+          fontSize: 20,
+          transition: 'all 0.2s ease',
+        }}
+      >
+        ⛰️
+      </button>
     </div>
   );
 }

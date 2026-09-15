@@ -1,28 +1,280 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/* Material Design 3 Semantic Tokens - LobsterMaps */
+/* Source color: #10b981 (Emerald) - Dynamic Color scheme generated */
 
+/* ============================================================================
+   LIGHT MODE (default)
+   ============================================================================ */
 :root {
-  /* Material Design 3 - Emerald Primary (replacing old Lobster vars) */
-  --md3-primary: #10b981;
-  --md3-on-primary: #ffffff;
-  --md3-primary-container: #a7f3d0;
-  --md3-on-primary-container: #005d4d;
+  color-scheme: light;
 
-  --lobster-red: #e83f3f;
-  --lobster-gold: #d4a574;
-  --lobster-bg: #0a0a0a;
-  --lobster-surface: #151515;
-  --lobster-text: #f2f2f2;
-  --lobster-text-dim: #a3a3a3;
+  /* Color roles - primary (emerald family) */
+  --md-sys-color-primary: #10b981;
+  --md-sys-color-on-primary: #ffffff;
+  --md-sys-color-primary-container: #c6f6d5;
+  --md-sys-color-on-primary-container: #005f3a;
 
-  --font-heading: 'Google Sans Flex', sans-serif;
-  --font-body: 'Google Sans Flex', sans-serif;
+  /* Secondary (teal family) */
+  --md-sys-color-secondary: #4b9876;
+  --md-sys-color-on-secondary: #ffffff;
+  --md-sys-color-secondary-container: #ccf0e0;
+  --md-sys-color-on-secondary-container: #0d3d2a;
 
-  /* Standard Lobster Ecosystem transition curve */
-  --ease-elastic: cubic-bezier(0.34, 1.56, 0.64, 1);
+  /* Tertiary (cyan family) */
+  --md-sys-color-tertiary: #008b99;
+  --md-sys-color-on-tertiary: #ffffff;
+  --md-sys-color-tertiary-container: #a8ecf5;
+  --md-sys-color-on-tertiary-container: #002d34;
+
+  /* Error */
+  --md-sys-color-error: #dc2626;
+  --md-sys-color-on-error: #ffffff;
+  --md-sys-color-error-container: #fee2e2;
+  --md-sys-color-on-error-container: #7f1d1d;
+
+  /* Neutral (surface/background) */
+  --md-sys-color-background: #fafaf9;
+  --md-sys-color-on-background: #1c1917;
+
+  --md-sys-color-surface: #fffbfe;
+  --md-sys-color-on-surface: #1c1b1f;
+  --md-sys-color-surface-variant: #e7e0eb;
+  --md-sys-color-on-surface-variant: #49454e;
+
+  --md-sys-color-surface-container-lowest: #ffffff;
+  --md-sys-color-surface-container-low: #f7f2fa;
+  --md-sys-color-surface-container: #f3edf7;
+  --md-sys-color-surface-container-high: #ede7f1;
+  --md-sys-color-surface-container-highest: #e8e1eb;
+
+  /* Outline */
+  --md-sys-color-outline: #79747e;
+  --md-sys-color-outline-variant: #cac4d0;
+
+  /* Other */
+  --md-sys-color-shadow: #000000;
+  --md-sys-color-scrim: #000000;
+  --md-sys-color-inverse-surface: #313033;
+  --md-sys-color-inverse-on-surface: #f4eff4;
+  --md-sys-color-inverse-primary: #a8f5d8;
 }
 
+/* ============================================================================
+   DARK MODE
+   ============================================================================ */
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+
+    /* Color roles - primary (emerald family, adjusted for dark) */
+    --md-sys-color-primary: #7fffce;
+    --md-sys-color-on-primary: #003d26;
+    --md-sys-color-primary-container: #08623c;
+    --md-sys-color-on-primary-container: #a8f5d8;
+
+    /* Secondary (teal family, dark) */
+    --md-sys-color-secondary: #b1d9c8;
+    --md-sys-color-on-secondary: #1f5444;
+    --md-sys-color-secondary-container: #33705f;
+    --md-sys-color-on-secondary-container: #ccf0e0;
+
+    /* Tertiary (cyan family, dark) */
+    --md-sys-color-tertiary: #80d5e0;
+    --md-sys-color-on-tertiary: #00464f;
+    --md-sys-color-tertiary-container: #006a74;
+    --md-sys-color-on-tertiary-container: #a8ecf5;
+
+    /* Error (dark) */
+    --md-sys-color-error: #f87171;
+    --md-sys-color-on-error: #5a0a0a;
+    --md-sys-color-error-container: #9d1e1e;
+    --md-sys-color-on-error-container: #fee2e2;
+
+    /* Neutral (surface/background, dark) */
+    --md-sys-color-background: #1c1917;
+    --md-sys-color-on-background: #e8d7ce;
+
+    --md-sys-color-surface: #131211;
+    --md-sys-color-on-surface: #e6e1e5;
+    --md-sys-color-surface-variant: #49454e;
+    --md-sys-color-on-surface-variant: #cac4d0;
+
+    --md-sys-color-surface-container-lowest: #0d0d0c;
+    --md-sys-color-surface-container-low: #1d1b20;
+    --md-sys-color-surface-container: #211f26;
+    --md-sys-color-surface-container-high: #2b2930;
+    --md-sys-color-surface-container-highest: #36343b;
+
+    /* Outline */
+    --md-sys-color-outline: #938f99;
+    --md-sys-color-outline-variant: #49454e;
+
+    /* Other */
+    --md-sys-color-shadow: #000000;
+    --md-sys-color-scrim: #000000;
+    --md-sys-color-inverse-surface: #e6e1e5;
+    --md-sys-color-inverse-on-surface: #313033;
+    --md-sys-color-inverse-primary: #10b981;
+  }
+}
+
+/* ============================================================================
+   TYPOGRAPHY SCALE (M3 standard, both themes)
+   ============================================================================ */
+:root {
+  --md-sys-typescale-display-large-size: 3.5625rem;
+  --md-sys-typescale-display-large-line-height: 4.25rem;
+  --md-sys-typescale-display-large-letter-spacing: 0rem;
+  --md-sys-typescale-display-large-font-weight: 400;
+
+  --md-sys-typescale-display-medium-size: 2.8125rem;
+  --md-sys-typescale-display-medium-line-height: 3.375rem;
+  --md-sys-typescale-display-medium-letter-spacing: 0rem;
+  --md-sys-typescale-display-medium-font-weight: 400;
+
+  --md-sys-typescale-display-small-size: 2.25rem;
+  --md-sys-typescale-display-small-line-height: 2.75rem;
+  --md-sys-typescale-display-small-letter-spacing: 0rem;
+  --md-sys-typescale-display-small-font-weight: 400;
+
+  --md-sys-typescale-headline-large-size: 2rem;
+  --md-sys-typescale-headline-large-line-height: 2.5rem;
+  --md-sys-typescale-headline-large-letter-spacing: 0rem;
+  --md-sys-typescale-headline-large-font-weight: 400;
+
+  --md-sys-typescale-headline-medium-size: 1.75rem;
+  --md-sys-typescale-headline-medium-line-height: 2.25rem;
+  --md-sys-typescale-headline-medium-letter-spacing: 0rem;
+  --md-sys-typescale-headline-medium-font-weight: 400;
+
+  --md-sys-typescale-headline-small-size: 1.5rem;
+  --md-sys-typescale-headline-small-line-height: 2rem;
+  --md-sys-typescale-headline-small-letter-spacing: 0rem;
+  --md-sys-typescale-headline-small-font-weight: 400;
+
+  --md-sys-typescale-title-large-size: 1.375rem;
+  --md-sys-typescale-title-large-line-height: 1.75rem;
+  --md-sys-typescale-title-large-letter-spacing: 0.0125rem;
+  --md-sys-typescale-title-large-font-weight: 500;
+
+  --md-sys-typescale-title-medium-size: 1rem;
+  --md-sys-typescale-title-medium-line-height: 1.5rem;
+  --md-sys-typescale-title-medium-letter-spacing: 0.009375rem;
+  --md-sys-typescale-title-medium-font-weight: 500;
+
+  --md-sys-typescale-title-small-size: 0.875rem;
+  --md-sys-typescale-title-small-line-height: 1.25rem;
+  --md-sys-typescale-title-small-letter-spacing: 0.0078125rem;
+  --md-sys-typescale-title-small-font-weight: 500;
+
+  --md-sys-typescale-body-large-size: 1rem;
+  --md-sys-typescale-body-large-line-height: 1.5rem;
+  --md-sys-typescale-body-large-letter-spacing: 0.03125rem;
+  --md-sys-typescale-body-large-font-weight: 400;
+
+  --md-sys-typescale-body-medium-size: 0.875rem;
+  --md-sys-typescale-body-medium-line-height: 1.25rem;
+  --md-sys-typescale-body-medium-letter-spacing: 0.025rem;
+  --md-sys-typescale-body-medium-font-weight: 400;
+
+  --md-sys-typescale-body-small-size: 0.75rem;
+  --md-sys-typescale-body-small-line-height: 1rem;
+  --md-sys-typescale-body-small-letter-spacing: 0.015625rem;
+  --md-sys-typescale-body-small-font-weight: 400;
+
+  --md-sys-typescale-label-large-size: 0.875rem;
+  --md-sys-typescale-label-large-line-height: 1.25rem;
+  --md-sys-typescale-label-large-letter-spacing: 0.0078125rem;
+  --md-sys-typescale-label-large-font-weight: 500;
+
+  --md-sys-typescale-label-medium-size: 0.75rem;
+  --md-sys-typescale-label-medium-line-height: 1rem;
+  --md-sys-typescale-label-medium-letter-spacing: 0.03125rem;
+  --md-sys-typescale-label-medium-font-weight: 500;
+
+  --md-sys-typescale-label-small-size: 0.6875rem;
+  --md-sys-typescale-label-small-line-height: 1rem;
+  --md-sys-typescale-label-small-letter-spacing: 0.03125rem;
+  --md-sys-typescale-label-small-font-weight: 500;
+}
+
+/* ============================================================================
+   SHAPE TOKENS
+   ============================================================================ */
+:root {
+  --md-sys-shape-corner-none: 0rem;
+  --md-sys-shape-corner-extra-small: 0.25rem;
+  --md-sys-shape-corner-small: 0.5rem;
+  --md-sys-shape-corner-medium: 0.75rem;
+  --md-sys-shape-corner-large: 1rem;
+  --md-sys-shape-corner-extra-large: 1.75rem;
+  --md-sys-shape-corner-full: 9999rem;
+}
+
+/* ============================================================================
+   MOTION / ANIMATION TOKENS
+   ============================================================================ */
+:root {
+  /* Duration tokens (milliseconds) */
+  --md-sys-motion-duration-short1: 50ms;
+  --md-sys-motion-duration-short2: 100ms;
+  --md-sys-motion-duration-short3: 150ms;
+  --md-sys-motion-duration-short4: 200ms;
+  --md-sys-motion-duration-medium1: 250ms;
+  --md-sys-motion-duration-medium2: 300ms;
+  --md-sys-motion-duration-medium3: 350ms;
+  --md-sys-motion-duration-medium4: 400ms;
+  --md-sys-motion-duration-long1: 450ms;
+  --md-sys-motion-duration-long2: 500ms;
+  --md-sys-motion-duration-long3: 550ms;
+  --md-sys-motion-duration-long4: 600ms;
+
+  /* Easing functions */
+  --md-sys-motion-easing-linear: cubic-bezier(0, 0, 1, 1);
+  --md-sys-motion-easing-emphasized: cubic-bezier(0.2, 0, 0, 1);
+  --md-sys-motion-easing-emphasized-decelerate: cubic-bezier(0.05, 0.7, 0.1, 1);
+  --md-sys-motion-easing-emphasized-accelerate: cubic-bezier(0.3, 0, 0.8, 0.15);
+  --md-sys-motion-easing-standard: cubic-bezier(0.2, 0, 0, 1);
+  --md-sys-motion-easing-standard-decelerate: cubic-bezier(0, 0, 0, 1);
+  --md-sys-motion-easing-standard-accelerate: cubic-bezier(0.3, 0, 1, 1);
+}
+
+/* ============================================================================
+   LOBSTERMAP PROJECT-LEVEL ALIASES
+   ============================================================================ */
+:root {
+  /* Typography family */
+  --app-font-family: 'Google Sans Flex', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --app-font-mono: 'Fira Code', 'Courier New', monospace;
+
+  /* Alias primary to brand */
+  --app-color-brand: var(--md-sys-color-primary);
+  --app-color-on-brand: var(--md-sys-color-on-primary);
+
+  /* Motion */
+  --app-ease-standard: var(--md-sys-motion-easing-standard);
+  --app-ease-emphasized: var(--md-sys-motion-easing-emphasized);
+  --app-duration-short: var(--md-sys-motion-duration-short2);
+  --app-duration-medium: var(--md-sys-motion-duration-medium2);
+
+  /* Density (button, input min height) */
+  --app-size-touch-target: 48px;
+  --app-size-focus-ring: 3px;
+}
+
+/* ============================================================================
+   ELEVATION/SHADOW TOKENS (supplemental)
+   ============================================================================ */
+:root {
+  --md-sys-elevation-shadow-1: 0 1px 2px rgba(0, 0, 0, 0.3), 0 2px 4px rgba(0, 0, 0, 0.15);
+  --md-sys-elevation-shadow-2: 0 3px 6px rgba(0, 0, 0, 0.3), 0 2px 8px rgba(0, 0, 0, 0.15);
+  --md-sys-elevation-shadow-3: 0 6px 12px rgba(0, 0, 0, 0.3), 0 4px 12px rgba(0, 0, 0, 0.15);
+  --md-sys-elevation-shadow-4: 0 12px 24px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.15);
+  --md-sys-elevation-shadow-5: 0 24px 48px rgba(0, 0, 0, 0.3), 0 16px 40px rgba(0, 0, 0, 0.15);
+}
+
+/* ============================================================================
+   BASE STYLES
+   ============================================================================ */
 * {
   box-sizing: border-box;
 }
@@ -35,17 +287,26 @@ body,
 }
 
 body {
-  background: var(--lobster-bg);
-  color: var(--lobster-text);
-  font-family: var(--font-body);
+  background: var(--md-sys-color-background);
+  color: var(--md-sys-color-on-background);
+  font-family: var(--app-font-family);
+  font-size: var(--md-sys-typescale-body-medium-size);
+  line-height: var(--md-sys-typescale-body-medium-line-height);
 }
 
 h1,
 h2,
 h3,
-.brand {
-  font-family: var(--font-heading);
-  font-weight: 700;
+h4,
+h5,
+h6 {
+  font-family: var(--app-font-family);
+  margin: 0;
+}
+
+button {
+  font-family: var(--app-font-family);
+  cursor: pointer;
 }
 
 /* The CSS blob loading pattern (lc-rotate-morph / lc-gradient-shift /

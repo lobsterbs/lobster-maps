@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
-import type { Map as MapLibreMap } from 'maplibre-gl';
+import type { Map as MapLibreMap, MapMouseEvent } from 'maplibre-gl';
 import { Viewer } from 'mapillary-js';
 import 'mapillary-js/dist/mapillary.css';
 import { Eye } from 'lucide-react';
@@ -70,7 +70,7 @@ export function StreetViewLayer({ map }: Props) {
       });
     }
 
-    const handleClick = async (e: maplibregl.MapMouseEvent) => {
+    const handleClick = async (e: MapMouseEvent) => {
       setViewerLoading(true);
       setViewerError(null);
       try {

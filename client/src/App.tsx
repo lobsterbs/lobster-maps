@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState, useEffect } from 'react';
-import maplibregl, { type Map as MapLibreMap } from 'maplibre-gl';
+import { type Map as MapLibreMap, type GeoJSONSource, Marker, LngLatBounds } from 'maplibre-gl';
 import { createRoot } from 'react-dom/client';
 import Supercluster from 'supercluster';
 import { MapCanvas } from './components/Map';
@@ -29,7 +29,7 @@ function drawRouteOnMap(map: MapLibreMap, coordinates: [number, number][]) {
     properties: {},
     geometry: { type: 'LineString' as const, coordinates },
   };
-  const existing = map.getSource(ROUTE_SOURCE_ID) as maplibregl.GeoJSONSource | undefined;
+  const existing = map.getSource(ROUTE_SOURCE_ID) as GeoJSONSource | undefined;
   if (existing) {
     existing.setData(geojson);
   } else {
@@ -62,8 +62,8 @@ type BusinessPointProps = {
 
 export default function App() {
   const mapRef = useRef<MapLibreMap | null>(null);
-  const businessMarkersRef = useRef(new Map<string, maplibregl.Marker>());
-  const clusterMarkersRef = useRef<maplibregl.Marker[]>([]);
+  const businessMarkersRef = useRef(new Map<string, Marker>());
+  const clusterMarkersRef = useRef<Marker[]>([]);
   const businessLookupRef = useRef(new Map<string, Business>());
   const lastItemsRef = useRef<Business[]>([]); // raw, unfiltered — lets category toggles re-render without a fresh fetch
   const [modalOpen, setModalOpen] = useState(false);
@@ -78,6 +78,7 @@ export default function App() {
   const selectedCategoryRef = useRef<string | null>(null); // mirrors selectedCategory — see note on syncMarkers below
   const [tripPlannerOpen, setTripPlannerOpen] = useState(false);
   const [tripPlannerTo, setTripPlannerTo] = useState<TripPlace | null>(null);
+  const [terrainEnabled, setTerrainEnabled] = useState(false);
   const cacheInitializedRef = useRef(false);
 
   // Initialize map cache and restore view state on mount
@@ -142,7 +143,7 @@ export default function App() {
             }}
           />
         );
-        const marker = new maplibregl.Marker({ element: el }).setLngLat([lng, lat]).addTo(map);
+        const marker = new Marker({ element: el }).setLngLat([lng, lat]).addTo(map);
         clusterMarkersRef.current.push(marker);
         continue;
       }
@@ -162,7 +163,7 @@ export default function App() {
           }}
         />
       );
-      const marker = new maplibregl.Marker({ element: el }).setLngLat([lng, lat]).addTo(map);
+      const marker = new Marker({ element: el }).setLngLat([lng, lat]).addTo(map);
       businessMarkersRef.current.set(businessId, marker);
     }
 
@@ -300,7 +301,7 @@ export default function App() {
     drawRouteOnMap(map, geometry);
     const bounds = geometry.reduce(
       (b, coord) => b.extend(coord),
-      new maplibregl.LngLatBounds(geometry[0], geometry[0])
+      new LngLatBounds(geometry[0], geometry[0])
     );
     map.fitBounds(bounds, { padding: 64, duration: 500 });
   }, []);
@@ -320,7 +321,13 @@ export default function App() {
 
   return (
     <div style={{ position: 'fixed', inset: 0 }}>
-      <MapCanvas onMapReady={handleMapReady} onMoveEnd={handleMoveEnd} onError={handleMapError} />
+      <MapCanvas 
+        onMapReady={handleMapReady} 
+        onMoveEnd={handleMoveEnd} 
+        onError={handleMapError}
+        terrainEnabled={terrainEnabled}
+        onTerrainToggle={setTerrainEnabled}
+      />
       {!mapLoaded && !mapError && <LoadingMorph />}
       {mapError && (
         <div
