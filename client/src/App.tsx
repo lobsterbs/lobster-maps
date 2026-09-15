@@ -23,27 +23,6 @@ import { setupLazyLoading } from './lib/lazyLoadBusinesses';
 const ROUTE_SOURCE_ID = 'lobster-route';
 const ROUTE_LAYER_ID = 'lobster-route-line';
 
-function drawRouteOnMap(map: MapLibreMap, coordinates: [number, number][]) {
-  const geojson = {
-    type: 'Feature' as const,
-    properties: {},
-    geometry: { type: 'LineString' as const, coordinates },
-  };
-  const existing = map.getSource(ROUTE_SOURCE_ID) as GeoJSONSource | undefined;
-  if (existing) {
-    existing.setData(geojson);
-  } else {
-    map.addSource(ROUTE_SOURCE_ID, { type: 'geojson', data: geojson });
-    map.addLayer({
-      id: ROUTE_LAYER_ID,
-      type: 'line',
-      source: ROUTE_SOURCE_ID,
-      layout: { 'line-cap': 'round', 'line-join': 'round' },
-      paint: { 'line-color': '#d4a574', 'line-width': 5, 'line-opacity': 0.9 },
-    });
-  }
-}
-
 // Best-effort: if the map's style got swapped (Map/Satellite toggle)
 // since the route was drawn, the source/layer are already gone, this
 // just avoids throwing on a getLayer/getSource call against a stale id.
@@ -62,6 +41,7 @@ type BusinessPointProps = {
 
 export default function App() {
   const mapRef = useRef<MapLibreMap | null>(null);
+  const lastRouteGeometryRef = useRef<[number, number][] | null>(null);
   const businessMarkersRef = useRef(new Map<string, Marker>());
   const clusterMarkersRef = useRef<Marker[]>([]);
   const businessLookupRef = useRef(new Map<string, Business>());
@@ -70,6 +50,7 @@ export default function App() {
   const [mapLoaded, setMapLoaded] = useState(false);
   const [mapError, setMapError] = useState<string | null>(null);
   const [center, setCenter] = useState<[number, number]>([-73.9857, 40.7484]);
+  const [zoom, setZoom] = useState(16);
   const [selectedBusiness, setSelectedBusiness] = useState<Business | null>(null);
   const [selectedPlace, setSelectedPlace] = useState<any>(null);
   const [snackbarMessage, setSnackbarMessage] = useState<string | null>(null);
@@ -91,9 +72,33 @@ export default function App() {
       const savedState = getMapViewState();
       if (savedState) {
         setCenter(savedState.center);
+        setZoom(savedState.zoom);
       }
     }
   }, []);
+
+  // Draw route on map and store geometry for redraw after style changes
+  function drawRouteOnMap(map: MapLibreMap, coordinates: [number, number][]) {
+    lastRouteGeometryRef.current = coordinates;
+    const geojson = {
+      type: 'Feature' as const,
+      properties: {},
+      geometry: { type: 'LineString' as const, coordinates },
+    };
+    const existing = map.getSource(ROUTE_SOURCE_ID) as GeoJSONSource | undefined;
+    if (existing) {
+      existing.setData(geojson);
+    } else {
+      map.addSource(ROUTE_SOURCE_ID, { type: 'geojson', data: geojson });
+      map.addLayer({
+        id: ROUTE_LAYER_ID,
+        type: 'line',
+        source: ROUTE_SOURCE_ID,
+        layout: { 'line-cap': 'round', 'line-join': 'round' },
+        paint: { 'line-color': '#d4a574', 'line-width': 5, 'line-opacity': 0.9 },
+      });
+    }
+  }
 
   // renderMarkers is the shared second half of syncMarkers below —
   // clustering + marker diffing against whatever's currently in
@@ -250,6 +255,14 @@ export default function App() {
     [syncMarkers]
   );
 
+  const handleStyleChange = useCallback(() => {
+    // Redraw route if it exists (setStyle removes all programmatic layers)
+    const map = mapRef.current;
+    if (map && lastRouteGeometryRef.current) {
+      drawRouteOnMap(map, lastRouteGeometryRef.current);
+    }
+  }, []);
+
   const handleSearchSelect = useCallback((lat: number, lon: number, label: string) => {
     mapRef.current?.flyTo({ center: [lon, lat], zoom: 15, essential: true });
     // Track destination in recent destinations
@@ -281,11 +294,11 @@ export default function App() {
       );
     }
 
-    // Save map view state for next visit
+    // Save map view state for next visit (MapLibre uses [lng, lat] order)
     const center = map.getCenter();
     saveMapViewState({
       zoom: map.getZoom(),
-      center: [center.lat, center.lng],
+      center: [center.lng, center.lat],
     });
 
     if (!geometry) {
@@ -327,6 +340,9 @@ export default function App() {
         onError={handleMapError}
         terrainEnabled={terrainEnabled}
         onTerrainToggle={setTerrainEnabled}
+        initialCenter={center}
+        initialZoom={zoom}
+        onStyleChange={handleStyleChange}
       />
       {!mapLoaded && !mapError && <LoadingMorph />}
       {mapError && (

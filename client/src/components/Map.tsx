@@ -256,6 +256,7 @@ type Props = {
   onTerrainToggle?: (enabled: boolean) => void;
   initialCenter?: [number, number];
   initialZoom?: number;
+  onStyleChange?: () => void;
 };
 
 type ViewMode = 'map' | 'satellite';
@@ -270,6 +271,7 @@ export function MapCanvas({
   onTerrainToggle,
   initialCenter = [-73.9857, 40.7484],
   initialZoom = 16,
+  onStyleChange,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
@@ -304,6 +306,11 @@ export function MapCanvas({
     map.on('moveend', () => {
       const b = map.getBounds();
       onMoveEnd?.([b.getWest(), b.getSouth(), b.getEast(), b.getNorth()]);
+    });
+
+    map.on('style.load', () => {
+      // Redraw any layers that were lost when style changed
+      onStyleChange?.();
     });
 
     return () => {
