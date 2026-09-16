@@ -32,8 +32,13 @@ class PreferenceEngine {
   private storageKey = 'lobster_search_preferences';
   
   private getPrefs() {
-    const stored = localStorage.getItem(this.storageKey);
-    return stored ? JSON.parse(stored) : {};
+    try {
+      const stored = localStorage.getItem(this.storageKey);
+      return stored ? JSON.parse(stored) : {};
+    } catch (e) {
+      console.warn('Failed to parse search preferences:', e);
+      return {};
+    }
   }
 
   private savePrefs(prefs: Record<string, number>) {

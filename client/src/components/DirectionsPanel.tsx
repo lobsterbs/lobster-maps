@@ -31,8 +31,8 @@ const DirectionsPanel: React.FC<DirectionsPanelProps> = ({
 }) => {
   const [selectedIndex, setSelectedIndex] = useState(0);
 
-  // Only show if we have routes or are loading with a destination
-  if (!to && !loading) return null;
+  // Only show if directions panel was explicitly opened
+  if (!loading && (!to || !routes)) return null;
 
   const formatTime = (seconds: number) => {
     const mins = Math.round(seconds / 60);
