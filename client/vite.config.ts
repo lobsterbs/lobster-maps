@@ -8,4 +8,24 @@ export default defineConfig({
       '/api': 'http://localhost:4000',
     },
   },
+  build: {
+    target: 'esnext',
+    rollupOptions: {
+      output: {
+        manualChunks: (id) => {
+          // Split node_modules into chunks by package
+          if (id.includes('node_modules')) {
+            if (id.includes('maplibre')) return 'maplibre';
+            if (id.includes('mapillary')) return 'mapillary';
+            if (id.includes('lucide')) return 'lucide';
+            if (id.includes('react-spring')) return 'animation';
+            if (id.includes('@material')) return 'material-utils';
+            if (id.includes('supercluster')) return 'clustering';
+            return 'vendor';
+          }
+        },
+      },
+    },
+    chunkSizeWarningLimit: 400,
+  },
 });
