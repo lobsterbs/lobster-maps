@@ -56,11 +56,101 @@
   --md-sys-color-inverse-surface: #313033;
   --md-sys-color-inverse-on-surface: #f4eff4;
   --md-sys-color-inverse-primary: #a8f5d8;
+
+  /* State Layer Opacities (M3 spec) */
+  --md-sys-state-hover-opacity: 0.08;
+  --md-sys-state-focus-opacity: 0.12;
+  --md-sys-state-pressed-opacity: 0.12;
+  --md-sys-state-drag-opacity: 0.16;
+  --md-sys-state-selected-opacity: 0.08;
+
+  /* Elevation Shadows */
+  --md-sys-elevation-shadow-0: none;
+  --md-sys-elevation-shadow-1: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24);
+  --md-sys-elevation-shadow-2: 0 3px 6px rgba(0, 0, 0, 0.16), 0 3px 6px rgba(0, 0, 0, 0.23);
+  --md-sys-elevation-shadow-3: 0 10px 20px rgba(0, 0, 0, 0.19), 0 6px 6px rgba(0, 0, 0, 0.23);
+  --md-sys-elevation-shadow-4: 0 15px 25px rgba(0, 0, 0, 0.15), 0 10px 10px rgba(0, 0, 0, 0.05);
+  --md-sys-elevation-shadow-5: 0 20px 40px rgba(0, 0, 0, 0.2);
 }
+
+/* Motion tokens */
+:root {
+  --app-duration-short1: 50ms;
+  --app-duration-short2: 100ms;
+  --app-duration-short3: 150ms;
+  --app-duration-short4: 200ms;
+  --app-duration-medium1: 250ms;
+  --app-duration-medium2: 300ms;
+  --app-duration-medium3: 350ms;
+  --app-duration-medium4: 400ms;
+  --app-duration-long1: 450ms;
+  --app-duration-long2: 500ms;
+  --app-duration-long3: 550ms;
+  --app-duration-long4: 600ms;
+  --app-duration-extra-long1: 700ms;
+  --app-duration-extra-long2: 800ms;
+  --app-duration-extra-long3: 900ms;
+  --app-duration-extra-long4: 1000ms;
+
+  --app-ease-linear: linear;
+  --app-ease-standard: cubic-bezier(0.2, 0, 0.8, 1);
+  --app-ease-standard-decelerate: cubic-bezier(0, 0, 0.2, 1);
+  --app-ease-standard-accelerate: cubic-bezier(0.8, 0, 1, 1);
+  --app-ease-emphasized: cubic-bezier(0.2, 0, 0, 1);
+  --app-ease-emphasized-decelerate: cubic-bezier(0.05, 0.7, 0.1, 1);
+  --app-ease-emphasized-accelerate: cubic-bezier(0.3, 0, 0.8, 0.15);
+}
+
+/* Responsive Layout Density (M3 spec) */
+/* Compact: <480px (phones) */
+@media (max-width: 479px) {
+  :root {
+    --md-layout-density: compact;
+    --md-layout-padding: 16px;
+    --md-layout-gap: 12px;
+  }
+}
+
+/* Medium: 480-839px (tablets) */
+@media (min-width: 480px) and (max-width: 839px) {
+  :root {
+    --md-layout-density: medium;
+    --md-layout-padding: 20px;
+    --md-layout-gap: 16px;
+  }
+}
+
+/* Expanded: ≥840px (desktop) */
+@media (min-width: 840px) {
+  :root {
+    --md-layout-density: expanded;
+    --md-layout-padding: 24px;
+    --md-layout-gap: 20px;
+  }
+}
+
+/* Default (mobile-first) */
+:root {
+  --md-layout-density: compact;
+  --md-layout-padding: 16px;
+  --md-layout-gap: 12px;
+}
+
 
 /* ============================================================================
    DARK MODE
    ============================================================================ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 @media (prefers-color-scheme: dark) {
   :root {
     color-scheme: dark;
@@ -307,6 +397,26 @@ h6 {
 button {
   font-family: var(--app-font-family);
   cursor: pointer;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  @keyframes spin {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(0deg);
+    }
+  }
 }
 
 /* The CSS blob loading pattern (lc-rotate-morph / lc-gradient-shift /
