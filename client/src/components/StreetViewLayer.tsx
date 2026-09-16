@@ -134,8 +134,8 @@ export function StreetViewLayer({ map }: Props) {
         onClick={() => setEnabled((v) => !v)}
         style={{
           ...toggleButtonStyle,
-          background: enabled ? 'var(--lobster-gold)' : 'rgba(21, 21, 21, 0.72)',
-          color: enabled ? '#0a0a0a' : 'var(--lobster-text)',
+          background: enabled ? 'var(--md-sys-color-primary)' : 'rgba(21, 21, 21, 0.72)',
+          color: enabled ? 'var(--md-sys-color-on-primary)' : 'var(--md-sys-color-on-surface-variant)',
         }}
         title="Toggle Street View coverage"
         aria-label="Toggle Street View coverage"

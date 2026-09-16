@@ -97,7 +97,7 @@ const PlaceDetailSheet: React.FC<PlaceDetailSheetProps> = ({ place, onClose = ()
                   height: '8px',
                   borderRadius: '50%',
                   border: 'none',
-                  backgroundColor: i === imageIdx ? '#10b981' : 'rgba(148, 163, 184, 0.3)',
+                  backgroundColor: i === imageIdx ? 'var(--md-sys-color-primary)' : `rgba(from var(--md-sys-color-on-surface-variant) r g b / 0.4)`,
                   cursor: 'pointer',
                 }}
               />
@@ -109,17 +109,17 @@ const PlaceDetailSheet: React.FC<PlaceDetailSheetProps> = ({ place, onClose = ()
       {/* Header */}
       <div style={{ marginBottom: '20px' }}>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px', marginBottom: '8px' }}>
-          <h2 style={{ margin: 0, color: '#f1f5f9', fontSize: '24px', fontWeight: '600' }}>{place.name}</h2>
+          <h2 style={{ margin: 0, color: 'var(--md-sys-color-on-surface)', fontSize: '24px', fontWeight: '600' }}>{place.name}</h2>
           {place.rating && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#10b981' }}>
-              <Star size={16} fill="#10b981" />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--md-sys-color-primary)' }}>
+              <Star size={16} fill="var(--md-sys-color-primary)" />
               <span>{place.rating.toFixed(1)}</span>
-              {place.reviews && <span style={{ color: 'rgba(203, 213, 225, 0.6)', fontSize: '14px' }}>({place.reviews})</span>}
+              {place.reviews && <span style={{ color: 'var(--md-sys-color-on-surface-variant)', fontSize: '14px' }}>({place.reviews})</span>}
             </div>
           )}
         </div>
         {place.category && (
-          <div style={{ color: 'rgba(203, 213, 225, 0.6)', fontSize: '14px', marginBottom: '8px' }}>
+          <div style={{ color: 'var(--md-sys-color-on-surface-variant)', fontSize: '14px', marginBottom: '8px' }}>
             {place.category}
           </div>
         )}
@@ -145,17 +145,17 @@ const PlaceDetailSheet: React.FC<PlaceDetailSheetProps> = ({ place, onClose = ()
           </div>
         )}
         {place.phone && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', color: 'rgba(203, 213, 225, 0.7)', fontSize: '14px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', color: 'var(--md-sys-color-on-surface-variant)', fontSize: '14px' }}>
             <Phone size={18} />
-            <a href={`tel:${place.phone}`} style={{ color: '#10b981', textDecoration: 'none' }}>
+            <a href={`tel:${place.phone}`} style={{ color: 'var(--md-sys-color-primary)', textDecoration: 'none' }}>
               {place.phone}
             </a>
           </div>
         )}
         {place.website && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', color: 'rgba(203, 213, 225, 0.7)', fontSize: '14px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', color: 'var(--md-sys-color-on-surface-variant)', fontSize: '14px' }}>
             <Globe size={18} />
-            <a href={place.website} target="_blank" rel="noopener noreferrer" style={{ color: '#10b981', textDecoration: 'none' }}>
+            <a href={place.website} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--md-sys-color-primary)', textDecoration: 'none' }}>
               Visit website
             </a>
           </div>
@@ -168,8 +168,8 @@ const PlaceDetailSheet: React.FC<PlaceDetailSheetProps> = ({ place, onClose = ()
           onClick={() => onNavigate(place.lat, place.lon, place.name)}
           style={{
             padding: '12px',
-            backgroundColor: '#10b981',
-            color: '#ffffff',
+            backgroundColor: 'var(--md-sys-color-primary)',
+            color: 'var(--md-sys-color-on-primary)',
             border: 'none',
             borderRadius: '8px',
             cursor: 'pointer',
@@ -189,9 +189,9 @@ const PlaceDetailSheet: React.FC<PlaceDetailSheetProps> = ({ place, onClose = ()
             href={`tel:${place.phone}`}
             style={{
               padding: '12px',
-              backgroundColor: 'rgba(16, 185, 129, 0.1)',
-              color: '#10b981',
-              border: '1px solid rgba(16, 185, 129, 0.3)',
+              backgroundColor: `rgba(from var(--md-sys-color-primary) r g b / 0.12)`,
+              color: 'var(--md-sys-color-primary)',
+              border: `1px solid var(--md-sys-color-primary)`,
               borderRadius: '8px',
               cursor: 'pointer',
               fontWeight: '500',

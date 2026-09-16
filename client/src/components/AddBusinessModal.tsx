@@ -233,10 +233,10 @@ const inputStyle: CSSProperties = {
   padding: '10px 12px',
   marginTop: 8,
   borderRadius: 10,
-  border: '1px solid rgba(255,255,255,0.12)',
-  background: '#0f0f0f',
-  color: 'var(--lobster-text)',
-  fontFamily: 'var(--font-body)',
+  border: `1px solid var(--md-sys-color-outline-variant)`,
+  background: 'var(--md-sys-color-surface-container)',
+  color: 'var(--md-sys-color-on-surface)',
+  fontFamily: '"Google Sans Flex", sans-serif',
   fontSize: 14,
 };
 

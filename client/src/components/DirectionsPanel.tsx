@@ -55,14 +55,14 @@ const DirectionsPanel: React.FC<DirectionsPanelProps> = ({
         bottom: 16,
         width: '320px',
         maxHeight: '50vh',
-        backgroundColor: 'rgba(15, 23, 42, 0.8)',
+        backgroundColor: 'var(--md-sys-color-surface-container-high)',
         backdropFilter: 'blur(12px)',
-        border: '1px solid rgba(148, 163, 184, 0.1)',
+        border: `1px solid var(--md-sys-color-outline-variant)`,
         borderRadius: '12px',
         padding: '16px',
         overflowY: 'auto',
         zIndex: 10,
-        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
+        boxShadow: 'var(--md-sys-elevation-shadow-3)',
       }}
     >
       {/* Header */}
@@ -97,19 +97,19 @@ const DirectionsPanel: React.FC<DirectionsPanelProps> = ({
               }}
               style={{
                 padding: '12px',
-                backgroundColor: selectedIndex === idx ? 'rgba(16, 185, 129, 0.15)' : 'transparent',
-                border: selectedIndex === idx ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(148, 163, 184, 0.1)',
+                backgroundColor: selectedIndex === idx ? `rgba(from var(--md-sys-color-primary) r g b / 0.15)` : 'transparent',
+                border: selectedIndex === idx ? `2px solid var(--md-sys-color-primary)` : `1px solid var(--md-sys-color-outline-variant)`,
                 borderRadius: '8px',
-                color: '#f1f5f9',
+                color: 'var(--md-sys-color-on-surface)',
                 cursor: 'pointer',
                 textAlign: 'left',
-                transition: 'all 200ms ease',
+                transition: 'all 200ms var(--app-ease-standard)',
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = 'rgba(148, 163, 184, 0.05)';
+                e.currentTarget.style.backgroundColor = `rgba(from var(--md-sys-color-primary) r g b / 0.08)`;
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = selectedIndex === idx ? 'rgba(16, 185, 129, 0.15)' : 'transparent';
+                e.currentTarget.style.backgroundColor = selectedIndex === idx ? `rgba(from var(--md-sys-color-primary) r g b / 0.15)` : 'transparent';
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>

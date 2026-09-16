@@ -396,9 +396,9 @@ type ModeToggleButtonProps = {
 // needs an actual color value to animate between, the same reason
 // LoadingMorph.tsx hardcodes a literal hex instead of the CSS custom
 // property. Keep these in sync with tokens.css.
-const GOLD = '#d4a574';
-const TEXT_DIM = '#a3a3a3';
-const INK = '#0a0a0a';
+const GOLD = 'var(--md-sys-color-primary)';
+const TEXT_DIM = 'var(--md-sys-color-on-surface-variant)';
+const INK = 'var(--md-sys-color-on-surface)';
 
 function ModeToggleButton({ label, selected, disabled, title, onClick }: ModeToggleButtonProps) {
   const style = useSpring({

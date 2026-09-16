@@ -84,7 +84,7 @@ const SearchBarEnhanced: React.FC<SearchBarEnhancedProps> = ({ onLocationSelect 
           transition: 'all 200ms ease',
         }}
       >
-        <Search size={18} color="rgba(203, 213, 225, 0.6)" />
+        <Search size={18} color="var(--md-sys-color-on-surface-variant)" />
         <input
           ref={inputRef}
           type="text"
@@ -96,16 +96,16 @@ const SearchBarEnhanced: React.FC<SearchBarEnhancedProps> = ({ onLocationSelect 
             flex: 1,
             backgroundColor: 'transparent',
             outline: 'none',
-            color: '#f1f5f9',
+            color: 'var(--md-sys-color-on-surface)',
             border: 'none',
             fontFamily: '"Google Sans Flex", sans-serif',
             fontSize: '14px',
           }}
         />
-        {isLoading && <Loader size={16} style={{ animation: 'spin 1s linear infinite', color: '#f1f5f9' }} />}
+        {isLoading && <Loader size={16} style={{ animation: 'spin 1s linear infinite', color: 'var(--md-sys-color-on-surface)' }} />}
         {query && !isLoading && (
           <button onClick={() => { setQuery(''); setResults([]); }} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
-            <X size={16} color="rgba(203, 213, 225, 0.6)" />
+            <X size={16} color="var(--md-sys-color-on-surface-variant)" />
           </button>
         )}
       </div>
@@ -116,9 +116,9 @@ const SearchBarEnhanced: React.FC<SearchBarEnhancedProps> = ({ onLocationSelect 
           top: 'calc(100% + 4px)',
           left: 0,
           right: 0,
-          backgroundColor: 'rgba(15, 23, 42, 0.8)',
+          backgroundColor: 'var(--md-sys-color-surface-container-high)',
           backdropFilter: 'blur(12px)',
-          border: '1px solid rgba(148, 163, 184, 0.1)',
+          border: `1px solid var(--md-sys-color-outline-variant)`,
           borderRadius: '8px',
           maxHeight: '400px',
           overflowY: 'auto',
@@ -133,18 +133,18 @@ const SearchBarEnhanced: React.FC<SearchBarEnhancedProps> = ({ onLocationSelect 
                 padding: '12px',
                 backgroundColor: 'transparent',
                 border: 'none',
-                borderBottom: i < results.length - 1 ? '1px solid rgba(148, 163, 184, 0.05)' : 'none',
-                color: '#f1f5f9',
+                borderBottom: i < results.length - 1 ? `1px solid var(--md-sys-color-outline-variant)` : 'none',
+                color: 'var(--md-sys-color-on-surface)',
                 textAlign: 'left',
                 cursor: 'pointer',
                 fontSize: '14px',
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'rgba(148, 163, 184, 0.08)')}
+              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = `rgba(from var(--md-sys-color-primary) r g b / 0.08)`)}
               onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
             >
               <div style={{ fontWeight: '500' }}>{r.name || r.address}</div>
               {r.category && (
-                <div style={{ fontSize: '12px', color: 'rgba(203, 213, 225, 0.5)' }}>
+                <div style={{ fontSize: '12px', color: 'var(--md-sys-color-on-surface-variant)' }}>
                   {r.category}
                 </div>
               )}

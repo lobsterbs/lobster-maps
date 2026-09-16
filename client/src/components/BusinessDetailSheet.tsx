@@ -214,7 +214,7 @@ const imageGalleryStyle: CSSProperties = {
   width: '100%',
   height: 180,
   overflow: 'hidden',
-  background: '#0f0f0f', // shows while the image loads, and if it fails to load entirely
+  background: 'var(--md-sys-color-surface-dim)', // shows while the image loads
 };
 
 const imageStyle: CSSProperties = {
