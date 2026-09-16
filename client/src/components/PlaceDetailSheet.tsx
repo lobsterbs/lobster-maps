@@ -38,16 +38,16 @@ const PlaceDetailSheet: React.FC<PlaceDetailSheetProps> = ({ place, onClose = ()
   ];
 
   return (
-    <div
+    <article
       style={{
         position: 'fixed',
         bottom: 0,
         left: 0,
         right: 0,
         maxHeight: '70vh',
-        backgroundColor: 'rgba(15, 23, 42, 0.95)',
+        backgroundColor: 'var(--md-sys-color-surface-container-high)',
         backdropFilter: 'blur(12px)',
-        borderTop: '1px solid rgba(148, 163, 184, 0.1)',
+        borderTop: `1px solid var(--md-sys-color-outline-variant)`,
         borderRadius: '20px 20px 0 0',
         padding: '24px',
         overflowY: 'auto',
@@ -208,7 +208,7 @@ const PlaceDetailSheet: React.FC<PlaceDetailSheetProps> = ({ place, onClose = ()
           </a>
         )}
       </div>
-    </div>
+    </article>
   );
 };
 

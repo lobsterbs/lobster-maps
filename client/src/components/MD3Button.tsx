@@ -50,9 +50,9 @@ const variantStyles: Record<ButtonVariant, CSSProperties> = {
 };
 
 const sizeStyles: Record<ButtonSize, CSSProperties> = {
-  small: { padding: '6px 12px', fontSize: '12px', minHeight: '32px', minWidth: '32px' },
-  medium: { padding: '10px 16px', fontSize: '14px', minHeight: '40px', minWidth: '40px' },
-  large: { padding: '12px 24px', fontSize: '16px', minHeight: '48px', minWidth: '48px' },
+  small: { padding: '8px 12px', fontSize: '12px', minHeight: '48px', minWidth: '48px' },
+  medium: { padding: '12px 16px', fontSize: '14px', minHeight: '48px', minWidth: '48px' },
+  large: { padding: '16px 24px', fontSize: '16px', minHeight: '48px', minWidth: '48px' },
 };
 
 export const MD3Button = React.forwardRef<HTMLButtonElement, MD3ButtonProps>(
