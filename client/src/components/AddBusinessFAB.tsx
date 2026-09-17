@@ -33,14 +33,14 @@ export function AddBusinessFAB({ onClick }: Props) {
         height: 56,
         borderRadius: 16,
         border: 'none',
-        background: 'var(--lobster-red)',
+        background: 'var(--md3-primary, #10b981)',
         color: 'white',
         fontSize: 28,
         lineHeight: '56px',
         textAlign: 'center',
         fontFamily: 'var(--font-heading)',
         cursor: 'pointer',
-        boxShadow: '0 4px 14px rgba(232, 63, 63, 0.4)',
+        boxShadow: '0 4px 14px rgba(16, 185, 129, 0.4)',
         overflow: 'hidden',
       }}
       aria-label="Add a business"

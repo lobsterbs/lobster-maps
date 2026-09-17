@@ -44,11 +44,28 @@ export function createRateLimiter(
   refillRatePerMs: number
 ): any {
   if (!rateLimiter) {
-    console.warn('⚠️ Using Node.js rate limiter (WASM unavailable)');
-    // Return simple Node.js fallback
+    let tokens = capacity;
+    let lastRefill = Date.now();
     return {
-      allowRequest: () => true,
-      getStatus: () => ({ capacity, tokens: capacity }),
+      allow_request: () => {
+        const now = Date.now();
+        const passedMs = now - lastRefill;
+        tokens = Math.min(capacity, tokens + passedMs * refillRatePerMs);
+        lastRefill = now;
+        if (tokens >= 1) {
+          tokens -= 1;
+          return true;
+        }
+        return false;
+      },
+      allowRequest() {
+        return this.allow_request();
+      },
+      get_remaining: () => Math.floor(tokens),
+      getRemaining() {
+        return this.get_remaining();
+      },
+      getStatus: () => ({ capacity, tokens: Math.floor(tokens) }),
     };
   }
   return new rateLimiter(capacity, refillRatePerMs);
@@ -60,15 +77,45 @@ export function createRateLimiter(
  */
 export function getSearchScorer(): any {
   if (!searchScorer) {
-    console.warn('⚠️ Using Node.js search scorer (WASM unavailable)');
     return {
-      score: (query: string, text: string) => 0.5, // Neutral score
-      score_business: (query: string, name: string, category: string, userLat: number, userLon: number, bizLat: number, bizLon: number) => {
-        // Simple fallback: check if name contains query (case-insensitive)
-        const nameScore = name.toLowerCase().includes(query.toLowerCase()) ? 70 : 30;
-        const categoryScore = category?.toLowerCase().includes(query.toLowerCase()) ? 20 : 0;
-        return Math.min(100, nameScore + categoryScore);
-      }
+      score: (query: string, text: string) => {
+        const q = query.toLowerCase();
+        const t = text.toLowerCase();
+        if (t === q) return 1.0;
+        if (t.includes(q)) return 0.8;
+        return 0.4;
+      },
+      score_business: (
+        query: string,
+        name: string,
+        category: string,
+        userLat: number,
+        userLon: number,
+        bizLat: number,
+        bizLon: number
+      ) => {
+        const q = query.toLowerCase().trim();
+        const n = (name || '').toLowerCase();
+        const c = (category || '').toLowerCase();
+        let nameScore = 0;
+        if (n === q) nameScore = 1.0;
+        else if (n.startsWith(q)) nameScore = 0.9;
+        else if (n.includes(q)) nameScore = 0.75;
+        else {
+          const words = q.split(/\s+/);
+          const matched = words.filter((w) => n.includes(w)).length;
+          nameScore = matched > 0 ? (matched / words.length) * 0.6 : 0.2;
+        }
+
+        const catScore = c === q || c.includes(q) ? 0.9 : 0.3;
+
+        const dLat = (userLat - bizLat) * 111;
+        const dLon = (userLon - bizLon) * 111 * Math.cos((userLat * Math.PI) / 180);
+        const distKm = Math.sqrt(dLat * dLat + dLon * dLon);
+        const proxScore = Math.max(0, 1 - distKm / 25);
+
+        return Number((nameScore * 0.6 + catScore * 0.2 + proxScore * 0.2).toFixed(3));
+      },
     };
   }
   return searchScorer;
@@ -80,14 +127,31 @@ export function getSearchScorer(): any {
  */
 export function createWeatherCache(): any {
   if (!weatherCache) {
-    console.warn('⚠️ Using Node.js weather cache (WASM unavailable)');
+    const memCache = new Map<string, { value: any; timestamp: number }>();
     return {
-      get: () => null,
-      set: () => {},
+      get: (key: string) => {
+        const item = memCache.get(key);
+        if (!item) return null;
+        if (Date.now() - item.timestamp > 3600_000) {
+          memCache.delete(key);
+          return null;
+        }
+        return item.value;
+      },
+      set: (key: string, value: any) => {
+        memCache.set(key, { value, timestamp: Date.now() });
+      },
+      add_condition: () => {},
+      get_delay_for_edge: () => 0,
+      get_route_delay: () => 0,
+      is_stale: () => false,
+      clear: () => memCache.clear(),
+      cell_count: () => memCache.size,
     };
   }
   return new weatherCache();
 }
+
 
 export default {
   initializeWasmModules,

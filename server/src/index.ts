@@ -85,14 +85,8 @@ async function startServer() {
       if (checkMcpToken(provided, res)) next();
     }
 
-    function requireMcpAuthPath(req: Request, res: Response, next: NextFunction) {
-      if (checkMcpToken(req.params.token, res)) next();
-    }
-
     async function handleMcpRequest(req: Request, res: Response) {
       try {
-        // Fresh transport + server per request: the simplest correct
-        // pattern for stateless Streamable HTTP, no session state to manage.
         const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
         const mcpServer = createMcpServer();
         res.on('close', () => {
@@ -114,7 +108,7 @@ async function startServer() {
     }
 
     app.post('/mcp', requireMcpAuthHeader, handleMcpRequest);
-    app.post('/mcp/:token', requireMcpAuthPath, handleMcpRequest);
+
 
     // Serve the built frontend from the same process/port as the API and
     // MCP endpoint, so a single Replit run command is enough — no separate

@@ -26,7 +26,7 @@ export function ClusterMarker({ count, onClick }: Props) {
         height: size,
         borderRadius: '50%',
         border: '3px solid rgba(255,255,255,0.85)',
-        background: 'var(--lobster-red)',
+        background: 'var(--md3-primary, #10b981)',
         color: 'white',
         fontFamily: 'var(--font-body)',
         fontWeight: 700,

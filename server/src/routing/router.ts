@@ -1,20 +1,55 @@
 import { readFileSync } from 'fs';
 import { join } from 'path';
-// Simple priority queue implementation (replaces js-priority-queue)
+// Efficient binary min-heap priority queue (O(log N) push and pop)
 class PriorityQueue<T> {
-  private items: Array<{ item: T; priority: number }> = [];
+  private heap: Array<{ item: T; priority: number }> = [];
 
   push(item: T, priority: number) {
-    this.items.push({ item, priority });
-    this.items.sort((a, b) => a.priority - b.priority);
+    const node = { item, priority };
+    this.heap.push(node);
+    let index = this.heap.length - 1;
+    while (index > 0) {
+      const parentIndex = (index - 1) >> 1;
+      if (this.heap[parentIndex].priority <= this.heap[index].priority) break;
+      const tmp = this.heap[parentIndex];
+      this.heap[parentIndex] = this.heap[index];
+      this.heap[index] = tmp;
+      index = parentIndex;
+    }
   }
 
   pop(): T | undefined {
-    return this.items.shift()?.item;
+    if (this.heap.length === 0) return undefined;
+    const top = this.heap[0].item;
+    const bottom = this.heap.pop()!;
+    if (this.heap.length > 0) {
+      this.heap[0] = bottom;
+      let index = 0;
+      const length = this.heap.length;
+      while (true) {
+        const leftChild = (index << 1) + 1;
+        const rightChild = leftChild + 1;
+        let smallest = index;
+
+        if (leftChild < length && this.heap[leftChild].priority < this.heap[smallest].priority) {
+          smallest = leftChild;
+        }
+        if (rightChild < length && this.heap[rightChild].priority < this.heap[smallest].priority) {
+          smallest = rightChild;
+        }
+        if (smallest === index) break;
+
+        const tmp = this.heap[index];
+        this.heap[index] = this.heap[smallest];
+        this.heap[smallest] = tmp;
+        index = smallest;
+      }
+    }
+    return top;
   }
 
   isEmpty(): boolean {
-    return this.items.length === 0;
+    return this.heap.length === 0;
   }
 }
 
@@ -76,78 +111,73 @@ export interface TrafficFactor {
 }
 
 class TrafficPredictor {
-  private patterns: Map<string, DayPattern> = new Map(); // key: "HH:MM:dayOfWeek"
-  private updateInterval = 3600000; // 1 hour
-  private lastUpdate = 0;
+  private patterns: Map<string, DayPattern> = new Map(); // key: "HH:00:dayOfWeek"
+  private hourlyWeekday: number[] = [
+    0.98, 0.99, 0.99, 0.99, 0.98, 0.92, 0.80, 0.60, 0.50, 0.65, 0.78, 0.82,
+    0.75, 0.78, 0.72, 0.62, 0.55, 0.50, 0.65, 0.80, 0.88, 0.92, 0.95, 0.97
+  ];
+  private hourlyWeekend: number[] = [
+    0.95, 0.96, 0.98, 0.98, 0.98, 0.97, 0.95, 0.92, 0.88, 0.85, 0.82, 0.80,
+    0.78, 0.80, 0.80, 0.78, 0.76, 0.75, 0.78, 0.82, 0.86, 0.90, 0.92, 0.95
+  ];
 
   constructor() {
     this.initializeDefaultPatterns();
   }
 
   private initializeDefaultPatterns() {
-    // Default rush hour patterns for Bergen/Vestland
-    // Time: HH:MM, dayOfWeek: 0-6 (Sun-Sat)
-    const patterns: Record<string, Partial<DayPattern>> = {
-      '07:00:weekday': { speedMultiplier: 0.6, congestion: 'high' },
-      '08:00:weekday': { speedMultiplier: 0.5, congestion: 'very_high' },
-      '09:00:weekday': { speedMultiplier: 0.65, congestion: 'high' },
-      '12:00:weekday': { speedMultiplier: 0.75, congestion: 'medium' },
-      '16:00:weekday': { speedMultiplier: 0.55, congestion: 'very_high' },
-      '17:00:weekday': { speedMultiplier: 0.5, congestion: 'very_high' },
-      '18:00:weekday': { speedMultiplier: 0.65, congestion: 'high' },
-      '20:00:weekday': { speedMultiplier: 0.85, congestion: 'low' },
-      '22:00:weekday': { speedMultiplier: 0.95, congestion: 'minimal' },
-      '23:00:weekday': { speedMultiplier: 0.95, congestion: 'minimal' },
-      '10:00:weekend': { speedMultiplier: 0.85, congestion: 'low' },
-      '15:00:weekend': { speedMultiplier: 0.8, congestion: 'medium' },
-      '18:00:weekend': { speedMultiplier: 0.75, congestion: 'medium' },
-    };
-
-    for (const [key, partial] of Object.entries(patterns)) {
-      this.patterns.set(key, {
-        speedMultiplier: partial.speedMultiplier || 1.0,
-        congestion: partial.congestion || 'none',
+    for (let h = 0; h < 24; h++) {
+      const hStr = String(h).padStart(2, '0');
+      this.patterns.set(`${hStr}:00:weekday`, {
+        speedMultiplier: this.hourlyWeekday[h],
+        congestion: this.getCongestionLabel(this.hourlyWeekday[h]),
         trafficIncidents: [],
         weather: 'clear',
-        confidence: 0.7,
+        confidence: 0.85,
+      });
+      this.patterns.set(`${hStr}:00:weekend`, {
+        speedMultiplier: this.hourlyWeekend[h],
+        congestion: this.getCongestionLabel(this.hourlyWeekend[h]),
+        trafficIncidents: [],
+        weather: 'clear',
+        confidence: 0.85,
       });
     }
+  }
+
+  private getCongestionLabel(multiplier: number): 'minimal' | 'low' | 'medium' | 'high' | 'very_high' {
+    if (multiplier >= 0.92) return 'minimal';
+    if (multiplier >= 0.82) return 'low';
+    if (multiplier >= 0.72) return 'medium';
+    if (multiplier >= 0.58) return 'high';
+    return 'very_high';
   }
 
   predictSpeed(
     baseSpeed: number,
     hour: number,
     minute: number,
-    dayOfWeek: number
+    dayOfWeek: number,
+    weatherMultiplier: number = 1.0
   ): { speed: number; factor: number; reason: string } {
     const isWeekday = dayOfWeek >= 1 && dayOfWeek <= 5;
-    const timeKey = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:${
-      isWeekday ? 'weekday' : 'weekend'
-    }`;
+    const profile = isWeekday ? this.hourlyWeekday : this.hourlyWeekend;
 
-    // Look for exact match or fall back to :00 of same hour
-    let pattern =
-      this.patterns.get(timeKey) ||
-      this.patterns.get(
-        `${String(hour).padStart(2, '0')}:00:${isWeekday ? 'weekday' : 'weekend'}`
-      );
+    // Linear time interpolation between current hour and next hour
+    const currentH = hour % 24;
+    const nextH = (currentH + 1) % 24;
+    const t = Math.max(0, Math.min(1, minute / 60));
 
-    if (!pattern) {
-      // Default: minimal congestion outside rush hours
-      pattern = {
-        speedMultiplier: 0.95,
-        congestion: 'minimal',
-        trafficIncidents: [],
-        weather: 'clear',
-        confidence: 0.5,
-      };
-    }
+    const baseMultiplier = profile[currentH] * (1 - t) + profile[nextH] * t;
+    const combinedMultiplier = Math.max(0.2, baseMultiplier * weatherMultiplier);
+    const predictedSpeed = Number((baseSpeed * combinedMultiplier).toFixed(2));
+    const congestion = this.getCongestionLabel(combinedMultiplier);
 
-    const predictedSpeed = baseSpeed * pattern.speedMultiplier;
+    const timeStr = `${String(currentH).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
     return {
       speed: predictedSpeed,
-      factor: pattern.speedMultiplier,
-      reason: `${pattern.congestion}_${timeKey}`,
+      factor: Number(combinedMultiplier.toFixed(3)),
+      reason: `${congestion}_rush_${isWeekday ? 'weekday' : 'weekend'}_${timeStr}`,
     };
   }
 
@@ -159,27 +189,19 @@ class TrafficPredictor {
     congestion: 'minimal' | 'low' | 'medium' | 'high' | 'very_high'
   ) {
     const isWeekday = dayOfWeek >= 1 && dayOfWeek <= 5;
-    const timeKey = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:${
-      isWeekday ? 'weekday' : 'weekend'
-    }`;
+    const profile = isWeekday ? this.hourlyWeekday : this.hourlyWeekend;
+    const h = hour % 24;
 
-    let pattern = this.patterns.get(timeKey);
-    if (!pattern) {
-      pattern = {
-        speedMultiplier: observedSpeedMultiplier,
-        congestion,
-        trafficIncidents: [],
-        weather: 'clear',
-        confidence: 0.5,
-      };
-    } else {
-      // Exponential moving average: new = 0.3 * observed + 0.7 * old
-      pattern.speedMultiplier = 0.3 * observedSpeedMultiplier + 0.7 * pattern.speedMultiplier;
+    // Exponential moving average update
+    profile[h] = Number((0.3 * observedSpeedMultiplier + 0.7 * profile[h]).toFixed(3));
+    const hStr = String(h).padStart(2, '0');
+    const key = `${hStr}:00:${isWeekday ? 'weekday' : 'weekend'}`;
+    const pattern = this.patterns.get(key);
+    if (pattern) {
+      pattern.speedMultiplier = profile[h];
       pattern.congestion = congestion;
-      pattern.confidence = Math.min(1.0, pattern.confidence + 0.1);
+      pattern.confidence = Math.min(1.0, pattern.confidence + 0.05);
     }
-
-    this.patterns.set(timeKey, pattern);
   }
 }
 

@@ -1,6 +1,7 @@
 /**
- * Weather Client - Yr.no Integration with Fallback
- * Returns weather-based delay: 0ms (clear) → 120ms (heavy snow)
+ * Weather Client - Yr.no / MET Norway Integration
+ * Calculates real weather-based routing delays for Vestland/Norway
+ * Returns delay in ms: 0ms (clear) → 120ms (heavy snow / storm)
  */
 
 import axios, { AxiosError } from 'axios';
@@ -12,9 +13,17 @@ interface WeatherData {
       data: {
         instant: {
           details: {
-            weather_code: number;
-            wind_speed: number;
-            precipitation_rate: number;
+            air_temperature?: number;
+            wind_speed?: number;
+            relative_humidity?: number;
+          };
+        };
+        next_1_hours?: {
+          summary?: {
+            symbol_code?: string;
+          };
+          details?: {
+            precipitation_amount?: number;
           };
         };
       };
@@ -22,13 +31,24 @@ interface WeatherData {
   };
 }
 
-const YR_API = 'https://api.met.no/weatherapi/locationforecast/2.0/compact';
+const MET_NO_API = 'https://api.met.no/weatherapi/locationforecast/2.0/compact';
 const CACHE_TTL = 3600 * 1000; // 1 hour
 
 let cachedWeather: { data: WeatherData | null; time: number } = {
   data: null,
   time: 0,
 };
+
+function symbolCodeToWmo(symbol: string): number {
+  if (!symbol) return 0;
+  const s = symbol.toLowerCase();
+  if (s.includes('snow')) return 71;
+  if (s.includes('heavyrain') || s.includes('thunder')) return 65;
+  if (s.includes('rain')) return 61;
+  if (s.includes('sleet')) return 68;
+  if (s.includes('fog')) return 45;
+  return 0;
+}
 
 async function fetchWeather(lat: number, lon: number): Promise<WeatherData | null> {
   try {
@@ -39,59 +59,63 @@ async function fetchWeather(lat: number, lon: number): Promise<WeatherData | nul
       return cachedWeather.data;
     }
 
-    const response = await axios.get<WeatherData>(YR_API, {
+    const response = await axios.get<WeatherData>(MET_NO_API, {
       params: { lat, lon },
       timeout: 5000,
-      headers: { 'User-Agent': 'LobsterMaps/1.0' },
+      headers: {
+        'User-Agent': 'LobsterMaps/2.0 (privacy-first maps; contact@lobstermaps.no)',
+      },
     });
 
     cachedWeather = { data: response.data, time: now };
     return response.data;
   } catch (error) {
     console.error('Weather fetch failed:', error instanceof AxiosError ? error.message : error);
-    // Return null on failure, caller will use default
     return null;
   }
 }
 
 export async function getWeatherDelay(lat: number, lon: number): Promise<number> {
-  const DEFAULT_DELAY = 0; // No delay if API fails
+  const DEFAULT_DELAY = 0;
 
   try {
     const weather = await fetchWeather(lat, lon);
     
-    // Fallback to default if fetch failed
     if (!weather?.properties?.timeseries?.length) {
       return DEFAULT_DELAY;
     }
 
     const current = weather.properties.timeseries[0];
-    if (!current?.data?.instant?.details) {
-      return DEFAULT_DELAY;
-    }
+    const details = current.data?.instant?.details;
+    const next1Hour = current.data?.next_1_hours;
 
-    const { weather_code, wind_speed, precipitation_rate } = current.data.instant.details;
+    const symbolCode = next1Hour?.summary?.symbol_code || '';
+    const weatherCode = symbolCodeToWmo(symbolCode);
+    const windSpeed = details?.wind_speed || 0;
+    const precipitationAmount = next1Hour?.details?.precipitation_amount || 0;
 
-    // Calculate delay based on conditions
     let delay = 0;
 
-    // Weather code mapping (WMO code)
-    if (weather_code >= 71 && weather_code <= 77) {
-      // Snow: +60ms base
+    // Weather code delay logic
+    if (weatherCode >= 71 && weatherCode <= 77) {
+      // Snow: base +60ms
       delay += 60;
-      if (precipitation_rate > 5) delay += 60; // Heavy snow
-    } else if (weather_code >= 80 && weather_code <= 82) {
-      // Rain: +30ms
+      if (precipitationAmount > 3) delay += 40; // Heavy snow
+    } else if (weatherCode >= 61 && weatherCode <= 68) {
+      // Rain / Sleet: base +30ms
       delay += 30;
-      if (precipitation_rate > 10) delay += 30; // Heavy rain
+      if (precipitationAmount > 5) delay += 30; // Heavy rain
+    } else if (weatherCode === 45) {
+      // Fog: +20ms
+      delay += 20;
     }
 
-    // Wind penalty: +1ms per m/s above 15 m/s
-    if (wind_speed > 15) {
-      delay += Math.min((wind_speed - 15) * 2, 60);
+    // High wind penalty: +2ms per m/s above 12 m/s
+    if (windSpeed > 12) {
+      delay += Math.min((windSpeed - 12) * 2, 40);
     }
 
-    return Math.min(delay, 120); // Cap at 120ms
+    return Math.min(delay, 120); // Cap at 120ms delay
   } catch (error) {
     console.error('Weather delay calculation failed:', error);
     return DEFAULT_DELAY;
@@ -100,11 +124,9 @@ export async function getWeatherDelay(lat: number, lon: number): Promise<number>
 
 export default getWeatherDelay;
 
-// Object export for destructuring
 export const weatherClient = {
   getDelay: getWeatherDelay,
   getDelayMultiplier: (delay: number) => {
-    // Convert ms delay to multiplier (e.g., 1000ms = 1.1x slower)
-    return 1 + delay / 10000;
+    return 1 + delay / 100; // e.g. 60ms delay = 1.6x multiplier
   },
 };

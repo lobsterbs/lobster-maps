@@ -7,23 +7,55 @@
 import { Request, Response, NextFunction } from 'express';
 import { createRateLimiter } from '../wasm/index.js';
 
-// Per-IP rate limiters
-const limiters = new Map<string, any>();
+// Per-IP rate limiters with timestamp for LRU/TTL cleanup
+interface LimiterEntry {
+  limiter: any;
+  lastAccess: number;
+}
+const limiters = new Map<string, LimiterEntry>();
+const MAX_LIMITERS = 5000;
+const TTL_MS = 15 * 60 * 1000; // 15 minutes
+
+// Periodic cleanup to eliminate memory leaks
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, entry] of limiters.entries()) {
+    if (now - entry.lastAccess > TTL_MS) {
+      limiters.delete(ip);
+    }
+  }
+}, 5 * 60 * 1000).unref();
 
 const CONFIG = {
   capacity: 100,        // tokens
   refillRatePerMs: 0.1, // 10 tokens/sec
-  keyExtractor: (req: Request) => req.ip || 'unknown',
+  keyExtractor: (req: Request) => req.ip || req.socket.remoteAddress || 'unknown',
 };
 
 /**
  * Get or create limiter for IP
  */
 function getLimiter(key: string): any {
-  if (!limiters.has(key)) {
-    limiters.set(key, createRateLimiter(CONFIG.capacity, CONFIG.refillRatePerMs));
+  const now = Date.now();
+  let entry = limiters.get(key);
+  if (!entry) {
+    // If map exceeds capacity, purge oldest 10%
+    if (limiters.size >= MAX_LIMITERS) {
+      let count = 0;
+      for (const k of limiters.keys()) {
+        limiters.delete(k);
+        if (++count > MAX_LIMITERS * 0.1) break;
+      }
+    }
+    entry = {
+      limiter: createRateLimiter(CONFIG.capacity, CONFIG.refillRatePerMs),
+      lastAccess: now,
+    };
+    limiters.set(key, entry);
+  } else {
+    entry.lastAccess = now;
   }
-  return limiters.get(key);
+  return entry.limiter;
 }
 
 /**
@@ -37,19 +69,22 @@ export const rateLimiterWasm = (
   const key = CONFIG.keyExtractor(req);
   const limiter = getLimiter(key);
 
-  // Check if allowed (WASM, <1ms)
   let allowed = true;
   let remaining = CONFIG.capacity;
 
-  if (limiter?.allow_request && typeof limiter.allow_request === 'function') {
-    allowed = limiter.allow_request();
-    if (limiter?.get_remaining && typeof limiter.get_remaining === 'function') {
-      remaining = limiter.get_remaining();
+  if (limiter) {
+    if (typeof limiter.allow_request === 'function') {
+      const res = limiter.allow_request();
+      allowed = typeof res === 'boolean' ? res : Boolean(res & 0x80000000);
+    } else if (typeof limiter.allowRequest === 'function') {
+      allowed = Boolean(limiter.allowRequest());
     }
-  } else {
-    // Fallback: always allow if WASM unavailable
-    console.warn('⚠️ Rate limiter unavailable, allowing all requests');
-    allowed = true;
+
+    if (typeof limiter.get_remaining === 'function') {
+      remaining = limiter.get_remaining();
+    } else if (typeof limiter.getRemaining === 'function') {
+      remaining = limiter.getRemaining();
+    }
   }
 
   res.setHeader('X-RateLimit-Remaining', remaining);
@@ -65,6 +100,7 @@ export const rateLimiterWasm = (
 
   next();
 };
+
 
 /**
  * Configure rate limiter (optional)

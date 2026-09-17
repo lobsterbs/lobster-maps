@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { CSSProperties } from 'react';
 import { animated, useTransition } from '@react-spring/web';
 import { Car, Bus, Footprints, ArrowUpDown, X, Navigation, Loader2 } from 'lucide-react';
@@ -29,13 +29,14 @@ export function TripPlanner({ open, initialTo, onClose, onRouteFound }: Props) {
   const [transitResult, setTransitResult] = useState<TransitTrip | null>(null);
 
   // initialTo changes (a new business or search result got picked)
-  // while the planner's already open — sync it in rather than only
-  // reading it once on mount.
-  if (initialTo && JSON.stringify(initialTo) !== JSON.stringify(to) && editingField === null) {
-    setTo(initialTo);
-    setDrivingResult(null);
-    setTransitResult(null);
-  }
+  // while the planner's already open — sync it in inside useEffect
+  useEffect(() => {
+    if (initialTo && editingField === null) {
+      setTo(initialTo);
+      setDrivingResult(null);
+      setTransitResult(null);
+    }
+  }, [initialTo, editingField]);
 
   const transition = useTransition(open, {
     from: { opacity: 0, transform: 'translateY(24px) scale(0.97)' },

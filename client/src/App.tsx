@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState, useEffect } from 'react';
-import { type Map as MapLibreMap, type GeoJSONSource, Marker, LngLatBounds } from 'maplibre-gl';
+import maplibregl, { type Map as MapLibreMap } from 'maplibre-gl';
 import { createRoot } from 'react-dom/client';
 import Supercluster from 'supercluster';
 import { MapCanvas } from './components/Map';
@@ -23,6 +23,27 @@ import { setupLazyLoading } from './lib/lazyLoadBusinesses';
 const ROUTE_SOURCE_ID = 'lobster-route';
 const ROUTE_LAYER_ID = 'lobster-route-line';
 
+function drawRouteOnMap(map: MapLibreMap, coordinates: [number, number][]) {
+  const geojson = {
+    type: 'Feature' as const,
+    properties: {},
+    geometry: { type: 'LineString' as const, coordinates },
+  };
+  const existing = map.getSource(ROUTE_SOURCE_ID) as maplibregl.GeoJSONSource | undefined;
+  if (existing) {
+    existing.setData(geojson);
+  } else {
+    map.addSource(ROUTE_SOURCE_ID, { type: 'geojson', data: geojson });
+    map.addLayer({
+      id: ROUTE_LAYER_ID,
+      type: 'line',
+      source: ROUTE_SOURCE_ID,
+      layout: { 'line-cap': 'round', 'line-join': 'round' },
+      paint: { 'line-color': '#d4a574', 'line-width': 5, 'line-opacity': 0.9 },
+    });
+  }
+}
+
 // Best-effort: if the map's style got swapped (Map/Satellite toggle)
 // since the route was drawn, the source/layer are already gone, this
 // just avoids throwing on a getLayer/getSource call against a stale id.
@@ -41,16 +62,14 @@ type BusinessPointProps = {
 
 export default function App() {
   const mapRef = useRef<MapLibreMap | null>(null);
-  const lastRouteGeometryRef = useRef<[number, number][] | null>(null);
-  const businessMarkersRef = useRef(new Map<string, Marker>());
-  const clusterMarkersRef = useRef<Marker[]>([]);
+  const businessMarkersRef = useRef(new Map<string, maplibregl.Marker>());
+  const clusterMarkersRef = useRef<maplibregl.Marker[]>([]);
   const businessLookupRef = useRef(new Map<string, Business>());
   const lastItemsRef = useRef<Business[]>([]); // raw, unfiltered — lets category toggles re-render without a fresh fetch
   const [modalOpen, setModalOpen] = useState(false);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [mapError, setMapError] = useState<string | null>(null);
-  const [center, setCenter] = useState<[number, number]>([-73.9857, 40.7484]);
-  const [zoom, setZoom] = useState(16);
+  const [center, setCenter] = useState<[number, number]>([5.3221, 60.3913]);
   const [selectedBusiness, setSelectedBusiness] = useState<Business | null>(null);
   const [selectedPlace, setSelectedPlace] = useState<any>(null);
   const [snackbarMessage, setSnackbarMessage] = useState<string | null>(null);
@@ -59,7 +78,6 @@ export default function App() {
   const selectedCategoryRef = useRef<string | null>(null); // mirrors selectedCategory — see note on syncMarkers below
   const [tripPlannerOpen, setTripPlannerOpen] = useState(false);
   const [tripPlannerTo, setTripPlannerTo] = useState<TripPlace | null>(null);
-  const [terrainEnabled, setTerrainEnabled] = useState(false);
   const cacheInitializedRef = useRef(false);
 
   // Initialize map cache and restore view state on mount
@@ -72,33 +90,9 @@ export default function App() {
       const savedState = getMapViewState();
       if (savedState) {
         setCenter(savedState.center);
-        setZoom(savedState.zoom);
       }
     }
   }, []);
-
-  // Draw route on map and store geometry for redraw after style changes
-  function drawRouteOnMap(map: MapLibreMap, coordinates: [number, number][]) {
-    lastRouteGeometryRef.current = coordinates;
-    const geojson = {
-      type: 'Feature' as const,
-      properties: {},
-      geometry: { type: 'LineString' as const, coordinates },
-    };
-    const existing = map.getSource(ROUTE_SOURCE_ID) as GeoJSONSource | undefined;
-    if (existing) {
-      existing.setData(geojson);
-    } else {
-      map.addSource(ROUTE_SOURCE_ID, { type: 'geojson', data: geojson });
-      map.addLayer({
-        id: ROUTE_LAYER_ID,
-        type: 'line',
-        source: ROUTE_SOURCE_ID,
-        layout: { 'line-cap': 'round', 'line-join': 'round' },
-        paint: { 'line-color': '#d4a574', 'line-width': 5, 'line-opacity': 0.9 },
-      });
-    }
-  }
 
   // renderMarkers is the shared second half of syncMarkers below —
   // clustering + marker diffing against whatever's currently in
@@ -128,7 +122,13 @@ export default function App() {
     const zoom = Math.round(map.getZoom());
     const clusters = index.getClusters(bbox, zoom);
 
-    for (const m of clusterMarkersRef.current) m.remove();
+    for (const m of clusterMarkersRef.current) {
+      const el = m.getElement() as any;
+      if (el._reactRoot) {
+        try { el._reactRoot.unmount(); } catch {}
+      }
+      m.remove();
+    }
     clusterMarkersRef.current = [];
 
     const seenBusinessIds = new Set<string>();
@@ -139,7 +139,9 @@ export default function App() {
       if ('cluster' in feature.properties) {
         const { point_count: count, cluster_id: clusterId } = feature.properties;
         const el = document.createElement('div');
-        createRoot(el).render(
+        const root = createRoot(el);
+        (el as any)._reactRoot = root;
+        root.render(
           <ClusterMarker
             count={count}
             onClick={() => {
@@ -148,7 +150,7 @@ export default function App() {
             }}
           />
         );
-        const marker = new Marker({ element: el }).setLngLat([lng, lat]).addTo(map);
+        const marker = new maplibregl.Marker({ element: el, anchor: 'bottom' }).setLngLat([lng, lat]).addTo(map);
         clusterMarkersRef.current.push(marker);
         continue;
       }
@@ -158,7 +160,9 @@ export default function App() {
       if (businessMarkersRef.current.has(businessId)) continue;
 
       const el = document.createElement('div');
-      createRoot(el).render(
+      const root = createRoot(el);
+      (el as any)._reactRoot = root;
+      root.render(
         <BusinessMarker
           name={name}
           verified={verified}
@@ -168,12 +172,16 @@ export default function App() {
           }}
         />
       );
-      const marker = new Marker({ element: el }).setLngLat([lng, lat]).addTo(map);
+      const marker = new maplibregl.Marker({ element: el, anchor: 'bottom' }).setLngLat([lng, lat]).addTo(map);
       businessMarkersRef.current.set(businessId, marker);
     }
 
     for (const [id, marker] of businessMarkersRef.current) {
       if (!seenBusinessIds.has(id)) {
+        const el = marker.getElement() as any;
+        if (el._reactRoot) {
+          try { el._reactRoot.unmount(); } catch {}
+        }
         marker.remove();
         businessMarkersRef.current.delete(id);
       }
@@ -255,14 +263,6 @@ export default function App() {
     [syncMarkers]
   );
 
-  const handleStyleChange = useCallback(() => {
-    // Redraw route if it exists (setStyle removes all programmatic layers)
-    const map = mapRef.current;
-    if (map && lastRouteGeometryRef.current) {
-      drawRouteOnMap(map, lastRouteGeometryRef.current);
-    }
-  }, []);
-
   const handleSearchSelect = useCallback((lat: number, lon: number, label: string) => {
     mapRef.current?.flyTo({ center: [lon, lat], zoom: 15, essential: true });
     // Track destination in recent destinations
@@ -294,7 +294,7 @@ export default function App() {
       );
     }
 
-    // Save map view state for next visit (MapLibre uses [lng, lat] order)
+    // Save map view state for next visit
     const center = map.getCenter();
     saveMapViewState({
       zoom: map.getZoom(),
@@ -314,7 +314,7 @@ export default function App() {
     drawRouteOnMap(map, geometry);
     const bounds = geometry.reduce(
       (b, coord) => b.extend(coord),
-      new LngLatBounds(geometry[0], geometry[0])
+      new maplibregl.LngLatBounds(geometry[0], geometry[0])
     );
     map.fitBounds(bounds, { padding: 64, duration: 500 });
   }, []);
@@ -334,16 +334,7 @@ export default function App() {
 
   return (
     <div style={{ position: 'fixed', inset: 0 }}>
-      <MapCanvas 
-        onMapReady={handleMapReady} 
-        onMoveEnd={handleMoveEnd} 
-        onError={handleMapError}
-        terrainEnabled={terrainEnabled}
-        onTerrainToggle={setTerrainEnabled}
-        initialCenter={center}
-        initialZoom={zoom}
-        onStyleChange={handleStyleChange}
-      />
+      <MapCanvas onMapReady={handleMapReady} onMoveEnd={handleMoveEnd} onError={handleMapError} />
       {!mapLoaded && !mapError && <LoadingMorph />}
       {mapError && (
         <div
@@ -372,7 +363,7 @@ export default function App() {
         </div>
       )}
       {!tripPlannerOpen && (
-        <div style={{ position: 'fixed', top: 16, left: 16, zIndex: 10, width: 'calc(100% - 32px)', maxWidth: '400px' }}>
+        <div style={{ position: 'fixed', top: 16, left: 16, zIndex: 10, width: 'calc(100% - 32px)', maxWidth: '400px', display: 'flex', flexDirection: 'column', gap: 8 }}>
           <SearchBarEnhanced
             onLocationSelect={(result: any) => {
               setSelectedPlace(result);
@@ -381,6 +372,59 @@ export default function App() {
               }
             }}
           />
+          {availableCategories.length > 0 && (
+            <div
+              style={{
+                display: 'flex',
+                gap: 6,
+                overflowX: 'auto',
+                paddingBottom: 4,
+                scrollbarWidth: 'none',
+                WebkitOverflowScrolling: 'touch',
+              }}
+            >
+              <button
+                onClick={() => handleCategorySelect(null)}
+                style={{
+                  padding: '4px 12px',
+                  borderRadius: 16,
+                  border: '1px solid rgba(255,255,255,0.12)',
+                  background: selectedCategory === null ? 'var(--md3-primary, #10b981)' : 'rgba(15,23,42,0.85)',
+                  color: selectedCategory === null ? '#ffffff' : '#94a3b8',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                  backdropFilter: 'blur(8px)',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                All
+              </button>
+              {availableCategories.map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() => handleCategorySelect(selectedCategory === cat ? null : cat)}
+                  style={{
+                    padding: '4px 12px',
+                    borderRadius: 16,
+                    border: '1px solid rgba(255,255,255,0.12)',
+                    background: selectedCategory === cat ? 'var(--md3-primary, #10b981)' : 'rgba(15,23,42,0.85)',
+                    color: selectedCategory === cat ? '#ffffff' : '#94a3b8',
+                    fontSize: 12,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                    backdropFilter: 'blur(8px)',
+                    transition: 'all 0.15s ease',
+                    textTransform: 'capitalize',
+                  }}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       )}
       <StreetViewLayer map={mapLoaded ? mapRef.current : null} />
@@ -392,7 +436,7 @@ export default function App() {
       />
       <DirectionsPanel
         from="Current location"
-        to={typeof tripPlannerTo === 'string' ? tripPlannerTo : undefined}
+        to={tripPlannerTo ? (typeof tripPlannerTo === 'string' ? tripPlannerTo : tripPlannerTo.label) : undefined}
         loading={false}
         routes={tripPlannerOpen ? [] : undefined}
         onSelect={() => {}}

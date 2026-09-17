@@ -35,35 +35,35 @@ router.post('/search', async (req: Request, res: Response) => {
 
     console.log(`🔍 Search: "${q}"`);
 
-    // Step 1: Geocode query
+    // Step 1: Try geocoding query
     const geocoded = await geocode(q).catch((err) => {
-      console.error('Geocoding failed:', err);
+      console.warn('Geocoding warning:', err);
       return null;
     });
 
-    if (!geocoded) {
-      res.json({ results: [], message: 'No results found' });
-      return;
+    const userLat = lat || (geocoded ? geocoded.lat : 60.3913);
+    const userLon = lon || (geocoded ? geocoded.lon : 5.3221);
+
+    const results: any[] = [];
+    if (geocoded) {
+      results.push(geocoded);
     }
-
-    const userLat = lat || geocoded.lat;
-    const userLon = lon || geocoded.lon;
-
-    const results: any[] = [geocoded];
 
     // Step 1.5: Search global landmarks
     const landmarks = searchLandmarks(q);
     if (landmarks.length > 0) {
       console.log(`Found ${landmarks.length} landmarks`);
-      results.push(...landmarks.map(l => ({
-        id: l.id,
-        name: l.name,
-        lat: l.lat,
-        lon: l.lon,
-        address: l.city,
-        category: l.category,
-        type: 'landmark',
-      })));
+      results.push(
+        ...landmarks.map((l) => ({
+          id: l.id,
+          name: l.name,
+          lat: l.lat,
+          lon: l.lon,
+          address: l.city,
+          category: l.category,
+          type: 'landmark',
+        }))
+      );
     }
 
     // Step 2: Search businesses if requested
@@ -77,22 +77,19 @@ router.post('/search', async (req: Request, res: Response) => {
         ];
 
         const businesses = await fetchBusinessesInView(bounds).catch((err) => {
-          console.error('Business search failed:', err);
+          console.warn('Business view query warning:', err);
           return [];
         });
-        console.log(`Found ${businesses.length} businesses`);
 
-        // Score with WASM if available
-        if (searchBusinessesWasm) {
+        if (businesses.length > 0) {
           const scored = searchBusinessesWasm(q, businesses, userLat, userLon, 10);
-          results.push(...scored);
-        } else {
-          results.push(...businesses);
+          results.push(...(scored.length > 0 ? scored : businesses.slice(0, 10)));
         }
       } catch (err) {
-        console.error('Business search error:', err);
+        console.warn('Business search error:', err);
       }
     }
+
 
     res.json({
       results,

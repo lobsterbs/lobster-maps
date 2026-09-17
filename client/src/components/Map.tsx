@@ -1,10 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
-import { Map as MapLibreMapClass, type Map as MapLibreMap, type StyleSpecification } from 'maplibre-gl';
+import maplibregl, { type Map as MapLibreMap, type StyleSpecification } from 'maplibre-gl';
 import { animated, useSpring } from '@react-spring/web';
-import { Mountain, Layers, Satellite } from 'lucide-react';
 import VersionIndicator from './VersionIndicator';
-import { enable3DTerrain, disable3DTerrain } from '../lib/mapbox3dTerrain';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
 // Maptiler vector tiles: single source for the entire basemap now, not
@@ -253,43 +251,29 @@ type Props = {
   onMapReady?: (map: MapLibreMap) => void;
   onMoveEnd?: (bounds: [number, number, number, number]) => void;
   onError?: (message: string) => void;
-  terrainEnabled?: boolean;
-  onTerrainToggle?: (enabled: boolean) => void;
-  initialCenter?: [number, number];
-  initialZoom?: number;
-  onStyleChange?: () => void;
 };
 
 type ViewMode = 'map' | 'satellite';
 
 // Exported as MapCanvas, not Map, so it doesn't shadow the built-in
 // Map constructor wherever this gets imported alongside marker tracking.
-export function MapCanvas({ 
-  onMapReady, 
-  onMoveEnd, 
-  onError, 
-  terrainEnabled = false, 
-  onTerrainToggle,
-  initialCenter = [-73.9857, 40.7484],
-  initialZoom = 16,
-  onStyleChange,
-}: Props) {
+export function MapCanvas({ onMapReady, onMoveEnd, onError }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   const [mode, setMode] = useState<ViewMode>('map');
-  const [terrain, setTerrain] = useState(terrainEnabled);
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
 
-    const map = new MapLibreMapClass({
+    const map = new maplibregl.Map({
       container: containerRef.current,
       style: darkStyle(),
-      center: initialCenter,
-      zoom: initialZoom,
+      center: [5.3221, 60.3913], // Bergen, Norway
+      zoom: 15,
       pitch: DEFAULT_PITCH,
       attributionControl: false, // Hide MapLibre/MapTiler attribution
     });
+
 
     // Without this, a bad or unreachable tiles source (wrong URL, no
     // CORS, host down) means 'load' never fires and the caller has no
@@ -309,11 +293,6 @@ export function MapCanvas({
       onMoveEnd?.([b.getWest(), b.getSouth(), b.getEast(), b.getNorth()]);
     });
 
-    map.on('style.load', () => {
-      // Redraw any layers that were lost when style changed
-      onStyleChange?.();
-    });
-
     return () => {
       map.remove();
       mapRef.current = null;
@@ -329,38 +308,18 @@ export function MapCanvas({
     map.easeTo({ pitch: next === 'satellite' ? 0 : DEFAULT_PITCH, duration: 500 });
   }
 
-  function handleTerrainToggle() {
-    const map = mapRef.current;
-    if (!map) return;
-    const newTerrainState = !terrain;
-    setTerrain(newTerrainState);
-    onTerrainToggle?.(newTerrainState);
-    if (newTerrainState) {
-      enable3DTerrain(map);
-    } else {
-      disable3DTerrain(map);
-    }
-  }
-
   return (
     <div style={{ position: 'absolute', inset: 0 }}>
       <div ref={containerRef} style={{ position: 'absolute', inset: 0 }} />
       <VersionIndicator />
       <div style={togglePillStyle}>
-        {(['map', 'satellite', '3d'] as const).map((m) => (
+        {(['map', 'satellite'] as const).map((m) => (
           <ModeToggleButton
             key={m}
-            label={m === 'map' ? 'Map' : m === 'satellite' ? 'Satellite' : '3D'}
-            selected={mode === m || (m === '3d' && terrain)}
+            label={m === 'map' ? 'Map' : 'Satellite'}
+            selected={mode === m}
             disabled={false}
-            icon={m === 'map' ? <Layers size={18} /> : m === 'satellite' ? <Satellite size={18} /> : <Mountain size={18} />}
-            onClick={() => {
-              if (m === '3d') {
-                handleTerrainToggle();
-              } else {
-                handleModeChange(m);
-              }
-            }}
+            onClick={() => handleModeChange(m)}
           />
         ))}
       </div>
@@ -373,24 +332,21 @@ type ModeToggleButtonProps = {
   selected: boolean;
   disabled: boolean;
   title?: string;
-  icon?: React.ReactNode;
   onClick: () => void;
 };
 
-// react-spring can't interpolate `var(--lobster-gold)` directly — it
-// needs an actual color value to animate between, the same reason
-// LoadingMorph.tsx hardcodes a literal hex instead of the CSS custom
-// property. Keep these in sync with tokens.css.
-const GOLD = 'var(--md-sys-color-primary)';
-const TEXT_DIM = 'var(--md-sys-color-on-surface-variant)';
-const INK = 'var(--md-sys-color-on-surface)';
+// Material Design 3 Expressive emerald accent
+const EMERALD = '#10b981';
+const TEXT_DIM = '#94a3b8';
+const ON_PRIMARY = '#ffffff';
 
-function ModeToggleButton({ label, selected, disabled, title, icon, onClick }: ModeToggleButtonProps) {
+function ModeToggleButton({ label, selected, disabled, title, onClick }: ModeToggleButtonProps) {
   const style = useSpring({
-    background: selected ? GOLD : 'transparent',
-    color: selected ? INK : TEXT_DIM,
+    background: selected ? EMERALD : 'transparent',
+    color: selected ? ON_PRIMARY : TEXT_DIM,
     config: { tension: 300, friction: 26 },
   });
+
 
   return (
     <animated.button
@@ -402,12 +358,8 @@ function ModeToggleButton({ label, selected, disabled, title, icon, onClick }: M
         ...style,
         cursor: disabled ? 'not-allowed' : 'pointer',
         opacity: disabled ? 0.4 : 1,
-        display: 'flex',
-        alignItems: 'center',
-        gap: '6px',
       }}
     >
-      {icon}
       {label}
     </animated.button>
   );

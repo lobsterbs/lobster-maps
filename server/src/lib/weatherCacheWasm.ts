@@ -13,60 +13,6 @@ interface WeatherCondition {
   precipitationRate: number;
 }
 
-/**
- * MET Norway symbol_code to WMO weather code mapping
- * MET returns human-readable strings; WASM expects WMO numeric codes
- * Reference: https://www.met.no/en/weather/weather-and-climate-services/about-met/faq/what-do-the-weather-symbols-mean/
- */
-const MET_SYMBOL_TO_WMO: Record<string, number> = {
-  // Clear conditions
-  'clearsky_day': 0,
-  'clearsky_night': 0,
-  'fair_day': 1,
-  'fair_night': 1,
-  
-  // Cloudy conditions
-  'partlycloudy_day': 2,
-  'partlycloudy_night': 2,
-  'cloudy': 3,
-  'overcast': 3,
-  
-  // Rain
-  'rain': 80,
-  'lightrain': 80,
-  'rainshowers_day': 80,
-  'rainshowers_night': 80,
-  'heavyrainshowers_day': 82,
-  'heavyrainshowers_night': 82,
-  
-  // Snow
-  'lightsnow': 71,
-  'snow': 75,
-  'heavysnow': 77,
-  'snowshowers_day': 75,
-  'snowshowers_night': 75,
-  
-  // Sleet
-  'sleet': 66,
-  'lightsleet': 66,
-  
-  // Default fallback
-  'unknown': 0,
-};
-
-/**
- * Convert MET Norway symbol_code string to WMO numeric weather code
- */
-function symbolCodeToWmo(symbolCode: string | undefined): number {
-  if (!symbolCode) return 0;
-  const code = MET_SYMBOL_TO_WMO[symbolCode];
-  if (code === undefined) {
-    console.warn(`Unknown weather symbol: ${symbolCode}, defaulting to clear sky`);
-    return 0;
-  }
-  return code;
-}
-
 export class WeatherCacheManager {
   private cache: any = null;
   private initialized = false;
@@ -187,31 +133,52 @@ export function getGlobalWeatherCache(): WeatherCacheManager {
 /**
  * Refresh weather cache from Yr.no
  */
+function symbolCodeToWmo(symbol: string): number {
+  if (!symbol) return 0;
+  const s = symbol.toLowerCase();
+  if (s.includes('snow')) return 71;
+  if (s.includes('heavyrain')) return 65;
+  if (s.includes('rain')) return 61;
+  if (s.includes('sleet')) return 68;
+  if (s.includes('cloud')) return 2;
+  return 0;
+}
+
 export async function refreshWeatherCache(): Promise<void> {
   try {
     const cache = getGlobalWeatherCache();
 
-    // Fetch from Yr.no (batch endpoint for Bergen region)
+    // Fetch from Yr.no (batch endpoint for Bergen region) with required User-Agent
     const response = await fetch(
-      'https://api.met.no/weatherapi/locationforecast/2.0/complete?lat=60.4&lon=5.3'
+      'https://api.met.no/weatherapi/locationforecast/2.0/complete?lat=60.4&lon=5.3',
+      {
+        headers: {
+          'User-Agent': 'LobsterMaps/0.1 (privacy-first maps; contact@lobstermaps.no)',
+        },
+      }
     );
+    if (!response.ok) {
+      console.warn(`Weather API responded ${response.status}`);
+      return;
+    }
     const data = await response.json();
 
     // Parse timeseries
-    const forecast = data.properties.timeseries.map((ts: any) => ({
+    const forecast = (data.properties?.timeseries || []).slice(0, 24).map((ts: any) => ({
       lat: 60.4,
       lon: 5.3,
-      weatherCode: symbolCodeToWmo(ts.data.next_1_hours?.summary?.symbol_code),
-      windSpeed: ts.data.instant?.details?.wind_speed || 0,
-      precipitation: ts.data.next_1_hours?.details?.precipitation_amount || 0,
+      weatherCode: symbolCodeToWmo(ts.data?.next_1_hours?.summary?.symbol_code || ''),
+      windSpeed: ts.data?.instant?.details?.wind_speed || 0,
+      precipitation: ts.data?.next_1_hours?.details?.precipitation_amount || 0,
     }));
 
     cache.populateFromYrno(forecast);
     console.log(`✅ Weather cache populated (${cache.getCellCount()} cells)`);
   } catch (err) {
-    console.error('❌ Weather cache refresh failed:', err);
+    console.warn('Weather cache refresh warning:', (err as Error).message);
   }
 }
+
 
 /**
  * Benchmark: Test 1000 edge lookups

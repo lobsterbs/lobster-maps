@@ -5,6 +5,7 @@
  */
 
 import * as https from 'https';
+import { sql } from 'drizzle-orm';
 import { db } from '../db/client.js';
 import { businesses } from '../db/schema.js';
 
@@ -106,6 +107,19 @@ export async function scrapeTouristAttractions(
 export async function storeScrapedBusinesses(data: ScrapedBusiness[]) {
   for (const biz of data) {
     try {
+      // Check if business already exists nearby (within ~30m) with similar name
+      const existing = await db.execute(sql`
+        SELECT id FROM businesses
+        WHERE lower(name) = lower(${biz.name})
+          AND abs(latitude - ${biz.lat}) < 0.0003
+          AND abs(longitude - ${biz.lon}) < 0.0003
+        LIMIT 1
+      `).catch(() => null);
+
+      if (existing && (existing as any).rows && (existing as any).rows.length > 0) {
+        continue; // Skip duplicate
+      }
+
       await db.insert(businesses).values({
         name: biz.name,
         latitude: biz.lat,
@@ -122,6 +136,7 @@ export async function storeScrapedBusinesses(data: ScrapedBusiness[]) {
     }
   }
 }
+
 
 /**
  * Main scraper - scrape region

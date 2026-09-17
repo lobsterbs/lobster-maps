@@ -24,8 +24,9 @@ const VersionIndicator: React.FC = () => {
         pointerEvents: 'none',
       }}
     >
-      v{VERSION_INFO.version.split('-')[0]} {VERSION_INFO.status}
+      v{VERSION_INFO.version} · {VERSION_INFO.status}
     </div>
+
   );
 };
 

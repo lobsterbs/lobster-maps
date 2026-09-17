@@ -33,8 +33,8 @@ const PlaceDetailSheet: React.FC<PlaceDetailSheetProps> = ({ place, onClose = ()
 
   if (!place) return null;
 
-  const images = place.images || [
-    'https://via.placeholder.com/400x300?text=' + encodeURIComponent(place.name),
+  const images = (place.images && place.images.length > 0) ? place.images : [
+    `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300" viewBox="0 0 400 300"><rect width="400" height="300" fill="%231e293b"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="%2394a3b8" font-family="sans-serif" font-size="18">${encodeURIComponent(place.name)}</text></svg>`,
   ];
 
   return (

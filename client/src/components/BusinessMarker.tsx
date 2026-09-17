@@ -13,7 +13,7 @@ export function BusinessMarker({ name, verified, onClick }: Props) {
     config: { tension: 300, friction: 12 }, // bouncy drop-in
   });
 
-  const color = verified ? '#E83F3F' : '#D4A574';
+  const color = verified ? '#10b981' : '#D4A574';
 
   return (
     <animated.button
