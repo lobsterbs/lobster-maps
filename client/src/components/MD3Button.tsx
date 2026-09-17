@@ -66,6 +66,7 @@ export const MD3Button = React.forwardRef<HTMLButtonElement, MD3ButtonProps>(
       loading = false,
       disabled,
       className = '',
+      style: userStyle = {},
       ...props
     },
     ref
@@ -109,7 +110,7 @@ export const MD3Button = React.forwardRef<HTMLButtonElement, MD3ButtonProps>(
       <button
         ref={ref}
         disabled={disabled || loading}
-        style={buttonStyle}
+        style={{ ...buttonStyle, ...userStyle }}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => { setIsHovered(false); setIsActive(false); }}
         onMouseDown={() => setIsActive(true)}
