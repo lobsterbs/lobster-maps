@@ -1,13 +1,9 @@
 /**
  * Material Design 3 Enhanced Route Selector Card
- * - Risk factor display (safety, weather, toll, speed cameras)
- * - Gradient backgrounds per route type
- * - Current location awareness
- * - Metric badges with rich data
- * - Smooth animations (Framer Motion ready)
+ * Risk factor display, current location awareness, smart metrics
  */
 
-import React, { useState } from 'react';
+import React, { useState, CSSProperties } from 'react';
 import {
   MapPin,
   Clock,
@@ -27,17 +23,13 @@ export interface RouteWithRisk {
   distance_km: number;
   duration_min: number;
   elevation_m: number;
-  
-  // Risk factors
-  safety_score: number; // 0-100 (0=dangerous, 100=safest)
-  weather_risk: 'clear' | 'rain' | 'snow' | 'wind'; // 0-100
+  safety_score: number;
+  weather_risk: 'clear' | 'rain' | 'snow' | 'wind';
   weather_risk_level: number;
   toll_cost_nok?: number;
   speed_cameras_count: number;
-  
-  // Scenic/quality
-  scenic_score: number; // 0-100
-  traffic_level: 'light' | 'moderate' | 'heavy'; // current
+  scenic_score: number;
+  traffic_level: 'light' | 'moderate' | 'heavy';
 }
 
 interface MD3EnhancedRouteSelectorCardProps {
@@ -48,16 +40,17 @@ interface MD3EnhancedRouteSelectorCardProps {
   onNavigate?: (id: string) => void;
 }
 
-const getGradient = (type: string) => {
-  const gradients: Record<string, string> = {
-    fastest:
-      'bg-gradient-to-br from-sky-600 to-sky-900 border-sky-500',
-    safest:
-      'bg-gradient-to-br from-emerald-600 to-emerald-900 border-emerald-500',
-    scenic:
-      'bg-gradient-to-br from-purple-600 to-purple-900 border-purple-500',
-  };
-  return gradients[type] || gradients.fastest;
+const getTypeColor = (type: string): { bg: string; text: string; border: string } => {
+  switch (type) {
+    case 'fastest':
+      return { bg: 'rgba(from var(--md-sys-color-tertiary) r g b / 0.12)', text: 'var(--md-sys-color-tertiary)', border: 'var(--md-sys-color-tertiary)' };
+    case 'safest':
+      return { bg: 'rgba(from var(--md-sys-color-primary) r g b / 0.12)', text: 'var(--md-sys-color-primary)', border: 'var(--md-sys-color-primary)' };
+    case 'scenic':
+      return { bg: 'rgba(from var(--md-sys-color-secondary) r g b / 0.12)', text: 'var(--md-sys-color-secondary)', border: 'var(--md-sys-color-secondary)' };
+    default:
+      return { bg: 'var(--md-sys-color-surface-container)', text: 'var(--md-sys-color-on-surface)', border: 'var(--md-sys-color-outline-variant)' };
+  }
 };
 
 const getTypeIcon = (type: string) => {
@@ -69,16 +62,16 @@ const getTypeIcon = (type: string) => {
   return icons[type] || icons.fastest;
 };
 
-const getRiskColor = (score: number) => {
-  if (score >= 75) return 'bg-emerald-500/20 text-emerald-300 border-emerald-600';
-  if (score >= 50) return 'bg-amber-500/20 text-amber-300 border-amber-600';
-  return 'bg-red-500/20 text-red-300 border-red-600';
+const getRiskColor = (score: number): { bg: string; text: string; border: string } => {
+  if (score >= 75) return { bg: 'rgba(from var(--md-sys-color-primary) r g b / 0.12)', text: 'var(--md-sys-color-primary)', border: 'var(--md-sys-color-primary)' };
+  if (score >= 50) return { bg: 'rgba(from var(--md-sys-color-secondary) r g b / 0.12)', text: 'var(--md-sys-color-secondary)', border: 'var(--md-sys-color-secondary)' };
+  return { bg: 'rgba(from var(--md-sys-color-error) r g b / 0.12)', text: 'var(--md-sys-color-error)', border: 'var(--md-sys-color-error)' };
 };
 
 const getRiskLabel = (score: number) => {
   if (score >= 75) return 'Safe';
   if (score >= 50) return 'Caution';
-  return 'Risky';
+  return 'High Risk';
 };
 
 export const MD3EnhancedRouteSelectorCard: React.FC<
@@ -86,43 +79,150 @@ export const MD3EnhancedRouteSelectorCard: React.FC<
 > = ({ routes, selectedId, currentLocation, onSelect, onNavigate }) => {
   const [expanded, setExpanded] = useState<string | null>(null);
 
+  const containerStyle: CSSProperties = {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '12px',
+  };
+
+  const routeButtonStyle = (isSelected: boolean, typeColor: ReturnType<typeof getTypeColor>): CSSProperties => ({
+    width: '100%',
+    textAlign: 'left',
+    backgroundColor: typeColor.bg,
+    border: `2px solid ${typeColor.border}`,
+    borderRadius: '16px',
+    padding: '16px',
+    cursor: 'pointer',
+    transition: 'all var(--app-duration-short2) var(--app-ease-standard)',
+    boxShadow: isSelected ? 'var(--md-sys-elevation-shadow-3)' : 'var(--md-sys-elevation-shadow-1)',
+    outline: 'none',
+  });
+
+  const headerStyle: CSSProperties = {
+    display: 'flex',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    marginBottom: '12px',
+  };
+
+  const iconBoxStyle = (color: string): CSSProperties => ({
+    padding: '8px',
+    backgroundColor: 'rgba(from white r g b / 0.12)',
+    borderRadius: '8px',
+    color: color,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  });
+
+  const titleStyle = (color: string): CSSProperties => ({
+    fontWeight: 700,
+    fontSize: '16px',
+    color: color,
+    textTransform: 'capitalize',
+    margin: 0,
+  });
+
+  const subtitleStyle: CSSProperties = {
+    fontSize: '12px',
+    color: 'var(--md-sys-color-on-surface-variant)',
+  };
+
+  const metricsGridStyle: CSSProperties = {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(3, 1fr)',
+    gap: '8px',
+    marginBottom: '12px',
+  };
+
+  const metricStyle: CSSProperties = {
+    textAlign: 'center',
+    padding: '8px',
+    backgroundColor: 'rgba(from var(--md-sys-color-on-surface) r g b / 0.04)',
+    borderRadius: '8px',
+  };
+
+  const metricValueStyle: CSSProperties = {
+    fontWeight: 700,
+    fontSize: '16px',
+    color: 'var(--md-sys-color-on-surface)',
+  };
+
+  const metricLabelStyle: CSSProperties = {
+    fontSize: '11px',
+    color: 'var(--md-sys-color-on-surface-variant)',
+    marginTop: '2px',
+    textTransform: 'uppercase',
+    letterSpacing: '0.5px',
+  };
+
+  const riskBadgeStyle = (riskColor: ReturnType<typeof getRiskColor>): CSSProperties => ({
+    display: 'inline-block',
+    backgroundColor: riskColor.bg,
+    color: riskColor.text,
+    border: `1px solid ${riskColor.border}`,
+    padding: '4px 8px',
+    borderRadius: '6px',
+    fontSize: '11px',
+    fontWeight: 600,
+  });
+
+  const detailsStyle = (isExpanded: boolean): CSSProperties => ({
+    display: isExpanded ? 'flex' : 'none',
+    flexDirection: 'column',
+    gap: '8px',
+    marginTop: '12px',
+    paddingTop: '12px',
+    borderTop: `1px solid rgba(from var(--md-sys-color-on-surface) r g b / 0.12)`,
+  });
+
+  const detailRowStyle: CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    fontSize: '13px',
+    color: 'var(--md-sys-color-on-surface)',
+  };
+
+  const detailLabelStyle: CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    color: 'var(--md-sys-color-on-surface-variant)',
+  };
+
   return (
-    <div className="space-y-3">
+    <div style={containerStyle}>
       {routes.map((route) => {
         const isSelected = selectedId === route.id;
         const isExpanded = expanded === route.id;
+        const typeColor = getTypeColor(route.type);
+        const riskColor = getRiskColor(route.safety_score);
         const hours = Math.floor(route.duration_min / 60);
         const mins = route.duration_min % 60;
         const durationStr = hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
-
-        // Calculate overall risk (weighted average)
-        const overallRisk = Math.round(
-          route.safety_score * 0.4 +
-            (100 - route.weather_risk_level) * 0.3 +
-            (route.speed_cameras_count > 0 ? 50 : 80) * 0.3
-        );
 
         return (
           <button
             key={route.id}
             onClick={() => onSelect?.(route.id)}
-            className={`w-full text-left rounded-2xl p-4 border-2 transition-all duration-200 ${
-              isSelected
-                ? 'ring-2 ring-emerald-400 shadow-xl'
-                : 'hover:shadow-lg'
-            } ${getGradient(route.type)}`}
+            style={routeButtonStyle(isSelected, typeColor)}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.boxShadow = 'var(--md-sys-elevation-shadow-4)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.boxShadow = isSelected ? 'var(--md-sys-elevation-shadow-3)' : 'var(--md-sys-elevation-shadow-1)';
+            }}
           >
             {/* Header */}
-            <div className="flex items-start justify-between mb-3">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-white/10 rounded-lg text-white/90">
+            <div style={headerStyle}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1 }}>
+                <div style={iconBoxStyle(typeColor.text)}>
                   {getTypeIcon(route.type)}
                 </div>
-                <div>
-                  <h3 className="font-bold text-white capitalize">
-                    {route.type}
-                  </h3>
-                  <p className="text-xs text-white/70">
+                <div style={{ flex: 1 }}>
+                  <h3 style={titleStyle(typeColor.text)}>{route.type}</h3>
+                  <p style={subtitleStyle}>
                     {route.type === 'fastest'
                       ? 'Quickest route'
                       : route.type === 'safest'
@@ -131,177 +231,104 @@ export const MD3EnhancedRouteSelectorCard: React.FC<
                   </p>
                 </div>
               </div>
-              <ChevronRight
-                size={20}
-                className={`text-white transition-transform ${
-                  isExpanded ? 'rotate-90' : ''
-                }`}
-              />
+              {isSelected && <ChevronRight size={24} style={{ color: typeColor.text }} />}
             </div>
 
-            {/* Main metrics row */}
-            <div className="grid grid-cols-4 gap-2 mb-3">
-              {/* Distance */}
-              <div className="bg-white/10 rounded-lg p-2 text-center">
-                <div className="text-xl font-bold text-white">
-                  {route.distance_km}
-                </div>
-                <div className="text-xs text-white/70">km</div>
+            {/* Metrics */}
+            <div style={metricsGridStyle}>
+              <div style={metricStyle}>
+                <div style={metricValueStyle}>{route.distance_km}</div>
+                <div style={metricLabelStyle}>km</div>
               </div>
-
-              {/* Duration */}
-              <div className="bg-white/10 rounded-lg p-2 text-center">
-                <div className="text-lg font-bold text-white flex items-center justify-center gap-1">
-                  <Clock size={14} />
-                  {durationStr}
-                </div>
-                <div className="text-xs text-white/70">time</div>
+              <div style={metricStyle}>
+                <div style={metricValueStyle}>{durationStr}</div>
+                <div style={metricLabelStyle}>Time</div>
               </div>
-
-              {/* Elevation */}
-              <div className="bg-white/10 rounded-lg p-2 text-center">
-                <div className="text-lg font-bold text-white flex items-center justify-center gap-1">
-                  <TrendingUp size={14} />
-                  {route.elevation_m}
-                </div>
-                <div className="text-xs text-white/70">m</div>
-              </div>
-
-              {/* Risk Badge */}
-              <div
-                className={`rounded-lg p-2 text-center border ${getRiskColor(
-                  overallRisk
-                )}`}
-              >
-                <div className="text-lg font-bold">{overallRisk}</div>
-                <div className="text-xs">{getRiskLabel(overallRisk)}</div>
+              <div style={metricStyle}>
+                <div style={metricValueStyle}>{route.elevation_m}</div>
+                <div style={metricLabelStyle}>m Elev</div>
               </div>
             </div>
 
-            {/* Risk factors row */}
-            <div className="grid grid-cols-2 gap-2 mb-3">
-              {/* Safety score */}
-              <div className="bg-white/5 rounded-lg px-3 py-2 flex items-center gap-2">
-                <Shield size={14} className="text-emerald-200" />
-                <div className="flex-1 min-w-0">
-                  <div className="text-xs text-white/70">Safety</div>
-                  <div className="text-sm font-semibold text-white">
-                    {route.safety_score}%
-                  </div>
-                </div>
-              </div>
-
-              {/* Weather */}
-              <div className="bg-white/5 rounded-lg px-3 py-2 flex items-center gap-2">
-                <Cloud size={14} className="text-blue-200" />
-                <div className="flex-1 min-w-0">
-                  <div className="text-xs text-white/70 capitalize">
-                    {route.weather_risk}
-                  </div>
-                  <div className="text-sm font-semibold text-white">
-                    {route.weather_risk_level}%
-                  </div>
-                </div>
-              </div>
-
-              {/* Toll if applicable */}
-              {route.toll_cost_nok && (
-                <div className="bg-white/5 rounded-lg px-3 py-2 flex items-center gap-2">
-                  <DollarSign size={14} className="text-amber-200" />
-                  <div className="flex-1 min-w-0">
-                    <div className="text-xs text-white/70">Toll</div>
-                    <div className="text-sm font-semibold text-white">
-                      {route.toll_cost_nok} NOK
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Speed cameras */}
-              {route.speed_cameras_count > 0 && (
-                <div className="bg-red-500/10 rounded-lg px-3 py-2 flex items-center gap-2 border border-red-500/30">
-                  <AlertTriangle size={14} className="text-red-300" />
-                  <div className="flex-1 min-w-0">
-                    <div className="text-xs text-red-300">Cameras</div>
-                    <div className="text-sm font-semibold text-red-200">
-                      {route.speed_cameras_count}
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Scenic/Quality bars (collapsed) */}
-            {route.scenic_score > 0 && (
-              <div className="mb-3">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs text-white/70">Scenery</span>
-                  <span className="text-xs font-semibold text-white">
-                    {route.scenic_score}%
-                  </span>
-                </div>
-                <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-gradient-to-r from-purple-400 to-pink-400"
-                    style={{ width: `${route.scenic_score}%` }}
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* Traffic indicator */}
-            <div className="flex items-center justify-between text-xs text-white/70 mb-3">
-              <span>Traffic: {route.traffic_level}</span>
-              <span className="inline-block px-2 py-1 bg-white/10 rounded text-white/80">
-                {route.traffic_level === 'heavy'
-                  ? '🔴'
-                  : route.traffic_level === 'moderate'
-                  ? '🟡'
-                  : '🟢'}
+            {/* Risk Badge */}
+            <div style={{ marginBottom: '12px' }}>
+              <span style={riskBadgeStyle(riskColor)}>
+                {getRiskLabel(route.safety_score)} ({route.safety_score}%)
               </span>
             </div>
 
-            {/* CTA Buttons */}
-            <div className="flex gap-2">
-              <MD3Button
-                variant="filled"
-                size="medium"
-                fullWidth
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onNavigate?.(route.id);
-                }}
-              >
-                Navigate
-              </MD3Button>
-              {currentLocation && (
-                <MD3Button
-                  variant="outlined"
-                  size="medium"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setExpanded(isExpanded ? null : route.id);
-                  }}
-                >
-                  {isExpanded ? 'Less' : 'More'}
-                </MD3Button>
+            {/* Expandable Details */}
+            <div style={detailsStyle(isExpanded)}>
+              <div style={detailRowStyle}>
+                <span style={detailLabelStyle}>
+                  <Cloud size={14} />
+                  Weather Risk
+                </span>
+                <span>{route.weather_risk_level}%</span>
+              </div>
+              {route.toll_cost_nok && (
+                <div style={detailRowStyle}>
+                  <span style={detailLabelStyle}>
+                    <DollarSign size={14} />
+                    Toll Cost
+                  </span>
+                  <span>{route.toll_cost_nok} NOK</span>
+                </div>
               )}
+              {route.speed_cameras_count > 0 && (
+                <div style={detailRowStyle}>
+                  <span style={detailLabelStyle}>
+                    <AlertTriangle size={14} />
+                    Speed Cameras
+                  </span>
+                  <span>{route.speed_cameras_count}</span>
+                </div>
+              )}
+              <div style={detailRowStyle}>
+                <span style={detailLabelStyle}>Traffic</span>
+                <span style={{ textTransform: 'capitalize' }}>{route.traffic_level}</span>
+              </div>
             </div>
 
-            {/* Expanded details */}
-            {isExpanded && currentLocation && (
-              <div className="mt-4 pt-4 border-t border-white/20 space-y-2 text-sm text-white/80">
-                <div className="flex items-center gap-2">
-                  <MapPin size={14} />
-                  <span>Distance from current: {route.distance_km} km</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <AlertTriangle size={14} />
-                  <span>
-                    Overall risk level: {getRiskLabel(overallRisk)}
-                  </span>
-                </div>
-              </div>
+            {/* Toggle Button */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setExpanded(isExpanded ? null : route.id);
+              }}
+              style={{
+                width: '100%',
+                backgroundColor: 'transparent',
+                border: `1px solid ${typeColor.border}`,
+                color: typeColor.text,
+                padding: '8px',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontSize: '13px',
+                fontWeight: 500,
+                marginBottom: '12px',
+                transition: 'all var(--app-duration-short2) var(--app-ease-standard)',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = typeColor.bg;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
+              }}
+            >
+              {isExpanded ? 'Hide details' : 'Show details'}
+            </button>
+
+            {/* Navigate Button */}
+            {isSelected && (
+              <MD3Button
+                variant="filled"
+                size="large"
+                onClick={() => onNavigate?.(route.id)}
+                fullWidth
+              >
+                Start Navigation
+              </MD3Button>
             )}
           </button>
         );
