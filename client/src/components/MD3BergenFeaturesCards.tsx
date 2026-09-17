@@ -3,7 +3,7 @@
  * Toll info, Speed cameras, Bike routes, Park & Ride
  */
 
-import React from 'react';
+import React, { CSSProperties } from 'react';
 import { AlertTriangle, Bike, Car, MapPin } from 'lucide-react';
 
 // Toll Card
@@ -14,22 +14,60 @@ interface TollInfo {
   payment_methods: string[];
 }
 
-export const MD3TollCard: React.FC<{ toll: TollInfo }> = ({ toll }) => (
-  <div className="md-card bg-orange-900 bg-opacity-20 border border-orange-700">
-    <div className="flex items-start gap-3">
-      <AlertTriangle size={20} className="text-orange-400 mt-1 flex-shrink-0" />
-      <div className="flex-1">
-        <h3 className="font-semibold text-orange-100">{toll.road} Toll</h3>
-        <div className="text-2xl font-bold text-orange-300 mt-1">{toll.cost_nok} NOK</div>
-        <div className="text-xs text-orange-200 mt-2 space-y-1">
+export const MD3TollCard: React.FC<{ toll: TollInfo }> = ({ toll }) => {
+  const cardStyle: CSSProperties = {
+    backgroundColor: 'rgba(from var(--md-sys-color-secondary) r g b / 0.08)',
+    border: `1px solid var(--md-sys-color-secondary)`,
+    borderRadius: '12px',
+    padding: '12px',
+    display: 'flex',
+    alignItems: 'flex-start',
+    gap: '12px',
+  };
+
+  const iconStyle: CSSProperties = {
+    color: 'var(--md-sys-color-secondary)',
+    marginTop: '2px',
+    flexShrink: 0,
+  };
+
+  const titleStyle: CSSProperties = {
+    fontWeight: 600,
+    color: 'var(--md-sys-color-on-surface)',
+    margin: 0,
+  };
+
+  const costStyle: CSSProperties = {
+    fontSize: '24px',
+    fontWeight: 700,
+    color: 'var(--md-sys-color-secondary)',
+    marginTop: '8px',
+  };
+
+  const methodsStyle: CSSProperties = {
+    fontSize: '12px',
+    color: 'var(--md-sys-color-on-surface-variant)',
+    marginTop: '8px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '4px',
+  };
+
+  return (
+    <div style={cardStyle}>
+      <AlertTriangle size={20} style={iconStyle} />
+      <div style={{ flex: 1 }}>
+        <h3 style={titleStyle}>{toll.road} Toll</h3>
+        <div style={costStyle}>{toll.cost_nok} NOK</div>
+        <div style={methodsStyle}>
           {toll.payment_methods.map((method) => (
             <div key={method}>• {method}</div>
           ))}
         </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
 
 // Speed Camera Alert Card
 interface SpeedCameraAlert {
@@ -39,57 +77,130 @@ interface SpeedCameraAlert {
   distance_m: number;
 }
 
-export const MD3SpeedCameraCard: React.FC<{ camera: SpeedCameraAlert }> = ({ camera }) => (
-  <div className="md-card bg-red-900 bg-opacity-20 border border-red-700">
-    <div className="flex items-start gap-3">
-      <AlertTriangle size={20} className="text-red-400 mt-1 flex-shrink-0" />
-      <div className="flex-1">
-        <h3 className="font-semibold text-red-100">Speed Camera Ahead</h3>
-        <p className="text-sm text-red-200 mt-1">{camera.road}</p>
-        <div className="flex items-center gap-4 mt-2 text-xs text-red-200">
-          <div>
-            <div className="text-red-300 font-bold">{camera.limit_kmh}</div>
-            <div>km/h limit</div>
-          </div>
-          <div>
-            <div className="text-red-300 font-bold">{(camera.distance_m / 1000).toFixed(1)}</div>
-            <div>km ahead</div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-);
+export const MD3SpeedCameraCard: React.FC<{ camera: SpeedCameraAlert }> = ({ camera }) => {
+  const cardStyle: CSSProperties = {
+    backgroundColor: 'rgba(from var(--md-sys-color-error) r g b / 0.08)',
+    border: `1px solid var(--md-sys-color-error)`,
+    borderRadius: '12px',
+    padding: '12px',
+    display: 'flex',
+    alignItems: 'flex-start',
+    gap: '12px',
+  };
 
-// Bike Route Card
-interface BikeRouteInfo {
-  id: string;
-  name: string;
-  difficulty: 'easy' | 'medium' | 'hard';
-  distance_km: number;
-  elevation_m: number;
-}
+  const iconStyle: CSSProperties = {
+    color: 'var(--md-sys-color-error)',
+    marginTop: '2px',
+    flexShrink: 0,
+  };
 
-export const MD3BikeRouteCard: React.FC<{ route: BikeRouteInfo }> = ({ route }) => {
-  const difficultyColor: Record<string, string> = {
-    easy: 'bg-green-500',
-    medium: 'bg-yellow-500',
-    hard: 'bg-red-500',
+  const titleStyle: CSSProperties = {
+    fontWeight: 600,
+    color: 'var(--md-sys-color-on-surface)',
+    margin: 0,
+  };
+
+  const roadStyle: CSSProperties = {
+    fontSize: '13px',
+    color: 'var(--md-sys-color-on-surface-variant)',
+    marginTop: '4px',
+  };
+
+  const detailsStyle: CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+    marginTop: '8px',
+    fontSize: '12px',
+    color: 'var(--md-sys-color-on-surface-variant)',
   };
 
   return (
-    <div className="md-card bg-emerald-900 bg-opacity-20 border border-emerald-700">
-      <div className="flex items-start gap-3">
-        <Bike size={20} className="text-emerald-400 mt-1 flex-shrink-0" />
-        <div className="flex-1">
-          <h3 className="font-semibold text-emerald-100">{route.name}</h3>
-          <div className="flex items-center gap-2 mt-2">
-            <span className={`px-2 py-1 rounded text-xs font-semibold text-white ${difficultyColor[route.difficulty]}`}>
-              {route.difficulty}
-            </span>
-            <span className="text-sm text-emerald-200">{route.distance_km} km</span>
-            <span className="text-sm text-emerald-200">+{route.elevation_m}m</span>
-          </div>
+    <div style={cardStyle}>
+      <AlertTriangle size={20} style={iconStyle} />
+      <div style={{ flex: 1 }}>
+        <h3 style={titleStyle}>Speed Camera Ahead</h3>
+        <p style={roadStyle}>{camera.road}</p>
+        <div style={detailsStyle}>
+          <div>{camera.limit_kmh} km/h</div>
+          <div>{camera.distance_m} m away</div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Bike Route Card
+interface BikeRoute {
+  id: string;
+  name: string;
+  difficulty: 'easy' | 'moderate' | 'hard';
+  distance_km: number;
+}
+
+export const MD3BikeRouteCard: React.FC<{ route: BikeRoute }> = ({ route }) => {
+  const getDifficultyColor = (difficulty: string): string => {
+    switch (difficulty) {
+      case 'easy':
+        return 'var(--md-sys-color-primary)';
+      case 'moderate':
+        return 'var(--md-sys-color-secondary)';
+      case 'hard':
+        return 'var(--md-sys-color-tertiary)';
+      default:
+        return 'var(--md-sys-color-on-surface-variant)';
+    }
+  };
+
+  const cardStyle: CSSProperties = {
+    backgroundColor: 'var(--md-sys-color-surface-container)',
+    border: `1px solid var(--md-sys-color-outline-variant)`,
+    borderRadius: '12px',
+    padding: '12px',
+    display: 'flex',
+    alignItems: 'flex-start',
+    gap: '12px',
+  };
+
+  const iconStyle: CSSProperties = {
+    color: getDifficultyColor(route.difficulty),
+    marginTop: '2px',
+    flexShrink: 0,
+  };
+
+  const titleStyle: CSSProperties = {
+    fontWeight: 600,
+    color: 'var(--md-sys-color-on-surface)',
+    margin: 0,
+  };
+
+  const detailsStyle: CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+    marginTop: '4px',
+    fontSize: '12px',
+    color: 'var(--md-sys-color-on-surface-variant)',
+  };
+
+  const badgeStyle: CSSProperties = {
+    backgroundColor: getDifficultyColor(route.difficulty),
+    color: 'white',
+    padding: '2px 8px',
+    borderRadius: '4px',
+    fontSize: '11px',
+    fontWeight: 600,
+    textTransform: 'capitalize',
+  };
+
+  return (
+    <div style={cardStyle}>
+      <Bike size={20} style={iconStyle} />
+      <div style={{ flex: 1 }}>
+        <h3 style={titleStyle}>{route.name}</h3>
+        <div style={detailsStyle}>
+          <div>{route.distance_km} km</div>
+          <div style={badgeStyle}>{route.difficulty}</div>
         </div>
       </div>
     </div>
@@ -97,84 +208,91 @@ export const MD3BikeRouteCard: React.FC<{ route: BikeRouteInfo }> = ({ route }) 
 };
 
 // Park & Ride Card
-interface ParkAndRideInfo {
+interface ParkAndRide {
   id: string;
   name: string;
-  available_spaces: number;
-  total_capacity: number;
-  transit_lines: string[];
-}
-
-export const MD3ParkAndRideCard: React.FC<{ station: ParkAndRideInfo }> = ({ station }) => {
-  const occupancy = (station.total_capacity - station.available_spaces) / station.total_capacity;
-  const availablePercent = (station.available_spaces / station.total_capacity) * 100;
-
-  return (
-    <div className="md-card bg-sky-900 bg-opacity-20 border border-sky-700">
-      <div className="flex items-start gap-3">
-        <Car size={20} className="text-sky-400 mt-1 flex-shrink-0" />
-        <div className="flex-1">
-          <h3 className="font-semibold text-sky-100">{station.name}</h3>
-          
-          {/* Capacity bar */}
-          <div className="mt-2 space-y-1">
-            <div className="flex justify-between text-xs text-sky-200">
-              <span>Availability</span>
-              <span className="font-bold">{station.available_spaces}/{station.total_capacity}</span>
-            </div>
-            <div className="h-2 bg-sky-900 rounded-full overflow-hidden">
-              <div
-                className={`h-full ${
-                  availablePercent > 30 ? 'bg-emerald-500' : 
-                  availablePercent > 10 ? 'bg-yellow-500' : 
-                  'bg-red-500'
-                }`}
-                style={{ width: `${availablePercent}%` }}
-              />
-            </div>
-          </div>
-
-          {/* Transit lines */}
-          <div className="flex flex-wrap gap-1 mt-2">
-            {station.transit_lines.map((line) => (
-              <span key={line} className="px-2 py-0.5 bg-sky-700 text-xs text-sky-100 rounded">
-                Line {line}
-              </span>
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// Speed Indicator Card
-interface SpeedIndicator {
-  current_kmh: number;
-  limit_kmh: number;
   location: string;
+  capacity: number;
+  occupied: number;
+  price_per_hour_nok: number;
 }
 
-export const MD3SpeedIndicatorCard: React.FC<{ speed: SpeedIndicator }> = ({ speed }) => {
-  const isOverLimit = speed.current_kmh > speed.limit_kmh;
-  const difference = Math.abs(speed.current_kmh - speed.limit_kmh);
+export const MD3ParkAndRideCard: React.FC<{ facility: ParkAndRide }> = ({ facility }) => {
+  const occupancy = Math.round((facility.occupied / facility.capacity) * 100);
+
+  const cardStyle: CSSProperties = {
+    backgroundColor: 'var(--md-sys-color-surface-container)',
+    border: `1px solid var(--md-sys-color-outline-variant)`,
+    borderRadius: '12px',
+    padding: '12px',
+    display: 'flex',
+    alignItems: 'flex-start',
+    gap: '12px',
+  };
+
+  const iconStyle: CSSProperties = {
+    color: 'var(--md-sys-color-primary)',
+    marginTop: '2px',
+    flexShrink: 0,
+  };
+
+  const titleStyle: CSSProperties = {
+    fontWeight: 600,
+    color: 'var(--md-sys-color-on-surface)',
+    margin: 0,
+  };
+
+  const locationStyle: CSSProperties = {
+    fontSize: '13px',
+    color: 'var(--md-sys-color-on-surface-variant)',
+    marginTop: '4px',
+  };
+
+  const detailsStyle: CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: '12px',
+    marginTop: '8px',
+    fontSize: '12px',
+  };
+
+  const priceStyle: CSSProperties = {
+    color: 'var(--md-sys-color-primary)',
+    fontWeight: 600,
+  };
+
+  const occupancyBarStyle: CSSProperties = {
+    width: '100%',
+    height: '4px',
+    backgroundColor: 'var(--md-sys-color-outline-variant)',
+    borderRadius: '2px',
+    overflow: 'hidden',
+    marginTop: '4px',
+  };
+
+  const occupancyFillStyle: CSSProperties = {
+    height: '100%',
+    width: `${occupancy}%`,
+    backgroundColor: occupancy > 80 ? 'var(--md-sys-color-error)' : 'var(--md-sys-color-primary)',
+    transition: 'width var(--app-duration-short2) var(--app-ease-standard)',
+  };
 
   return (
-    <div className={`md-card ${isOverLimit ? 'bg-red-900 bg-opacity-20 border border-red-700' : 'bg-slate-800'}`}>
-      <div className="text-center">
-        <div className="text-4xl font-bold text-sky-400">{speed.current_kmh}</div>
-        <div className="text-sm text-slate-400">km/h</div>
-        {isOverLimit && (
-          <div className="mt-2 text-red-300 text-sm font-semibold">
-            +{difference} over limit ({speed.limit_kmh} km/h)
-          </div>
-        )}
-        {!isOverLimit && (
-          <div className="mt-2 text-emerald-300 text-sm font-semibold">
-            {difference} under limit
-          </div>
-        )}
-        <div className="text-xs text-slate-400 mt-2">{speed.location}</div>
+    <div style={cardStyle}>
+      <MapPin size={20} style={iconStyle} />
+      <div style={{ flex: 1 }}>
+        <h3 style={titleStyle}>{facility.name}</h3>
+        <p style={locationStyle}>{facility.location}</p>
+        <div style={occupancyBarStyle}>
+          <div style={occupancyFillStyle} />
+        </div>
+        <div style={detailsStyle}>
+          <span style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>
+            {facility.occupied}/{facility.capacity} spaces
+          </span>
+          <span style={priceStyle}>{facility.price_per_hour_nok} NOK/h</span>
+        </div>
       </div>
     </div>
   );
@@ -185,5 +303,4 @@ export default {
   MD3SpeedCameraCard,
   MD3BikeRouteCard,
   MD3ParkAndRideCard,
-  MD3SpeedIndicatorCard,
 };

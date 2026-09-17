@@ -1,13 +1,10 @@
 /**
  * Material Design 3 Navigation Flow
  * Complete search-to-navigation experience
- * - Combines advanced search + enhanced route selector
- * - Smooth transitions and animations ready
- * - Current location awareness
  */
 
-import React, { useState } from 'react';
-import { MapPin, Navigation } from 'lucide-react';
+import React, { useState, CSSProperties } from 'react';
+import { MapPin, Navigation, ArrowUp } from 'lucide-react';
 import { MD3AdvancedSearchBar, SearchSuggestion } from './MD3AdvancedSearchBar';
 import { MD3EnhancedRouteSelectorCard, RouteWithRisk } from './MD3EnhancedRouteSelectorCard';
 import { MD3Button } from './MD3Button';
@@ -18,7 +15,6 @@ export interface NavigationFlowProps {
   onNavigate?: (destination: SearchSuggestion, route: RouteWithRisk) => void;
 }
 
-// Mock data generator for demo
 const generateMockRoutes = (destination: string): RouteWithRisk[] => [
   {
     id: 'route-fastest',
@@ -48,152 +44,258 @@ const generateMockRoutes = (destination: string): RouteWithRisk[] => [
     scenic_score: 65,
     traffic_level: 'light',
   },
-  {
-    id: 'route-scenic',
-    type: 'scenic',
-    distance_km: 18.9,
-    duration_min: 35,
-    elevation_m: 380,
-    safety_score: 85,
-    weather_risk: 'clear',
-    weather_risk_level: 12,
-    toll_cost_nok: undefined,
-    speed_cameras_count: 0,
-    scenic_score: 88,
-    traffic_level: 'light',
-  },
 ];
 
 export const MD3NavigationFlow: React.FC<NavigationFlowProps> = ({
   businesses = [],
-  currentLocation,
+  currentLocation = [59.9139, 10.7522],
   onNavigate,
 }) => {
-  const [origin, setOrigin] = useState<SearchSuggestion | null>(
-    currentLocation ? {
-      id: 'current',
-      name: 'Current Location',
-      type: 'poi',
-      coordinates: currentLocation,
-    } : null
-  );
-  const [destination, setDestination] = useState<SearchSuggestion | null>(null);
+  const [selectedDestination, setSelectedDestination] = useState<SearchSuggestion | null>(null);
   const [routes, setRoutes] = useState<RouteWithRisk[]>([]);
-  const [selectedRoute, setSelectedRoute] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [isLoadingRoutes, setIsLoadingRoutes] = useState(false);
+  const [selectedRoute, setSelectedRoute] = useState<RouteWithRisk | null>(null);
 
-  const handleDestinationSelect = async (suggestion: SearchSuggestion) => {
-    setDestination(suggestion);
-    setLoading(true);
+  const handleDestinationSelect = (destination: SearchSuggestion) => {
+    setSelectedDestination(destination);
+    setIsLoadingRoutes(true);
+    setRoutes([]);
+    setSelectedRoute(null);
 
-    // Simulate API call to get routes
     setTimeout(() => {
-      setRoutes(generateMockRoutes(suggestion.name));
-      setLoading(false);
-      setSelectedRoute('route-fastest'); // Auto-select fastest
-    }, 800);
+      setRoutes(generateMockRoutes(destination.name));
+      setIsLoadingRoutes(false);
+    }, 1000);
   };
 
-  const handleNavigate = (routeId: string) => {
-    const route = routes.find((r) => r.id === routeId);
-    if (destination && route && onNavigate) {
-      onNavigate(destination, route);
+  const handleRouteSelect = (route: RouteWithRisk) => {
+    setSelectedRoute(route);
+    if (selectedDestination && onNavigate) {
+      onNavigate(selectedDestination, route);
     }
   };
 
-  const handleSwapLocations = () => {
-    setOrigin(destination);
-    setDestination(origin);
+  const handleReset = () => {
+    setSelectedDestination(null);
     setRoutes([]);
     setSelectedRoute(null);
   };
 
+  const containerStyle: CSSProperties = {
+    width: '100%',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '16px',
+  };
+
+  const sectionStyle: CSSProperties = {
+    backgroundColor: 'var(--md-sys-color-surface-container)',
+    borderRadius: '16px',
+    padding: '16px',
+    border: `1px solid var(--md-sys-color-outline-variant)`,
+    boxShadow: 'var(--md-sys-elevation-shadow-1)',
+  };
+
+  const labelStyle: CSSProperties = {
+    fontSize: '11px',
+    fontWeight: 600,
+    color: 'var(--md-sys-color-on-surface-variant)',
+    textTransform: 'uppercase',
+    marginBottom: '8px',
+    display: 'block',
+    letterSpacing: '0.5px',
+  };
+
+  const inputWrapperStyle: CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    padding: '8px 12px',
+    backgroundColor: 'var(--md-sys-color-surface)',
+    borderRadius: '8px',
+    border: `1px solid var(--md-sys-color-outline-variant)`,
+  };
+
+  const textStyle: CSSProperties = {
+    fontSize: '14px',
+    color: 'var(--md-sys-color-on-surface)',
+  };
+
+  const swapButtonStyle: CSSProperties = {
+    display: 'flex',
+    justifyContent: 'center',
+    marginBottom: '16px',
+  };
+
+  const headerStyle: CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: '16px',
+  };
+
+  const titleStyle: CSSProperties = {
+    fontWeight: 600,
+    color: 'var(--md-sys-color-on-surface)',
+  };
+
+  const subtitleStyle: CSSProperties = {
+    fontSize: '12px',
+    color: 'var(--md-sys-color-on-surface-variant)',
+    marginTop: '4px',
+  };
+
+  const loaderStyle: CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+  };
+
+  const pulseStyle: CSSProperties = {
+    width: '8px',
+    height: '8px',
+    backgroundColor: 'var(--md-sys-color-primary)',
+    borderRadius: '50%',
+    animation: 'pulse 1.5s ease-in-out infinite',
+  };
+
+  const loadingContainerStyle: CSSProperties = {
+    paddingTop: '32px',
+    paddingBottom: '32px',
+    textAlign: 'center',
+  };
+
+  const spinnerStyle: CSSProperties = {
+    width: '32px',
+    height: '32px',
+    border: `2px solid var(--md-sys-color-primary)`,
+    borderTopColor: 'transparent',
+    borderRadius: '50%',
+    animation: 'spin 1s linear infinite',
+    margin: '0 auto',
+  };
+
+  const emptyStateStyle: CSSProperties = {
+    backgroundColor: 'rgba(from var(--md-sys-color-primary) r g b / 0.08)',
+    borderRadius: '8px',
+    padding: '16px',
+    textAlign: 'center',
+    border: `1px solid var(--md-sys-color-primary)`,
+  };
+
   return (
-    <div className="w-full space-y-4">
-      {/* Search Card */}
-      <div className="bg-slate-900 rounded-2xl p-4 border border-slate-800 shadow-lg">
-        {/* Origin */}
-        <div className="mb-4">
-          <label className="text-xs font-semibold text-slate-400 uppercase mb-2 block">
-            From
-          </label>
-          <div className="flex items-center gap-2 px-3 py-2 bg-slate-800 rounded-lg border border-slate-700">
-            <MapPin size={16} className="text-emerald-400 flex-shrink-0" />
-            <span className="text-sm text-slate-200">
-              {origin?.name || 'Current Location'}
-            </span>
-          </div>
-        </div>
+    <div style={containerStyle}>
+      <style>{`
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.5; }
+        }
+      `}</style>
 
-        {/* Swap button */}
-        <div className="flex justify-center mb-4">
-          <MD3Button
-            variant="text"
-            icon={<Navigation size={18} />}
-            onClick={handleSwapLocations}
-            title="Swap locations"
-          />
-        </div>
-
-        {/* Destination Search */}
-        <div>
-          <label className="text-xs font-semibold text-slate-400 uppercase mb-2 block">
-            To
-          </label>
-          <MD3AdvancedSearchBar
-            placeholder="Search destination..."
-            onSelect={handleDestinationSelect}
-            currentLocation={currentLocation}
-            businesses={businesses}
-          />
-        </div>
-      </div>
-
-      {/* Routes Display */}
-      {destination && (
-        <div className="bg-slate-900 rounded-2xl p-4 border border-slate-800 shadow-lg">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h3 className="font-bold text-slate-100">
-                Routes to {destination.name}
-              </h3>
-              <p className="text-xs text-slate-400 mt-1">
-                {routes.length} option(s) found
-              </p>
+      {!selectedDestination ? (
+        <>
+          <div style={sectionStyle}>
+            <div style={{ marginBottom: '16px' }}>
+              <label style={labelStyle}>From</label>
+              <div style={inputWrapperStyle}>
+                <MapPin size={16} style={{ color: 'var(--md-sys-color-primary)', flexShrink: 0 }} />
+                <span style={textStyle}>
+                  {currentLocation ? `${currentLocation[0].toFixed(4)}, ${currentLocation[1].toFixed(4)}` : 'Current Location'}
+                </span>
+              </div>
             </div>
-            {loading && (
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
-                <span className="text-xs text-slate-400">Computing...</span>
+
+            <div style={swapButtonStyle}>
+              <button
+                onClick={handleReset}
+                style={{
+                  padding: '8px 8px',
+                  backgroundColor: 'transparent',
+                  border: 'none',
+                  cursor: 'pointer',
+                }}
+              >
+                <ArrowUp size={20} style={{ color: 'var(--md-sys-color-primary)' }} />
+              </button>
+            </div>
+
+            <div>
+              <label style={labelStyle}>To</label>
+              <MD3AdvancedSearchBar
+                placeholder="Search destination..."
+                onSelect={handleDestinationSelect}
+              />
+            </div>
+          </div>
+        </>
+      ) : (
+        <div style={sectionStyle}>
+          <div style={headerStyle}>
+            <div>
+              <div style={titleStyle}>{selectedDestination.name}</div>
+              <div style={subtitleStyle}>
+                {selectedDestination.address || 'Location selected'}
+              </div>
+            </div>
+            {!isLoadingRoutes && routes.length > 0 && (
+              <div style={loaderStyle}>
+                <div style={pulseStyle} />
+                <span style={{ fontSize: '12px', color: 'var(--md-sys-color-on-surface-variant)' }}>Computing...</span>
               </div>
             )}
           </div>
 
-          {loading && (
-            <div className="py-8 text-center">
-              <div className="w-8 h-8 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin mx-auto" />
-              <p className="text-sm text-slate-400 mt-2">Finding optimal routes...</p>
+          {isLoadingRoutes ? (
+            <div style={loadingContainerStyle}>
+              <div style={spinnerStyle} />
+              <div style={{ fontSize: '14px', color: 'var(--md-sys-color-on-surface-variant)', marginTop: '8px' }}>
+                Finding optimal routes...
+              </div>
             </div>
-          )}
-
-          {!loading && routes.length > 0 && (
+          ) : routes.length === 0 ? (
+            <div style={emptyStateStyle}>
+              <div style={{ fontSize: '14px', color: 'var(--md-sys-color-primary)' }}>
+                No routes available. Please check your network connection.
+              </div>
+            </div>
+          ) : (
             <MD3EnhancedRouteSelectorCard
               routes={routes}
-              selectedId={selectedRoute || undefined}
+              selectedId={selectedRoute?.id}
               currentLocation={currentLocation}
-              onSelect={setSelectedRoute}
-              onNavigate={handleNavigate}
+              onSelect={(routeId) => {
+                const route = routes.find(r => r.id === routeId);
+                if (route) handleRouteSelect(route);
+              }}
+              onNavigate={(routeId) => {
+                const route = routes.find(r => r.id === routeId);
+                if (route && selectedDestination) {
+                  onNavigate?.(selectedDestination, route);
+                }
+              }}
             />
           )}
-        </div>
-      )}
 
-      {/* Info */}
-      {!destination && (
-        <div className="bg-slate-900/50 rounded-xl p-4 border border-slate-800 text-center">
-          <p className="text-sm text-slate-400">
-            Enter a destination to see available routes and risk factors
-          </p>
+          {selectedRoute && (
+            <MD3Button
+              variant="filled"
+              size="large"
+              icon={<Navigation size={20} />}
+              onClick={() => {
+                if (selectedDestination && selectedRoute) {
+                  onNavigate?.(selectedDestination, selectedRoute);
+                }
+              }}
+              fullWidth
+              style={{ marginTop: '16px' }}
+            >
+              Start Navigation
+            </MD3Button>
+          )}
         </div>
       )}
     </div>

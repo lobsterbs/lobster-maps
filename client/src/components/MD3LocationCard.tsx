@@ -1,95 +1,196 @@
 /**
  * Material Design 3 Location Card
- * Display origin or destination with address, coordinates, etc.
+ * Displays a saved location with coordinates, metadata, and actions
  */
 
-import React from 'react';
-import { MapPin, Clock, AlertCircle } from 'lucide-react';
+import React, { CSSProperties } from 'react';
+import { Globe, Trash2, Copy, AlertCircle } from 'lucide-react';
 
-export interface LocationData {
-  id: string;
-  name: string;
-  address?: string;
-  coordinates: [number, number];
-  type: 'origin' | 'destination';
-  recentlyUsed?: boolean;
-  arrival_time?: string;
-  note?: string;
+interface LocationCardProps {
+  location: {
+    id: string;
+    name: string;
+    address?: string;
+    lat: number;
+    lng: number;
+    note?: string;
+    lastUsed?: Date;
+  };
+  onDelete?: (id: string) => void;
+  onSelect?: (location: LocationCardProps['location']) => void;
 }
 
-interface MD3LocationCardProps {
-  location: LocationData;
-  onEdit?: () => void;
-  onClear?: () => void;
-  showDetails?: boolean;
-}
+export const MD3LocationCard: React.FC<LocationCardProps> = ({ location, onDelete, onSelect }) => {
+  const [copied, setCopied] = React.useState(false);
 
-export const MD3LocationCard: React.FC<MD3LocationCardProps> = ({
-  location,
-  onEdit,
-  onClear,
-  showDetails = false,
-}) => {
-  const [lat, lng] = location.coordinates;
+  const handleCopyCoords = () => {
+    navigator.clipboard.writeText(`${location.lat.toFixed(6)}, ${location.lng.toFixed(6)}`);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const cardStyle: CSSProperties = {
+    backgroundColor: 'var(--md-sys-color-surface-container)',
+    border: `1px solid var(--md-sys-color-outline-variant)`,
+    borderRadius: '12px',
+    padding: '12px',
+    cursor: onSelect ? 'pointer' : 'default',
+    transition: 'all var(--app-duration-short2) var(--app-ease-standard)',
+  };
+
+  const headerStyle: CSSProperties = {
+    display: 'flex',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    marginBottom: '12px',
+    gap: '8px',
+  };
+
+  const contentStyle: CSSProperties = {
+    display: 'flex',
+    alignItems: 'flex-start',
+    gap: '12px',
+    flex: 1,
+  };
+
+  const iconStyle: CSSProperties = {
+    color: 'var(--md-sys-color-on-surface-variant)',
+    flexShrink: 0,
+    marginTop: '2px',
+  };
+
+  const nameStyle: CSSProperties = {
+    fontWeight: 600,
+    color: 'var(--md-sys-color-on-surface)',
+    margin: 0,
+  };
+
+  const addressStyle: CSSProperties = {
+    fontSize: '13px',
+    color: 'var(--md-sys-color-on-surface-variant)',
+    margin: '4px 0 0 0',
+  };
+
+  const recentStyle: CSSProperties = {
+    fontSize: '11px',
+    color: 'var(--md-sys-color-primary)',
+    marginTop: '4px',
+    fontWeight: 500,
+  };
+
+  const deleteButtonStyle: CSSProperties = {
+    backgroundColor: 'transparent',
+    border: 'none',
+    color: 'var(--md-sys-color-on-surface-variant)',
+    cursor: 'pointer',
+    padding: '8px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: '6px',
+    transition: 'all var(--app-duration-short2) var(--app-ease-standard)',
+  };
+
+  const metadataStyle: CSSProperties = {
+    paddingTop: '12px',
+    borderTop: `1px solid var(--md-sys-color-outline-variant)`,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '8px',
+  };
+
+  const metaItemStyle: CSSProperties = {
+    fontSize: '12px',
+    color: 'var(--md-sys-color-on-surface-variant)',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '4px',
+  };
+
+  const noteStyle: CSSProperties = {
+    display: 'flex',
+    alignItems: 'flex-start',
+    gap: '6px',
+  };
+
+  const noteTextStyle: CSSProperties = {
+    color: 'var(--md-sys-color-on-surface)',
+    fontSize: '12px',
+  };
+
+  const actionButtonStyle: CSSProperties = {
+    width: '100%',
+    marginTop: '12px',
+    paddingTop: '8px',
+    paddingBottom: '8px',
+    backgroundColor: 'transparent',
+    border: `1px solid var(--md-sys-color-primary)`,
+    color: 'var(--md-sys-color-primary)',
+    borderRadius: '6px',
+    cursor: 'pointer',
+    fontSize: '12px',
+    fontWeight: 500,
+    transition: 'all var(--app-duration-short2) var(--app-ease-standard)',
+  };
 
   return (
-    <div className="md-card">
-      <div className="flex items-start justify-between mb-3">
-        <div className="flex items-start gap-3 flex-1">
-          <MapPin
-            size={20}
-            className={
-              location.type === 'origin'
-                ? 'text-emerald-400 mt-1'
-                : 'text-slate-400 mt-1'
-            }
-          />
-          <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-slate-100 truncate">{location.name}</h3>
-            {location.address && (
-              <p className="text-sm text-slate-400 truncate">{location.address}</p>
-            )}
-            {location.recentlyUsed && (
-              <div className="text-xs text-emerald-400 mt-1">Recently used</div>
-            )}
+    <div
+      style={cardStyle}
+      onMouseEnter={(e) => onSelect && (e.currentTarget.style.backgroundColor = 'var(--md-sys-color-surface-container-high)')}
+      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'var(--md-sys-color-surface-container)')}
+      onClick={() => onSelect?.(location)}
+    >
+      <div style={headerStyle}>
+        <div style={contentStyle}>
+          <Globe size={18} style={iconStyle} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <h3 style={nameStyle}>{location.name}</h3>
+            {location.address && <p style={addressStyle}>{location.address}</p>}
+            {location.lastUsed && <div style={recentStyle}>Recently used</div>}
           </div>
         </div>
-        <button
-          onClick={onClear}
-          className="text-slate-400 hover:text-slate-200 px-2"
-        >
-          ✕
-        </button>
+        {onDelete && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete(location.id);
+            }}
+            style={deleteButtonStyle}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = 'rgba(from var(--md-sys-color-error) r g b / var(--md-sys-state-hover-opacity))';
+              e.currentTarget.style.color = 'var(--md-sys-color-error)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent';
+              e.currentTarget.style.color = 'var(--md-sys-color-on-surface-variant)';
+            }}
+          >
+            <Trash2 size={16} />
+          </button>
+        )}
       </div>
 
-      {showDetails && (
-        <div className="space-y-2 pt-3 border-t border-slate-700">
-          <div className="text-xs text-slate-400 space-y-1">
-            <div>
-              <span className="text-slate-500">Coordinates:</span> {lat.toFixed(4)}, {lng.toFixed(4)}
-            </div>
-            {location.arrival_time && (
-              <div className="flex items-center gap-1">
-                <Clock size={12} />
-                <span>Arrival: {location.arrival_time}</span>
-              </div>
-            )}
-            {location.note && (
-              <div className="flex items-start gap-1">
-                <AlertCircle size={12} className="mt-0.5 flex-shrink-0" />
-                <span className="text-slate-300">{location.note}</span>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {onEdit && (
-        <button
-          onClick={onEdit}
-          className="w-full mt-3 py-2 text-sm text-emerald-400 hover:text-emerald-300 rounded transition-colors"
+      <div style={metadataStyle}>
+        <div
+          style={metaItemStyle}
+          onMouseEnter={(e) => (e.currentTarget.style.cursor = 'pointer')}
+          onClick={handleCopyCoords}
         >
-          Edit location
+          <span>Coordinates: {location.lat.toFixed(4)}, {location.lng.toFixed(4)}</span>
+          <Copy size={12} />
+        </div>
+
+        {location.note && (
+          <div style={noteStyle}>
+            <AlertCircle size={12} style={{ marginTop: '2px', flexShrink: 0, color: 'var(--md-sys-color-on-surface-variant)' }} />
+            <span style={noteTextStyle}>{location.note}</span>
+          </div>
+        )}
+      </div>
+
+      {onSelect && (
+        <button style={actionButtonStyle}>
+          Use This Location
         </button>
       )}
     </div>

@@ -4,7 +4,7 @@
  * Vertical timeline with step markers and timing
  */
 
-import React from 'react';
+import React, { CSSProperties } from 'react';
 import { MapPin, Clock, Bus, Navigation } from 'lucide-react';
 
 export interface JourneyStep {
@@ -31,89 +31,159 @@ export const MD3TimelineRail: React.FC<MD3TimelineRailProps> = ({
   const getIcon = (step: JourneyStep) => {
     if (step.icon) return step.icon;
     
-    const iconProps = { size: 20, className: 'text-slate-300' };
+    const getIconColor = (type: string): string => {
+      switch (type) {
+        case 'start':
+        case 'end':
+          return 'var(--md-sys-color-primary)';
+        case 'transit':
+          return 'var(--md-sys-color-tertiary)';
+        case 'waypoint':
+          return 'var(--md-sys-color-secondary)';
+        default:
+          return 'var(--md-sys-color-on-surface-variant)';
+      }
+    };
+
+    const iconProps = { size: 20, style: { color: getIconColor(step.type) } };
     switch (step.type) {
       case 'start':
-        return <MapPin {...iconProps} className="text-emerald-400" />;
-      case 'transit':
-        return <Bus {...iconProps} className="text-sky-400" />;
-      case 'waypoint':
-        return <Navigation {...iconProps} className="text-orange-400" />;
       case 'end':
-        return <MapPin {...iconProps} className="text-emerald-400" />;
+        return <MapPin {...iconProps} />;
+      case 'transit':
+        return <Bus {...iconProps} />;
+      case 'waypoint':
+        return <Navigation {...iconProps} />;
       default:
         return <MapPin {...iconProps} />;
     }
   };
 
-  const getStepColor = (type: string) => {
+  const getStepColor = (type: string): string => {
     const colors: Record<string, string> = {
-      start: 'bg-emerald-500',
-      transit: 'bg-sky-500',
-      waypoint: 'bg-orange-500',
-      end: 'bg-emerald-500',
+      start: 'var(--md-sys-color-primary)',
+      transit: 'var(--md-sys-color-tertiary)',
+      waypoint: 'var(--md-sys-color-secondary)',
+      end: 'var(--md-sys-color-primary)',
     };
-    return colors[type] || 'bg-slate-500';
+    return colors[type] || 'var(--md-sys-color-outline)';
+  };
+
+  const containerStyle: CSSProperties = {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 0,
+  };
+
+  const stepStyle = (isActive: boolean): CSSProperties => ({
+    display: 'flex',
+    gap: '12px',
+    padding: '12px',
+    cursor: 'pointer',
+    backgroundColor: isActive ? 'var(--md-sys-color-surface-container-high)' : 'transparent',
+    transition: 'all var(--app-duration-short2) var(--app-ease-standard)',
+    borderRadius: '8px',
+  });
+
+  const timelineStyle: CSSProperties = {
+    position: 'relative',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: '8px',
+  };
+
+  const markerStyle = (isActive: boolean): CSSProperties => ({
+    width: isActive ? '28px' : '20px',
+    height: isActive ? '28px' : '20px',
+    borderRadius: '50%',
+    backgroundColor: 'var(--md-sys-color-surface)',
+    border: `2px solid var(--md-sys-color-primary)`,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    transition: 'all var(--app-duration-short2) var(--app-ease-standard)',
+  });
+
+  const connectorStyle: CSSProperties = {
+    width: '2px',
+    height: '24px',
+    backgroundColor: 'var(--md-sys-color-outline-variant)',
+  };
+
+  const contentStyle: CSSProperties = {
+    flex: 1,
+    minWidth: 0,
+  };
+
+  const titleStyle: CSSProperties = {
+    fontWeight: 600,
+    fontSize: '14px',
+    color: 'var(--md-sys-color-on-surface)',
+    margin: 0,
+  };
+
+  const instructionStyle: CSSProperties = {
+    fontSize: '13px',
+    color: 'var(--md-sys-color-on-surface-variant)',
+    margin: '4px 0 0 0',
+  };
+
+  const metaStyle: CSSProperties = {
+    display: 'flex',
+    gap: '8px',
+    marginTop: '4px',
+    fontSize: '12px',
+    color: 'var(--md-sys-color-on-surface-variant)',
   };
 
   return (
-    <div className="space-y-0">
+    <div style={containerStyle}>
       {steps.map((step, idx) => {
         const isActive = activeStepId === step.id;
         const isLast = idx === steps.length - 1;
-        const stepColor = getStepColor(step.type);
 
         return (
-          <button
+          <div
             key={step.id}
+            style={stepStyle(isActive)}
             onClick={() => onStepClick?.(step.id)}
-            className={`w-full flex gap-4 px-4 py-3 text-left transition-colors ${
-              isActive ? 'bg-slate-700 bg-opacity-50' : 'hover:bg-slate-700 hover:bg-opacity-30'
-            }`}
+            onMouseEnter={(e) => {
+              if (!isActive) {
+                e.currentTarget.style.backgroundColor = 'rgba(from var(--md-sys-color-primary) r g b / var(--md-sys-state-hover-opacity))';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!isActive) {
+                e.currentTarget.style.backgroundColor = 'transparent';
+              }
+            }}
           >
-            {/* Timeline connector */}
-            <div className="flex flex-col items-center pt-1">
-              {/* Circle marker */}
-              <div
-                className={`w-8 h-8 rounded-full ${stepColor} flex items-center justify-center shadow-lg`}
-              >
+            <div style={timelineStyle}>
+              <div style={markerStyle(isActive)}>
                 {getIcon(step)}
               </div>
-              {/* Vertical line (except for last item) */}
-              {!isLast && (
-                <div className={`w-0.5 h-12 mt-2 ${stepColor} opacity-30`} />
-              )}
+              {!isLast && <div style={connectorStyle} />}
             </div>
 
-            {/* Content */}
-            <div className="flex-1 pt-1 min-w-0">
-              <h3 className="font-semibold text-slate-100 truncate">{step.name}</h3>
-              
-              {step.time && (
-                <div className="flex items-center gap-1 text-sm text-slate-400 mt-1">
-                  <Clock size={14} />
-                  <span>{step.time}</span>
-                </div>
-              )}
-
-              {step.instruction && (
-                <p className="text-sm text-slate-400 mt-1 line-clamp-2">{step.instruction}</p>
-              )}
-
-              {step.duration_min && (
-                <div className="text-xs text-slate-500 mt-2">
-                  {step.duration_min} min
+            <div style={contentStyle}>
+              <h3 style={titleStyle}>{step.name}</h3>
+              {step.instruction && <p style={instructionStyle}>{step.instruction}</p>}
+              {(step.time || step.duration_min) && (
+                <div style={metaStyle}>
+                  {step.time && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <Clock size={12} />
+                      {step.time}
+                    </div>
+                  )}
+                  {step.duration_min && (
+                    <div>{step.duration_min} min</div>
+                  )}
                 </div>
               )}
             </div>
-
-            {/* Right indicator */}
-            {isActive && (
-              <div className="flex items-center">
-                <div className="w-1 h-8 bg-emerald-400 rounded-full" />
-              </div>
-            )}
-          </button>
+          </div>
         );
       })}
     </div>
