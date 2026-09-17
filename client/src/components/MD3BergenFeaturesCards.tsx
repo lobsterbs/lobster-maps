@@ -16,7 +16,7 @@ interface TollInfo {
 
 export const MD3TollCard: React.FC<{ toll: TollInfo }> = ({ toll }) => {
   const cardStyle: CSSProperties = {
-    backgroundColor: 'rgba(from var(--md-sys-color-secondary) r g b / 0.08)',
+    backgroundColor: 'rgba(106, 90, 205, 0.08)',
     border: `1px solid var(--md-sys-color-secondary)`,
     borderRadius: '12px',
     padding: '12px',
@@ -79,7 +79,7 @@ interface SpeedCameraAlert {
 
 export const MD3SpeedCameraCard: React.FC<{ camera: SpeedCameraAlert }> = ({ camera }) => {
   const cardStyle: CSSProperties = {
-    backgroundColor: 'rgba(from var(--md-sys-color-error) r g b / 0.08)',
+    backgroundColor: 'rgba(220, 38, 38, 0.08)',
     border: `1px solid var(--md-sys-color-error)`,
     borderRadius: '12px',
     padding: '12px',

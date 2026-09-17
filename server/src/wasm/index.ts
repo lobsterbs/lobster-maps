@@ -63,6 +63,12 @@ export function getSearchScorer(): any {
     console.warn('⚠️ Using Node.js search scorer (WASM unavailable)');
     return {
       score: (query: string, text: string) => 0.5, // Neutral score
+      score_business: (query: string, name: string, category: string, userLat: number, userLon: number, bizLat: number, bizLon: number) => {
+        // Simple fallback: check if name contains query (case-insensitive)
+        const nameScore = name.toLowerCase().includes(query.toLowerCase()) ? 70 : 30;
+        const categoryScore = category?.toLowerCase().includes(query.toLowerCase()) ? 20 : 0;
+        return Math.min(100, nameScore + categoryScore);
+      }
     };
   }
   return searchScorer;

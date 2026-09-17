@@ -97,7 +97,7 @@ const DirectionsPanel: React.FC<DirectionsPanelProps> = ({
               }}
               style={{
                 padding: '12px',
-                backgroundColor: selectedIndex === idx ? `rgba(from var(--md-sys-color-primary) r g b / 0.15)` : 'transparent',
+                backgroundColor: selectedIndex === idx ? `rgba(16, 185, 129, 0.15)` : 'transparent',
                 border: selectedIndex === idx ? `2px solid var(--md-sys-color-primary)` : `1px solid var(--md-sys-color-outline-variant)`,
                 borderRadius: '8px',
                 color: 'var(--md-sys-color-on-surface)',
@@ -106,10 +106,10 @@ const DirectionsPanel: React.FC<DirectionsPanelProps> = ({
                 transition: 'all 200ms var(--app-ease-standard)',
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = `rgba(from var(--md-sys-color-primary) r g b / 0.08)`;
+                e.currentTarget.style.backgroundColor = `rgba(16, 185, 129, 0.08)`;
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = selectedIndex === idx ? `rgba(from var(--md-sys-color-primary) r g b / 0.15)` : 'transparent';
+                e.currentTarget.style.backgroundColor = selectedIndex === idx ? `rgba(16, 185, 129, 0.15)` : 'transparent';
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>

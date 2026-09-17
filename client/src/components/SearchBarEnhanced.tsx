@@ -139,7 +139,7 @@ const SearchBarEnhanced: React.FC<SearchBarEnhancedProps> = ({ onLocationSelect 
                 cursor: 'pointer',
                 fontSize: '14px',
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = `rgba(from var(--md-sys-color-primary) r g b / 0.08)`)}
+              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = `rgba(16, 185, 129, 0.08)`)}
               onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
             >
               <div style={{ fontWeight: '500' }}>{r.name || r.address}</div>

@@ -157,7 +157,7 @@ export const MD3LocationCard: React.FC<LocationCardProps> = ({ location, onDelet
             }}
             style={deleteButtonStyle}
             onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = 'rgba(from var(--md-sys-color-error) r g b / var(--md-sys-state-hover-opacity))';
+              e.currentTarget.style.backgroundColor = 'rgba(220, 38, 38, var(--md-sys-state-hover-opacity))';
               e.currentTarget.style.color = 'var(--md-sys-color-error)';
             }}
             onMouseLeave={(e) => {

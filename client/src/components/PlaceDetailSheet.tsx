@@ -97,7 +97,7 @@ const PlaceDetailSheet: React.FC<PlaceDetailSheetProps> = ({ place, onClose = ()
                   height: '8px',
                   borderRadius: '50%',
                   border: 'none',
-                  backgroundColor: i === imageIdx ? 'var(--md-sys-color-primary)' : `rgba(from var(--md-sys-color-on-surface-variant) r g b / 0.4)`,
+                  backgroundColor: i === imageIdx ? 'var(--md-sys-color-primary)' : 'rgba(198, 198, 203, 0.4)',
                   cursor: 'pointer',
                 }}
               />
@@ -189,7 +189,7 @@ const PlaceDetailSheet: React.FC<PlaceDetailSheetProps> = ({ place, onClose = ()
             href={`tel:${place.phone}`}
             style={{
               padding: '12px',
-              backgroundColor: `rgba(from var(--md-sys-color-primary) r g b / 0.12)`,
+              backgroundColor: `rgba(16, 185, 129, 0.12)`,
               color: 'var(--md-sys-color-primary)',
               border: `1px solid var(--md-sys-color-primary)`,
               borderRadius: '8px',

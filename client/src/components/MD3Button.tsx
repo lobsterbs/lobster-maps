@@ -80,8 +80,8 @@ export const MD3Button = React.forwardRef<HTMLButtonElement, MD3ButtonProps>(
 
     // Compute state-layer overlay based on M3 spec
     const getStateLayerColor = () => {
-      if (isActive) return `rgba(from var(--md-sys-color-primary) r g b / var(--md-sys-state-pressed-opacity))`;
-      if (isHovered) return `rgba(from var(--md-sys-color-primary) r g b / var(--md-sys-state-hover-opacity))`;
+      if (isActive) return `rgba(16, 185, 129, var(--md-sys-state-pressed-opacity))`;
+      if (isHovered) return `rgba(16, 185, 129, var(--md-sys-state-hover-opacity))`;
       return 'transparent';
     };
 

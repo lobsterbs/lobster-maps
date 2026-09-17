@@ -143,7 +143,7 @@ export const MD3RoutePlannerCard: React.FC<MD3RoutePlannerCardProps> = ({
     display: 'flex',
     alignItems: 'flex-start',
     gap: '8px',
-    backgroundColor: 'rgba(from var(--md-sys-color-error) r g b / 0.08)',
+    backgroundColor: 'rgba(220, 38, 38, 0.08)',
     borderRadius: '8px',
     padding: '8px 12px',
     border: `1px solid var(--md-sys-color-error)`,
@@ -248,7 +248,7 @@ export const MD3RoutePlannerCard: React.FC<MD3RoutePlannerCardProps> = ({
       <button
         style={expandButtonStyle}
         onClick={() => setExpanded(!expanded)}
-        onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'rgba(from var(--md-sys-color-primary) r g b / 0.08)')}
+        onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'rgba(16, 185, 129, 0.08)')}
         onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
       >
         {expanded ? 'Hide details' : 'Show details'}

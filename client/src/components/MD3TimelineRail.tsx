@@ -150,7 +150,7 @@ export const MD3TimelineRail: React.FC<MD3TimelineRailProps> = ({
             onClick={() => onStepClick?.(step.id)}
             onMouseEnter={(e) => {
               if (!isActive) {
-                e.currentTarget.style.backgroundColor = 'rgba(from var(--md-sys-color-primary) r g b / var(--md-sys-state-hover-opacity))';
+                e.currentTarget.style.backgroundColor = 'rgba(16, 185, 129, var(--md-sys-state-hover-opacity))';
               }
             }}
             onMouseLeave={(e) => {

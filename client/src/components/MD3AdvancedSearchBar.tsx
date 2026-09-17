@@ -187,7 +187,7 @@ export const MD3AdvancedSearchBar: React.FC<MD3AdvancedSearchBarProps> = ({
           onFocus={(e) => {
             setShowSuggestions(true);
             e.currentTarget.style.borderColor = 'var(--md-sys-color-primary)';
-            e.currentTarget.style.boxShadow = '0 0 0 3px rgba(from var(--md-sys-color-primary) r g b / 0.12)';
+            e.currentTarget.style.boxShadow = '0 0 0 3px rgba(16, 185, 129, 0.12)';
           }}
           onBlur={(e) => {
             e.currentTarget.style.borderColor = 'var(--md-sys-color-outline-variant)';
@@ -250,7 +250,7 @@ export const MD3AdvancedSearchBar: React.FC<MD3AdvancedSearchBarProps> = ({
                   display: 'flex',
                   alignItems: 'center',
                   gap: '12px',
-                  backgroundColor: isSelected ? `rgba(from var(--md-sys-color-primary) r g b / var(--md-sys-state-selected-opacity))` : 'transparent',
+                  backgroundColor: isSelected ? `rgba(16, 185, 129, var(--md-sys-state-selected-opacity))` : 'transparent',
                   color: 'var(--md-sys-color-on-surface)',
                   border: 'none',
                   cursor: 'pointer',
@@ -258,7 +258,7 @@ export const MD3AdvancedSearchBar: React.FC<MD3AdvancedSearchBarProps> = ({
                 }}
                 onMouseEnter={(e) => {
                   if (!isSelected) {
-                    e.currentTarget.style.backgroundColor = `rgba(from var(--md-sys-color-primary) r g b / var(--md-sys-state-hover-opacity))`;
+                    e.currentTarget.style.backgroundColor = `rgba(16, 185, 129, var(--md-sys-state-hover-opacity))`;
                   }
                 }}
                 onMouseLeave={(e) => {
@@ -356,7 +356,7 @@ export const MD3AdvancedSearchBar: React.FC<MD3AdvancedSearchBarProps> = ({
                 fontSize: '14px',
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = `rgba(from var(--md-sys-color-primary) r g b / var(--md-sys-state-hover-opacity))`;
+                e.currentTarget.style.backgroundColor = `rgba(16, 185, 129, var(--md-sys-state-hover-opacity))`;
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.backgroundColor = 'transparent';

@@ -43,11 +43,11 @@ interface MD3EnhancedRouteSelectorCardProps {
 const getTypeColor = (type: string): { bg: string; text: string; border: string } => {
   switch (type) {
     case 'fastest':
-      return { bg: 'rgba(from var(--md-sys-color-tertiary) r g b / 0.12)', text: 'var(--md-sys-color-tertiary)', border: 'var(--md-sys-color-tertiary)' };
+      return { bg: 'rgba(255, 184, 115, 0.12)', text: 'var(--md-sys-color-tertiary)', border: 'var(--md-sys-color-tertiary)' };
     case 'safest':
-      return { bg: 'rgba(from var(--md-sys-color-primary) r g b / 0.12)', text: 'var(--md-sys-color-primary)', border: 'var(--md-sys-color-primary)' };
+      return { bg: 'rgba(16, 185, 129, 0.12)', text: 'var(--md-sys-color-primary)', border: 'var(--md-sys-color-primary)' };
     case 'scenic':
-      return { bg: 'rgba(from var(--md-sys-color-secondary) r g b / 0.12)', text: 'var(--md-sys-color-secondary)', border: 'var(--md-sys-color-secondary)' };
+      return { bg: 'rgba(106, 90, 205, 0.12)', text: 'var(--md-sys-color-secondary)', border: 'var(--md-sys-color-secondary)' };
     default:
       return { bg: 'var(--md-sys-color-surface-container)', text: 'var(--md-sys-color-on-surface)', border: 'var(--md-sys-color-outline-variant)' };
   }
@@ -63,9 +63,9 @@ const getTypeIcon = (type: string) => {
 };
 
 const getRiskColor = (score: number): { bg: string; text: string; border: string } => {
-  if (score >= 75) return { bg: 'rgba(from var(--md-sys-color-primary) r g b / 0.12)', text: 'var(--md-sys-color-primary)', border: 'var(--md-sys-color-primary)' };
-  if (score >= 50) return { bg: 'rgba(from var(--md-sys-color-secondary) r g b / 0.12)', text: 'var(--md-sys-color-secondary)', border: 'var(--md-sys-color-secondary)' };
-  return { bg: 'rgba(from var(--md-sys-color-error) r g b / 0.12)', text: 'var(--md-sys-color-error)', border: 'var(--md-sys-color-error)' };
+  if (score >= 75) return { bg: 'rgba(16, 185, 129, 0.12)', text: 'var(--md-sys-color-primary)', border: 'var(--md-sys-color-primary)' };
+  if (score >= 50) return { bg: 'rgba(106, 90, 205, 0.12)', text: 'var(--md-sys-color-secondary)', border: 'var(--md-sys-color-secondary)' };
+  return { bg: 'rgba(220, 38, 38, 0.12)', text: 'var(--md-sys-color-error)', border: 'var(--md-sys-color-error)' };
 };
 
 const getRiskLabel = (score: number) => {
@@ -107,7 +107,7 @@ export const MD3EnhancedRouteSelectorCard: React.FC<
 
   const iconBoxStyle = (color: string): CSSProperties => ({
     padding: '8px',
-    backgroundColor: 'rgba(from white r g b / 0.12)',
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
     borderRadius: '8px',
     color: color,
     display: 'flex',
@@ -138,7 +138,7 @@ export const MD3EnhancedRouteSelectorCard: React.FC<
   const metricStyle: CSSProperties = {
     textAlign: 'center',
     padding: '8px',
-    backgroundColor: 'rgba(from var(--md-sys-color-on-surface) r g b / 0.04)',
+    backgroundColor: 'rgba(15, 15, 15, 0.04)',
     borderRadius: '8px',
   };
 
@@ -173,7 +173,7 @@ export const MD3EnhancedRouteSelectorCard: React.FC<
     gap: '8px',
     marginTop: '12px',
     paddingTop: '12px',
-    borderTop: `1px solid rgba(from var(--md-sys-color-on-surface) r g b / 0.12)`,
+    borderTop: `1px solid rgba(15, 15, 15, 0.12)`,
   });
 
   const detailRowStyle: CSSProperties = {
