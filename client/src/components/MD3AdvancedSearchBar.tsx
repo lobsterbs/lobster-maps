@@ -150,22 +150,49 @@ export const MD3AdvancedSearchBar: React.FC<MD3AdvancedSearchBarProps> = ({
   };
 
   return (
-    <div className="relative w-full">
+    <div style={{ position: 'relative', width: '100%' }}>
       {/* Search Input */}
-      <div className="relative">
+      <div style={{ position: 'relative' }}>
         <Search
           size={20}
-          className="absolute left-4 top-3.5 text-emerald-400 pointer-events-none"
+          style={{
+            position: 'absolute',
+            left: '16px',
+            top: '14px',
+            color: 'var(--md-sys-color-primary)',
+            pointerEvents: 'none',
+          }}
         />
         <input
           ref={inputRef}
           type="text"
           value={query}
           onChange={(e) => handleSearch(e.target.value)}
-          onFocus={() => setShowSuggestions(true)}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
-          className="w-full pl-12 pr-10 py-3 bg-slate-800 text-slate-100 rounded-lg border border-slate-700 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-400 outline-none transition-all text-sm placeholder-slate-500"
+          style={{
+            width: '100%',
+            paddingLeft: '48px',
+            paddingRight: '40px',
+            paddingTop: '12px',
+            paddingBottom: '12px',
+            backgroundColor: 'var(--md-sys-color-surface-container)',
+            color: 'var(--md-sys-color-on-surface)',
+            border: `1px solid var(--md-sys-color-outline-variant)`,
+            borderRadius: '8px',
+            fontSize: '14px',
+            transition: 'all var(--app-duration-short2) var(--app-ease-standard)',
+            outline: 'none',
+          }}
+          onFocus={(e) => {
+            setShowSuggestions(true);
+            e.currentTarget.style.borderColor = 'var(--md-sys-color-primary)';
+            e.currentTarget.style.boxShadow = '0 0 0 3px rgba(from var(--md-sys-color-primary) r g b / 0.12)';
+          }}
+          onBlur={(e) => {
+            e.currentTarget.style.borderColor = 'var(--md-sys-color-outline-variant)';
+            e.currentTarget.style.boxShadow = 'none';
+          }}
         />
         {query && (
           <MD3Button
@@ -177,24 +204,36 @@ export const MD3AdvancedSearchBar: React.FC<MD3AdvancedSearchBarProps> = ({
               setSuggestions([]);
               inputRef.current?.focus();
             }}
-            className="absolute right-3 top-3.5"
+            style={{ position: 'absolute', right: '12px', top: '12px' }}
           />
         )}
       </div>
 
       {/* Suggestions Dropdown */}
       {showSuggestions && suggestions.length > 0 && (
-        <div className="absolute top-full left-0 right-0 mt-1 bg-slate-800 border border-slate-700 rounded-lg shadow-lg z-50 overflow-hidden">
+        <div style={{
+          position: 'absolute',
+          top: '100%',
+          left: 0,
+          right: 0,
+          marginTop: '4px',
+          backgroundColor: 'var(--md-sys-color-surface-container-high)',
+          border: `1px solid var(--md-sys-color-outline-variant)`,
+          borderRadius: '8px',
+          boxShadow: 'var(--md-sys-elevation-shadow-2)',
+          zIndex: 50,
+          overflow: 'hidden',
+        }}>
           {suggestions.map((sugg, idx) => {
             const isSelected = idx === selectedIndex;
             const getIcon = () => {
               switch (sugg.type) {
                 case 'business':
-                  return <MapPin size={16} className="text-emerald-400" />;
+                  return <MapPin size={16} style={{ color: 'var(--md-sys-color-primary)' }} />;
                 case 'recent':
-                  return <Clock size={16} className="text-slate-400" />;
+                  return <Clock size={16} style={{ color: 'var(--md-sys-color-on-surface-variant)' }} />;
                 case 'smart':
-                  return <Star size={16} className="text-amber-400" />;
+                  return <Star size={16} style={{ color: 'var(--md-sys-color-primary)' }} />;
                 default:
                   return <MapPin size={16} />;
               }
@@ -204,21 +243,62 @@ export const MD3AdvancedSearchBar: React.FC<MD3AdvancedSearchBarProps> = ({
               <button
                 key={sugg.id}
                 onClick={() => handleSelect(sugg)}
-                className={`w-full px-4 py-3 text-left flex items-center gap-3 transition-colors ${
-                  isSelected ? 'bg-emerald-600 bg-opacity-20' : 'hover:bg-slate-700'
-                }`}
+                style={{
+                  width: '100%',
+                  padding: '12px 16px',
+                  textAlign: 'left',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  backgroundColor: isSelected ? `rgba(from var(--md-sys-color-primary) r g b / var(--md-sys-state-selected-opacity))` : 'transparent',
+                  color: 'var(--md-sys-color-on-surface)',
+                  border: 'none',
+                  cursor: 'pointer',
+                  transition: 'background-color var(--app-duration-short2) var(--app-ease-standard)',
+                }}
+                onMouseEnter={(e) => {
+                  if (!isSelected) {
+                    e.currentTarget.style.backgroundColor = `rgba(from var(--md-sys-color-primary) r g b / var(--md-sys-state-hover-opacity))`;
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!isSelected) {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                  }
+                }}
               >
-                {getIcon()}
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium text-slate-100 truncate">
+                <div style={{ color: 'var(--md-sys-color-primary)', flexShrink: 0 }}>
+                  {getIcon()}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{
+                    fontSize: '14px',
+                    fontWeight: 500,
+                    color: 'var(--md-sys-color-on-surface)',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}>
                     {sugg.name}
                   </div>
                   {sugg.address && (
-                    <div className="text-xs text-slate-400 truncate">{sugg.address}</div>
+                    <div style={{
+                      fontSize: '12px',
+                      color: 'var(--md-sys-color-on-surface-variant)',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}>
+                      {sugg.address}
+                    </div>
                   )}
                 </div>
                 {sugg.score && (
-                  <div className="text-xs text-amber-300 font-semibold">
+                  <div style={{
+                    fontSize: '12px',
+                    color: 'var(--md-sys-color-primary)',
+                    fontWeight: 600,
+                  }}>
                     {Math.round(sugg.score * 10)}%
                   </div>
                 )}
@@ -230,19 +310,67 @@ export const MD3AdvancedSearchBar: React.FC<MD3AdvancedSearchBarProps> = ({
 
       {/* Empty State - Show Recent */}
       {showSuggestions && !query && (
-        <div className="absolute top-full left-0 right-0 mt-1 bg-slate-800 border border-slate-700 rounded-lg shadow-lg z-50 p-3 space-y-2">
-          <div className="text-xs font-semibold text-slate-400 uppercase px-1">
+        <div style={{
+          position: 'absolute',
+          top: '100%',
+          left: 0,
+          right: 0,
+          marginTop: '4px',
+          backgroundColor: 'var(--md-sys-color-surface-container-high)',
+          border: `1px solid var(--md-sys-color-outline-variant)`,
+          borderRadius: '8px',
+          boxShadow: 'var(--md-sys-elevation-shadow-2)',
+          zIndex: 50,
+          padding: '12px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '8px',
+        }}>
+          <div style={{
+            fontSize: '11px',
+            fontWeight: 600,
+            color: 'var(--md-sys-color-on-surface-variant)',
+            textTransform: 'uppercase',
+            paddingLeft: '4px',
+            letterSpacing: '0.5px',
+          }}>
             Recent Destinations
           </div>
           {prefEngine.getRecent(4).map((sugg) => (
             <button
               key={sugg.id}
               onClick={() => handleSelect(sugg)}
-              className="w-full px-3 py-2 text-left flex items-center gap-2 rounded hover:bg-slate-700 transition-colors"
+              style={{
+                width: '100%',
+                padding: '8px 12px',
+                textAlign: 'left',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                backgroundColor: 'transparent',
+                border: 'none',
+                borderRadius: '6px',
+                color: 'var(--md-sys-color-on-surface)',
+                cursor: 'pointer',
+                transition: 'background-color var(--app-duration-short2) var(--app-ease-standard)',
+                fontSize: '14px',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = `rgba(from var(--md-sys-color-primary) r g b / var(--md-sys-state-hover-opacity))`;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
+              }}
             >
-              <Clock size={14} className="text-slate-400 flex-shrink-0" />
-              <span className="text-sm text-slate-200 truncate">{sugg.name}</span>
-              <span className="text-xs text-slate-500 ml-auto flex-shrink-0">
+              <Clock size={14} style={{ color: 'var(--md-sys-color-on-surface-variant)', flexShrink: 0 }} />
+              <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {sugg.name}
+              </span>
+              <span style={{
+                fontSize: '12px',
+                color: 'var(--md-sys-color-on-surface-variant)',
+                flexShrink: 0,
+              }}>
                 {sugg.score}x
               </span>
             </button>

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { Map as MapLibreMapClass, type Map as MapLibreMap, type StyleSpecification } from 'maplibre-gl';
 import { animated, useSpring } from '@react-spring/web';
+import { Mountain, Layers, Satellite } from 'lucide-react';
 import VersionIndicator from './VersionIndicator';
 import { enable3DTerrain, disable3DTerrain } from '../lib/mapbox3dTerrain';
 import 'maplibre-gl/dist/maplibre-gl.css';
@@ -346,40 +347,23 @@ export function MapCanvas({
       <div ref={containerRef} style={{ position: 'absolute', inset: 0 }} />
       <VersionIndicator />
       <div style={togglePillStyle}>
-        {(['map', 'satellite'] as const).map((m) => (
+        {(['map', 'satellite', '3d'] as const).map((m) => (
           <ModeToggleButton
             key={m}
-            label={m === 'map' ? 'Map' : 'Satellite'}
-            selected={mode === m}
+            label={m === 'map' ? 'Map' : m === 'satellite' ? 'Satellite' : '3D'}
+            selected={mode === m || (m === '3d' && terrain)}
             disabled={false}
-            onClick={() => handleModeChange(m)}
+            icon={m === 'map' ? <Layers size={18} /> : m === 'satellite' ? <Satellite size={18} /> : <Mountain size={18} />}
+            onClick={() => {
+              if (m === '3d') {
+                handleTerrainToggle();
+              } else {
+                handleModeChange(m);
+              }
+            }}
           />
         ))}
       </div>
-      <button
-        onClick={handleTerrainToggle}
-        title={terrain ? 'Disable terrain' : 'Enable terrain'}
-        style={{
-          position: 'absolute',
-          top: 72,
-          right: 16,
-          zIndex: 5,
-          width: 40,
-          height: 40,
-          borderRadius: '50%',
-          border: '1px solid rgba(255,255,255,0.08)',
-          backdropFilter: 'blur(20px) saturate(180%)',
-          background: terrain ? 'rgba(16, 185, 129, 0.2)' : 'rgba(21, 21, 21, 0.72)',
-          color: terrain ? '#10b981' : 'rgba(255,255,255,0.5)',
-          cursor: 'pointer',
-          display: 'grid',
-          placeItems: 'center',
-          fontSize: 20,
-          transition: 'all 0.2s ease',
-        }}
-      >
-        ⛰️
-      </button>
     </div>
   );
 }
@@ -389,6 +373,7 @@ type ModeToggleButtonProps = {
   selected: boolean;
   disabled: boolean;
   title?: string;
+  icon?: React.ReactNode;
   onClick: () => void;
 };
 
@@ -400,7 +385,7 @@ const GOLD = 'var(--md-sys-color-primary)';
 const TEXT_DIM = 'var(--md-sys-color-on-surface-variant)';
 const INK = 'var(--md-sys-color-on-surface)';
 
-function ModeToggleButton({ label, selected, disabled, title, onClick }: ModeToggleButtonProps) {
+function ModeToggleButton({ label, selected, disabled, title, icon, onClick }: ModeToggleButtonProps) {
   const style = useSpring({
     background: selected ? GOLD : 'transparent',
     color: selected ? INK : TEXT_DIM,
@@ -417,8 +402,12 @@ function ModeToggleButton({ label, selected, disabled, title, onClick }: ModeTog
         ...style,
         cursor: disabled ? 'not-allowed' : 'pointer',
         opacity: disabled ? 0.4 : 1,
+        display: 'flex',
+        alignItems: 'center',
+        gap: '6px',
       }}
     >
+      {icon}
       {label}
     </animated.button>
   );
