@@ -161,9 +161,17 @@ export function createWeatherCache(): any {
 }
 
 
+/**
+ * Check if WASM modules are actually loaded
+ */
+export function isWasmAvailable(): boolean {
+  return rateLimiter !== null && searchScorer !== null;
+}
+
 export default {
   initializeWasmModules,
   createRateLimiter,
   getSearchScorer,
   createWeatherCache,
+  isWasmAvailable,
 };

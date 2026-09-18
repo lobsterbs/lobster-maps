@@ -12,7 +12,7 @@ import routingRouter from './routes/routing.js';
 import searchRouter from './routes/search.js';
 import scrapeRouter from './routes/scrape.js';
 import { createMcpServer } from './mcp.js';
-import { initializeWasmModules } from './wasm/index.js';
+import { initializeWasmModules, isWasmAvailable } from './wasm/index.js';
 import { rateLimiterWasm } from './middleware/rateLimiterWasm.js';
 import { refreshWeatherCache } from './lib/weatherCacheWasm.js';
 
@@ -130,9 +130,9 @@ async function startServer() {
     // /api or /mcp requests into an HTML response instead of a proper
     // 404/error from those routers.
     app.use(express.static(CLIENT_DIST));
-    // Only serve index.html for routes without file extensions (for SPA routing)
-    // This prevents /assets/*.js, /assets/*.mjs, /assets/*.css etc from being intercepted
-    app.get(/^(?!.*\.(?:js|mjs|css|png|jpg|jpeg|gif|svg|ico|woff2?|json)$)(?!\/api|\/mcp).*/, (_req, res) => {
+    // Only serve index.html for SPA routing (routes without file extensions)
+    // Skip: paths with dots (are files), /api routes, /mcp routes
+    app.get(/^(?!.*[.])(?!\/api)(?!\/mcp)/, (_req, res) => {
       res.sendFile(path.join(CLIENT_DIST, 'index.html'));
     });
 
@@ -148,10 +148,11 @@ async function startServer() {
     });
 
     app.listen(PORT, () => {
+      const usingWasm = isWasmAvailable();
       console.log(`✅ LobsterMaps server listening on :${PORT}`);
-      console.log('🚀 Rate limiter: WASM (<1ms)');
-      console.log('🚀 Search scorer: WASM (100x faster)');
-      console.log('🚀 Weather cache: WASM (O(1) lookups)');
+      console.log(`🚀 Rate limiter: ${usingWasm ? 'WASM (<1ms)' : 'Node.js fallback'}`);
+      console.log(`🚀 Search scorer: ${usingWasm ? 'WASM (100x faster)' : 'Node.js fallback'}`);
+      console.log(`🚀 Weather cache: ${usingWasm ? 'WASM (O(1) lookups)' : 'Node.js fallback'}`);
       console.log('🚀 Geocoding: Nominatim + local cache');
     });
   } catch (err) {
