@@ -188,7 +188,25 @@ e25fc38 - feat: PHASE 3 - Accessibility & semantic HTML improvements
 8ad2987 - fix: Phase 1 hardcoded colors → M3 semantic tokens
 f20b6e2 - docs: bug audit + fix MD3AdvancedSearchBar + DirectionsPanel
 
-## CRITICAL BUGS FIXED (POST-DEPLOYMENT)
+## RENDER DEPLOYMENT FIX (Post-Session)
+
+**Commit: e1237b9** - "fix: Render deployment - handle missing WASM build gracefully"
+
+Issue: Render doesn't have Rust/Cargo/wasm-pack installed, so the WASM module (routing-core/pkg) never gets built. Server tried to import non-existent module and crashed at startup.
+
+Solution:
+- Wrapped WASM import in try-catch with @ts-expect-error
+- Server gracefully falls back to Node.js implementations when WASM unavailable
+- All fallback methods (score_business, etc.) already implemented
+- Server now starts successfully on Render
+
+Result:
+- Server builds on Render
+- Server starts without WASM
+- Search queries work via Node.js fallback
+- Full functionality preserved
+
+---
 
 **BUG #1: WASM Search Scorer Fallback Broken**
 - Issue: All search queries crashing with "scorer.score_business is not a function"
