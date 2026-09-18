@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
-import maplibregl, { type Map as MapLibreMap, type StyleSpecification } from 'maplibre-gl';
+import * as maplibregl from 'maplibre-gl';
+import { type Map as MapLibreMap, type StyleSpecification } from 'maplibre-gl';
 import { animated, useSpring } from '@react-spring/web';
 import VersionIndicator from './VersionIndicator';
 import 'maplibre-gl/dist/maplibre-gl.css';
@@ -279,7 +280,7 @@ export function MapCanvas({ onMapReady, onMoveEnd, onError }: Props) {
     // CORS, host down) means 'load' never fires and the caller has no
     // way to know the map is stuck rather than still loading. Whatever
     // caused it, the UI shouldn't spin forever pretending it's fine.
-    map.on('error', (e) => {
+    map.on('error', (e: any) => {
       onError?.(e.error?.message ?? 'Map failed to load');
     });
 

@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState, useEffect } from 'react';
-import maplibregl, { type Map as MapLibreMap } from 'maplibre-gl';
+import * as maplibregl from 'maplibre-gl';
+import { type Map as MapLibreMap } from 'maplibre-gl';
 import { createRoot } from 'react-dom/client';
 import Supercluster from 'supercluster';
 import { MapCanvas } from './components/Map';
