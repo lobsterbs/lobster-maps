@@ -44,9 +44,7 @@ app.get('/health', (_req, res) => res.json({ ok: true }));
 // Initialize WASM modules and start server
 async function startServer() {
   try {
-    console.log('🦀 Initializing WASM modules...');
     await initializeWasmModules();
-    console.log('✅ WASM modules ready');
 
     // Wire rate limiter (before all /api routes)
     app.use('/api', rateLimiterWasm);

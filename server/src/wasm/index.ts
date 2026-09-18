@@ -12,8 +12,6 @@ let weatherCache: any = null;
  */
 export async function initializeWasmModules(): Promise<void> {
   try {
-    console.log('🦀 Initializing WASM modules...');
-
     // Try to load WASM (optional on Render without Rust toolchain)
     let wasmPkg: any = null;
     try {
@@ -33,7 +31,7 @@ export async function initializeWasmModules(): Promise<void> {
       searchScorer = wasmPkg.SearchScorer;
       weatherCache = wasmPkg.WeatherCache;
 
-      console.log('✅ WASM modules ready');
+      console.log('✅ WASM modules loaded');
       console.log('   - RateLimiter (<1ms, 1000+ req/sec)');
       console.log('   - SearchScorer (100x faster)');
       console.log('   - WeatherCache (O(1) lookups)');
