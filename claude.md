@@ -188,9 +188,28 @@ e25fc38 - feat: PHASE 3 - Accessibility & semantic HTML improvements
 8ad2987 - fix: Phase 1 hardcoded colors → M3 semantic tokens
 f20b6e2 - docs: bug audit + fix MD3AdvancedSearchBar + DirectionsPanel
 
-## Deliverables
+## CRITICAL BUGS FIXED (POST-DEPLOYMENT)
 
-COMPLETE - Phase 1: All hardcoded colors replaced with M3 semantic tokens (8 files)
+**BUG #1: WASM Search Scorer Fallback Broken**
+- Issue: All search queries crashing with "scorer.score_business is not a function"
+- Root cause: Fallback object in server/src/wasm/index.ts didn't implement score_business method
+- Fix: Implemented proper fallback that does name/category string matching
+- Impact: Server now works without WASM build; search queries return results
+
+**BUG #2: Unsupported CSS rgba(from ...) Syntax**
+- Issue: Layout not rendering; elements invisible
+- Root cause: rgba(from VAR r g b / opacity) syntax not supported in Safari/Firefox
+- Fix: Replaced all 28 instances with static rgba values:
+  * Primary: rgba(16, 185, 129, opacity)
+  * Secondary: rgba(106, 90, 205, opacity)
+  * Error: rgba(220, 38, 38, opacity)
+  * On-surface-variant: rgba(198, 198, 203, opacity)
+  * White: rgba(255, 255, 255, opacity)
+- Impact: CSS now renders correctly across all browsers
+
+**Commit: c840500** - "fix: Critical issues - WASM fallback + rgba(from) CSS"
+
+---
 COMPLETE - Phase 2: M3 compliance (state layers, reduced-motion, responsive density, MD3Button CSS-in-JS)
 COMPLETE - Phase 3: Accessibility hardening (48px touch targets, semantic HTML foundation)
 COMPLETE - Phase 4: Complete Tailwind migration (9 MD3 components to inline M3 token styles)
