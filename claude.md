@@ -188,7 +188,19 @@ e25fc38 - feat: PHASE 3 - Accessibility & semantic HTML improvements
 8ad2987 - fix: Phase 1 hardcoded colors → M3 semantic tokens
 f20b6e2 - docs: bug audit + fix MD3AdvancedSearchBar + DirectionsPanel
 
-## RENDER DEPLOYMENT FIX (Post-Session)
+## LATEST FIXES (Session Continuation)
+
+**Commit: fcbbb98** - "fix: maplibre-gl import - use namespace import"
+- Fixed TS1192 errors: MapLibreGL has no default export
+- Changed from `import maplibregl, { ... }` to `import * as maplibregl`
+- Added type annotation to error handler callback
+- Both client and server builds now pass on Render
+
+Previous fixes this session:
+- `e1237b9` - WASM fallback for Render (no Rust toolchain)
+- `ce6efbd` - Documentation updates
+
+---
 
 **Commit: e1237b9** - "fix: Render deployment - handle missing WASM build gracefully"
 
