@@ -18,16 +18,23 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 // actual schema (docs.maptiler.com/schema/planet-v4/), not pattern-matched.
 const MAPTILER_KEY = import.meta.env.VITE_MAPTILER_KEY || '';
 if (!MAPTILER_KEY) {
-  // Fails loud in the console rather than silently shipping a style
-  // that 404s on every vector tile request — same principle as the
-  // DATABASE_URL check in server/src/db/client.ts.
-  console.error(
-    'VITE_MAPTILER_KEY is not set — the map will not load. Get a free key at cloud.maptiler.com and set it in client/.env (see .env.example).'
+  console.warn(
+    'VITE_MAPTILER_KEY is not set — using OpenStreetMap tiles as fallback. Get a free key at cloud.maptiler.com and set it in .env for vector tiles.'
   );
 }
-const MAPTILER_TILES_URL = `https://api.maptiler.com/tiles/v4/tiles.json?key=${MAPTILER_KEY}`;
-const MAPTILER_GLYPHS_URL = `https://api.maptiler.com/fonts/{fontstack}/{range}.pbf?key=${MAPTILER_KEY}`;
+
+const MAPTILER_TILES_URL = MAPTILER_KEY
+  ? `https://api.maptiler.com/tiles/v4/tiles.json?key=${MAPTILER_KEY}`
+  : null;
+const MAPTILER_GLYPHS_URL = MAPTILER_KEY
+  ? `https://api.maptiler.com/fonts/{fontstack}/{range}.pbf?key=${MAPTILER_KEY}`
+  : null;
 const MAPTILER_ATTRIBUTION = '© <a href="https://www.maptiler.com/copyright/">MapTiler</a>';
+
+// OpenStreetMap raster tiles (free fallback when no MapTiler key)
+const OSM_TILES_URL = 'https://{a-c}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+const OSM_ATTRIBUTION = '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+
 const SOURCE_NAME = 'maptiler';
 
 // Confirmed against MapTiler Planet v4's actual published schema
@@ -93,13 +100,39 @@ const ROAD_COLOR: any = [
 ];
 
 function darkStyle(): StyleSpecification {
+  // Use OSM raster tiles as fallback when MapTiler key not available
+  if (!MAPTILER_TILES_URL) {
+    return {
+      version: 8,
+      sources: {
+        [SOURCE_NAME]: {
+          type: 'raster',
+          tiles: [OSM_TILES_URL],
+          tileSize: 256,
+          attribution: OSM_ATTRIBUTION,
+        },
+      },
+      layers: [
+        {
+          id: 'raster',
+          type: 'raster',
+          source: SOURCE_NAME,
+          paint: {
+            'raster-opacity': 0.85,
+          },
+        },
+      ],
+    };
+  }
+
+  // Use MapTiler vector tiles when key is available
   return {
     version: 8,
-    glyphs: MAPTILER_GLYPHS_URL,
+    ...(MAPTILER_GLYPHS_URL && { glyphs: MAPTILER_GLYPHS_URL }),
     sources: {
       [SOURCE_NAME]: {
         type: 'vector',
-        url: MAPTILER_TILES_URL,
+        url: MAPTILER_TILES_URL!,
         attribution: MAPTILER_ATTRIBUTION,
       },
     },
@@ -219,6 +252,25 @@ function satelliteStyle(): StyleSpecification {
   // Satellite view: real Esri World Imagery raster underneath, the
   // same Maptiler building extrusions on top for a hybrid look. No
   // road/place labels here, keep satellite view clean.
+  
+  // When MapTiler key not available, just show satellite raster without buildings
+  if (!MAPTILER_TILES_URL) {
+    return {
+      version: 8,
+      sources: {
+        satellite: {
+          type: 'raster',
+          tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
+          tileSize: 256,
+          attribution: '© Esri',
+        },
+      },
+      layers: [
+        { id: 'satellite-raster', type: 'raster', source: 'satellite' },
+      ],
+    };
+  }
+
   return {
     version: 8,
     sources: {
@@ -230,7 +282,7 @@ function satelliteStyle(): StyleSpecification {
       },
       [SOURCE_NAME]: {
         type: 'vector',
-        url: MAPTILER_TILES_URL,
+        url: MAPTILER_TILES_URL!,
         attribution: MAPTILER_ATTRIBUTION,
       },
     },
