@@ -2,6 +2,7 @@ import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import path from 'node:path';
+import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import type { Request, Response, NextFunction } from 'express';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
@@ -16,7 +17,21 @@ import { rateLimiterWasm } from './middleware/rateLimiterWasm.js';
 import { refreshWeatherCache } from './lib/weatherCacheWasm.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const CLIENT_DIST = path.join(__dirname, '../../client/dist');
+// Resolve client dist path - handle both local dev and Render deployments  
+// __dirname from compiled server/dist/index.js points to server/dist/
+// So ../../client/dist resolves to client/dist (correct)
+// For Render, we fall back to searching from process.cwd()
+let CLIENT_DIST = path.join(__dirname, '../../client/dist');
+if (process.env.CLIENT_DIST) {
+  CLIENT_DIST = process.env.CLIENT_DIST;
+} else {
+  // Try alternate paths if the computed one doesn't exist
+  const altPath = path.join(process.cwd(), 'client/dist');
+  if (fs.existsSync(altPath)) {
+    CLIENT_DIST = altPath;
+  }
+}
+console.log('📂 Serving client from:', CLIENT_DIST);
 
 const app = express();
 const PORT = process.env.PORT ? Number(process.env.PORT) : 4000;
