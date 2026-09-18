@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import * as maplibregl from 'maplibre-gl';
 import { type Map as MapLibreMap, type StyleSpecification } from 'maplibre-gl';
+import { Map as MapIcon, Satellite } from 'lucide-react';
 import { animated, useSpring } from '@react-spring/web';
 import VersionIndicator from './VersionIndicator';
 import 'maplibre-gl/dist/maplibre-gl.css';
@@ -314,25 +315,33 @@ export function MapCanvas({ onMapReady, onMoveEnd, onError }: Props) {
       <div ref={containerRef} style={{ position: 'absolute', inset: 0 }} />
       <VersionIndicator />
       <div style={togglePillStyle}>
-        {(['map', 'satellite'] as const).map((m) => (
-          <ModeToggleButton
-            key={m}
-            label={m === 'map' ? 'Map' : 'Satellite'}
-            selected={mode === m}
-            disabled={false}
-            onClick={() => handleModeChange(m)}
-          />
-        ))}
+        <ModeToggleButton
+          icon={MapIcon}
+          label="Map"
+          tooltip="Map"
+          selected={mode === 'map'}
+          disabled={false}
+          onClick={() => handleModeChange('map')}
+        />
+        <ModeToggleButton
+          icon={Satellite}
+          label="Satellite"
+          tooltip="Satellite"
+          selected={mode === 'satellite'}
+          disabled={false}
+          onClick={() => handleModeChange('satellite')}
+        />
       </div>
     </div>
   );
 }
 
 type ModeToggleButtonProps = {
+  icon: any; // lucide-react icon component
   label: string;
+  tooltip: string;
   selected: boolean;
   disabled: boolean;
-  title?: string;
   onClick: () => void;
 };
 
@@ -341,27 +350,32 @@ const EMERALD = '#10b981';
 const TEXT_DIM = '#94a3b8';
 const ON_PRIMARY = '#ffffff';
 
-function ModeToggleButton({ label, selected, disabled, title, onClick }: ModeToggleButtonProps) {
+function ModeToggleButton({ icon: Icon, label, tooltip, selected, disabled, onClick }: ModeToggleButtonProps) {
   const style = useSpring({
     background: selected ? EMERALD : 'transparent',
     color: selected ? ON_PRIMARY : TEXT_DIM,
     config: { tension: 300, friction: 26 },
   });
 
-
   return (
     <animated.button
       onClick={onClick}
       disabled={disabled}
-      title={title}
+      title={tooltip}
       style={{
         ...toggleButtonStyle,
         ...style,
         cursor: disabled ? 'not-allowed' : 'pointer',
         opacity: disabled ? 0.4 : 1,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: 40,
+        height: 40,
+        padding: 0,
       }}
     >
-      {label}
+      <Icon size={20} strokeWidth={2} />
     </animated.button>
   );
 }
