@@ -130,7 +130,9 @@ async function startServer() {
     // /api or /mcp requests into an HTML response instead of a proper
     // 404/error from those routers.
     app.use(express.static(CLIENT_DIST));
-    app.get(/^(?!\/api|\/mcp).*/, (_req, res) => {
+    // Only serve index.html for routes without file extensions (for SPA routing)
+    // This prevents /assets/*.js, /assets/*.mjs, /assets/*.css etc from being intercepted
+    app.get(/^(?!.*\.(?:js|mjs|css|png|jpg|jpeg|gif|svg|ico|woff2?|json)$)(?!\/api|\/mcp).*/, (_req, res) => {
       res.sendFile(path.join(CLIENT_DIST, 'index.html'));
     });
 
