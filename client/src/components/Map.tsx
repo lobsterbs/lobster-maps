@@ -327,7 +327,16 @@ export function MapCanvas({ onMapReady, onMoveEnd, onError }: Props) {
     try {
       console.log('📍 Creating MapLibreGL instance...');
       const style = darkStyle();
-      console.log('🎨 Style created:', style.sources ? Object.keys(style.sources)[0] : 'unknown source');
+      console.log('🎨 Style created:', {
+        version: style.version,
+        sources: Object.keys(style.sources),
+        layers: style.layers.length,
+      });
+      
+      if (style.sources[SOURCE_NAME]?.type === 'vector') {
+        const src = style.sources[SOURCE_NAME] as any;
+        console.log('📡 Vector source URL:', src.url?.substring(0, 60) + '...');
+      }
       
       const map = new maplibregl.Map({
         container: containerRef.current,
@@ -346,6 +355,14 @@ export function MapCanvas({ onMapReady, onMoveEnd, onError }: Props) {
           onError?.('Map tiles took too long to load. Check your network or MapTiler key.');
         }
       }, 10000);
+
+      map.on('dataloading', () => {
+        console.log('📥 Map data loading...');
+      });
+
+      map.on('data', (e: any) => {
+        console.log('📦 Map data event:', e.sourceDataType);
+      });
 
       // Without this, a bad or unreachable tiles source (wrong URL, no
       // CORS, host down) means 'load' never fires and the caller has no
