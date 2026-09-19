@@ -22,7 +22,7 @@ if (!MAPTILER_KEY) {
     'VITE_MAPTILER_KEY is not set — using OpenStreetMap tiles as fallback. Get a free key at cloud.maptiler.com and set it in .env for vector tiles.'
   );
 } else {
-  console.log('✅ MapTiler key found, using vector tiles');
+  console.log('✅ Using MapTiler vector tiles');
 }
 
 const MAPTILER_TILES_URL = MAPTILER_KEY
@@ -37,7 +37,7 @@ const MAPTILER_ATTRIBUTION = '© <a href="https://www.maptiler.com/copyright/">M
 const OSM_TILES_URL = 'https://{a-c}.tile.openstreetmap.org/{z}/{x}/{y}.png';
 const OSM_ATTRIBUTION = '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
 
-console.log('📍 Tile URL:', MAPTILER_TILES_URL || OSM_TILES_URL);
+console.log('📍 Using', MAPTILER_TILES_URL ? 'MapTiler' : 'OpenStreetMap', 'tiles');
 
 const SOURCE_NAME = 'maptiler';
 
@@ -326,15 +326,26 @@ export function MapCanvas({ onMapReady, onMoveEnd, onError }: Props) {
 
     try {
       console.log('📍 Creating MapLibreGL instance...');
+      const style = darkStyle();
+      console.log('🎨 Style created:', style.sources ? Object.keys(style.sources)[0] : 'unknown source');
+      
       const map = new maplibregl.Map({
         container: containerRef.current,
-        style: darkStyle(),
+        style: style,
         center: [5.3221, 60.3913], // Bergen, Norway
         zoom: 15,
         pitch: DEFAULT_PITCH,
         attributionControl: false, // Hide MapLibre/MapTiler attribution
       });
-      console.log('📍 MapLibreGL instance created:', map);
+      console.log('📍 MapLibreGL instance created');
+
+      // Timeout: if load doesn't fire in 10 seconds, something's stuck
+      const loadTimeout = setTimeout(() => {
+        console.error('⏱️ Map load timeout (10s) - tiles may be unreachable');
+        if (mapRef.current === null) { // Only error if map never loaded
+          onError?.('Map tiles took too long to load. Check your network or MapTiler key.');
+        }
+      }, 10000);
 
       // Without this, a bad or unreachable tiles source (wrong URL, no
       // CORS, host down) means 'load' never fires and the caller has no
@@ -342,11 +353,13 @@ export function MapCanvas({ onMapReady, onMoveEnd, onError }: Props) {
       // caused it, the UI shouldn't spin forever pretending it's fine.
       map.on('error', (e: any) => {
         console.error('🔴 MapLibre error:', e.error?.message || String(e));
+        clearTimeout(loadTimeout);
         onError?.(e.error?.message ?? 'Map failed to load');
       });
 
       map.on('load', () => {
         console.log('✅ Map ready!');
+        clearTimeout(loadTimeout);
         mapRef.current = map;
         onMapReady?.(map);
       });
