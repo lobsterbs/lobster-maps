@@ -21,6 +21,8 @@ if (!MAPTILER_KEY) {
   console.warn(
     'VITE_MAPTILER_KEY is not set — using OpenStreetMap tiles as fallback. Get a free key at cloud.maptiler.com and set it in .env for vector tiles.'
   );
+} else {
+  console.log('✅ MapTiler key found, using vector tiles');
 }
 
 const MAPTILER_TILES_URL = MAPTILER_KEY
@@ -34,6 +36,8 @@ const MAPTILER_ATTRIBUTION = '© <a href="https://www.maptiler.com/copyright/">M
 // OpenStreetMap raster tiles (free fallback when no MapTiler key)
 const OSM_TILES_URL = 'https://{a-c}.tile.openstreetmap.org/{z}/{x}/{y}.png';
 const OSM_ATTRIBUTION = '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+
+console.log('📍 Tile URL:', MAPTILER_TILES_URL || OSM_TILES_URL);
 
 const SOURCE_NAME = 'maptiler';
 
@@ -337,10 +341,12 @@ export function MapCanvas({ onMapReady, onMoveEnd, onError }: Props) {
       // way to know the map is stuck rather than still loading. Whatever
       // caused it, the UI shouldn't spin forever pretending it's fine.
       map.on('error', (e: any) => {
+        console.error('🔴 MapLibre error:', e.error?.message || String(e));
         onError?.(e.error?.message ?? 'Map failed to load');
       });
 
       map.on('load', () => {
+        console.log('✅ Map ready!');
         mapRef.current = map;
         onMapReady?.(map);
       });
