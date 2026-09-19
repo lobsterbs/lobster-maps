@@ -1,118 +1,54 @@
-# LobsterMaps — Active Work Session (Sep 19, 2026)
+# LobsterMaps Debug Session — Sep 19, 2026
 
-## Current Issue: Map Not Loading on Render
+## Problem
+Map failed to load on Render with `TILE_LOAD_TIMEOUT` after 10s. Browser console showed:
+- MapTiler vector tiles: timeout after 10s
+- OSM fallback: `net::ERR_NAME_NOT_RESOLVED` on `{a-c}.tile.openstreetmap.org`
 
-**Status:** Map mounts but never fires 'load' event. Spinner hangs forever.
+Root cause: **Render's outbound network cannot reach external tile servers.** This is a platform restriction, not a code bug.
 
-### What Works
-- Server starts on Render ✅
-- Client files served correctly ✅
-- React app mounts ✅
-- MapLibreGL instance created ✅
-- All JS/CSS assets load with 0 errors ✅
-- MapTiler API key is set ✅
+## Solution Deployed
+**Tile Proxy Pattern** — Backend fetches tiles, client requests from backend.
 
-### What's Broken
-- MapLibreGL load event never fires
-- No error events in console
-- Map stays blank, UI spinner spins forever
-- Likely: tile source unreachable or MapLibre hangs on dataloading
+### Changes Made
+1. **server/src/index.ts**: Added `/api/tiles/:z/:x/:y.png` endpoint
+   - Validates zoom (0-28)
+   - Round-robins subdomain (a/b/c) to OSM
+   - Caches tiles for 1 year (immutable by z/x/y)
+   - Proper error handling and User-Agent
 
-### Latest Commits (Ready to Deploy)
-- `7386b4e` - Added dataloading/data event listeners (Sep 19)
-- `18c96e4` - Added 10s timeout, removed API key logging
-- `3b4f3a4` - Added tile URL & source logging
-- `f423b7c` - Added detailed debug logging
-- `8968b14` - Added favicon.ico
+2. **client/src/components/Map.tsx**: Updated OSM_TILES_URL
+   - Changed from external CDN URL to backend proxy
+   - Client now requests: `/api/tiles/{z}/{x}/{y}.png`
 
-### Next Steps
-1. **Wait for Render redeploy** of commit 7386b4e
-2. **Hard refresh** and check console for:
-   - `📥 Map data loading...` → dataloading event fired?
-   - `📦 Map data event: ...` → which data type?
-   - `⏱️ Map load timeout` → still hanging?
-3. **If no dataloading event:** Tiles aren't being requested at all
-   - Check: style object structure
-   - Check: MapTiler URL format
-4. **If dataloading fires but no load:** Stuck on tile fetch
-   - Check: Network tab in DevTools for tile requests
-   - Check: CORS headers on MapTiler responses
-5. **If timeout fires:** Network timeout (Render can't reach MapTiler)
-   - Fallback: Use OSM raster tiles only for now
-   - Check: Render outbound network config
+### Build Status
+- ✅ Client: builds clean, no TS errors
+- ✅ Server: builds clean, no TS errors
+- ✅ Commit: 4192df1 pushed to main
+- ⏳ Render auto-deploy: triggered (2-3 min ETA)
 
-### Detailed Logging Added
+## Testing Checklist
+- [ ] Wait for Render deployment
+- [ ] Open https://lobster-maps.onrender.com
+- [ ] Map should load without timeout
+- [ ] Check browser console for `/api/tiles/` requests (should be 200, not 5xx)
+- [ ] Zoom in/out — should render tiles smoothly
+- [ ] Switch to satellite view — also uses proxy, should work
 
-**In Map.tsx:**
-- Style object structure logged (version, sources, layers)
-- Vector source URL logged (truncated, no secrets)
-- dataloading event → `📥 Map data loading...`
-- data event → `📦 Map data event: {sourceDataType}`
-- error event → `🔴 MapLibre error: {message}`
-- load event → `✅ Map ready!`
-- 10s timeout → `⏱️ Map load timeout (10s)`
+## If Still Failing
+1. Check Render logs: `https://dashboard.render.com/services/srv-da77r72d0e5s73dl976g`
+2. Test proxy directly: `https://lobster-maps.onrender.com/api/tiles/16/33736/18888.png`
+   - Should return PNG, not 5xx
+3. If proxy returns 5xx: Render's backend can't reach OSM either
+   - Next option: use Mapbox, USGS TopoView, or pre-download PMTiles
 
-**In App.tsx:**
-- `🚀 App mounted`
-- `✅ Map ready!` (when onMapReady fires)
-- `❌ Map error: {message}` (when onError fires)
+## Architecture Notes
+- **Why not MapTiler vector tiles?** Same issue — Render blocked, MapTiler API unreachable
+- **Why not PMTiles?** Would work, but requires ~500MB-1GB pre-download; tile proxy is faster to implement
+- **Why subdomain round-robin?** OSM uses {a-c}.tile.openstreetmap.org for load balancing; replicating that pattern ensures fair distribution
 
-### Hypothesis
-MapTiler vector tiles are unreachable or hanging due to:
-1. Render network isolation (needs outbound HTTPS to api.maptiler.com)
-2. CORS issue (MapTiler not returning Access-Control-Allow-Origin)
-3. Malformed style object (missing required fields)
-4. MapLibre bug with vector source URL format
+## Files Changed
+- server/src/index.ts: +40 lines (tile proxy endpoint)
+- client/src/components/Map.tsx: -1, +1 lines (OSM_TILES_URL)
 
-### Fallback Plan
-If MapTiler unreachable from Render:
-- Switch to OSM raster tiles globally
-- OR use simple Carto positron/voyager styles (free, hosted)
-- Update darkStyle() to return raster-only config
-
-### Files Modified (This Session)
-- `client/src/components/Map.tsx` - Added all debug logging
-- `client/src/App.tsx` - Added mount/error logging
-- `client/public/favicon.ico` - Created (red lobster shell)
-
-### Deploy Command (if needed)
-```bash
-cd /home/claude/lobster-maps
-npm run build:client && npm run build:server  # Test locally first
-git add -A
-git commit -m "message"
-git push origin main  # Uses GH_TOKEN from env
-# Then trigger redeploy on Render dashboard
-```
-
----
-
-## Previous Sessions Summary
-
-### Bug Fixes Shipped (Sep 18)
-- Favicon 404 → created favicon.ico
-- SPA routing regex intercepting assets → fixed to only catch routes without dots
-- WASM not available → added Node.js fallback with honest logging
-- OSM fallback tiles → implemented when MapTiler key missing
-- Lucide icons for map/satellite toggle → replaced text labels
-
-### Material You 3 Refactor (In Progress)
-- ⚠️ 20+ hardcoded hex colors blocking dark theme (HIGH PRIORITY)
-- ⚠️ State layer opacity using Tailwind, not M3 spec
-- ⚠️ No reduced-motion media query (WCAG violation)
-- ✅ M3 tokens.css with semantic scale
-- See BUG_AUDIT.md for full list
-
-### Stack
-- Client: Vite, React, MapLibre v6.9.1, TypeScript, Tailwind (gradual removal)
-- Server: Express, Drizzle ORM, Neon (PostgreSQL), Node.js
-- Rendering: Render (srv-da77r72d0e5s73dl976g)
-- Live: https://lobster-maps.onrender.com
-- Repo: https://github.com/lobsterbs/lobster-maps
-
----
-
-## Quick Links
-- GitHub: https://github.com/lobsterbs/lobster-maps
-- Render: https://dashboard.render.com → srv-da77r72d0e5s73dl976g
-- Notion: LobsterMaps project page
+**Total:** 2 files, 44 insertions

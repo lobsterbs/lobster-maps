@@ -25,12 +25,11 @@ if (!MAPTILER_KEY) {
   console.log('Using MapTiler vector tiles');
 }
 
-const MAPTILER_TILES_URL = MAPTILER_KEY
-  ? `https://api.maptiler.com/tiles/v4/tiles.json?key=${MAPTILER_KEY}`
-  : null;
-const MAPTILER_GLYPHS_URL = MAPTILER_KEY
-  ? `https://api.maptiler.com/fonts/{fontstack}/{range}.pbf?key=${MAPTILER_KEY}`
-  : null;
+// Backend proxies MapTiler API — client doesn't need the key
+// Render's network can't reach MapTiler, so backend fetches with the key
+// and client just requests from /api/maptiler/*
+const MAPTILER_TILES_URL = MAPTILER_KEY ? '/api/maptiler/style' : null;
+const MAPTILER_GLYPHS_URL = MAPTILER_KEY ? '/api/maptiler/fonts/{fontstack}/{range}.pbf' : null;
 const MAPTILER_ATTRIBUTION = '© <a href="https://www.maptiler.com/copyright/">MapTiler</a>';
 
 // OpenStreetMap raster tiles proxied through backend

@@ -89,6 +89,65 @@ async function startServer() {
       }
     });
 
+    // MapTiler proxy — forward style spec (tiles.json) request to MapTiler
+    // Client requests the style from /api/maptiler/style instead of maptiler.com
+    app.get('/api/maptiler/style', async (req, res) => {
+      const apiKey = process.env.VITE_MAPTILER_KEY;
+      if (!apiKey) {
+        res.status(400).json({ error: 'MapTiler API key not configured' });
+        return;
+      }
+
+      try {
+        const maptilerUrl = `https://api.maptiler.com/tiles/v4/tiles.json?key=${apiKey}`;
+        const response = await fetch(maptilerUrl);
+
+        if (!response.ok) {
+          console.warn(`MapTiler style fetch failed: returned ${response.status}`);
+          res.status(response.status).json({ error: 'Style fetch failed' });
+          return;
+        }
+
+        const styleJson = await response.json();
+        // Cache style spec for 1 hour (can change, but rare)
+        res.set('Cache-Control', 'public, max-age=3600');
+        res.json(styleJson);
+      } catch (err) {
+        console.error('MapTiler style proxy error:', err);
+        res.status(500).json({ error: 'Style fetch failed' });
+      }
+    });
+
+    // MapTiler glyphs proxy — forward font glyph requests to MapTiler
+    // Pattern: /api/maptiler/fonts/{fontstack}/{range}.pbf
+    app.get('/api/maptiler/fonts/:fontstack/:range.pbf', async (req, res) => {
+      const apiKey = process.env.VITE_MAPTILER_KEY;
+      if (!apiKey) {
+        res.status(400).json({ error: 'MapTiler API key not configured' });
+        return;
+      }
+
+      const { fontstack, range } = req.params;
+      try {
+        const maptilerUrl = `https://api.maptiler.com/fonts/${fontstack}/${range}.pbf?key=${apiKey}`;
+        const response = await fetch(maptilerUrl);
+
+        if (!response.ok) {
+          console.warn(`MapTiler glyph fetch failed for ${fontstack}/${range}: ${response.status}`);
+          res.status(response.status).json({ error: 'Glyph fetch failed' });
+          return;
+        }
+
+        // Cache glyphs for 1 year (immutable by fontstack/range)
+        res.set('Cache-Control', 'public, max-age=31536000, immutable');
+        res.set('Content-Type', 'application/octet-stream');
+        res.send(Buffer.from(await response.arrayBuffer()));
+      } catch (err) {
+        console.error(`MapTiler glyph proxy error for ${fontstack}/${range}:`, err);
+        res.status(500).json({ error: 'Glyph fetch failed' });
+      }
+    });
+
     // Wire routes
     app.use('/api/businesses', businessesRouter);
     app.use('/api/geocode', geocodeRouter);
