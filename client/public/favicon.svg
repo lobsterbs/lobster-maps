@@ -1,0 +1,53 @@
+<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      .lobster-body { fill: #DC143C; }
+      .lobster-accent { fill: #B22222; }
+      .lobster-eye { fill: #000; }
+      .lobster-detail { fill: none; stroke: #8B0000; stroke-width: 0.5; }
+    </style>
+  </defs>
+  
+  <!-- Body -->
+  <ellipse cx="50" cy="55" rx="20" ry="25" class="lobster-body"/>
+  
+  <!-- Head -->
+  <circle cx="50" cy="25" r="16" class="lobster-body"/>
+  
+  <!-- Eyes -->
+  <circle cx="44" cy="20" r="2.5" class="lobster-eye"/>
+  <circle cx="56" cy="20" r="2.5" class="lobster-eye"/>
+  
+  <!-- Eyestalks -->
+  <line x1="44" y1="20" x2="42" y2="12" class="lobster-detail"/>
+  <line x1="56" y1="20" x2="58" y2="12" class="lobster-detail"/>
+  
+  <!-- Antennae -->
+  <path d="M 42 15 Q 30 8 25 5" class="lobster-detail" stroke-width="1"/>
+  <path d="M 58 15 Q 70 8 75 5" class="lobster-detail" stroke-width="1"/>
+  
+  <!-- Left claw -->
+  <ellipse cx="30" cy="40" rx="8" ry="12" class="lobster-accent" transform="rotate(-30 30 40)"/>
+  <path d="M 26 45 Q 20 50 18 55" class="lobster-detail" stroke-width="1.5"/>
+  <path d="M 32 48 Q 28 55 26 60" class="lobster-detail" stroke-width="1.5"/>
+  
+  <!-- Right claw -->
+  <ellipse cx="70" cy="40" rx="8" ry="12" class="lobster-accent" transform="rotate(30 70 40)"/>
+  <path d="M 74 45 Q 80 50 82 55" class="lobster-detail" stroke-width="1.5"/>
+  <path d="M 68 48 Q 72 55 74 60" class="lobster-detail" stroke-width="1.5"/>
+  
+  <!-- Segments on body -->
+  <ellipse cx="50" cy="40" rx="18" ry="4" class="lobster-detail" stroke-width="0.8"/>
+  <ellipse cx="50" cy="55" rx="18" ry="4" class="lobster-detail" stroke-width="0.8"/>
+  <ellipse cx="50" cy="70" rx="16" ry="4" class="lobster-detail" stroke-width="0.8"/>
+  
+  <!-- Tail flukes -->
+  <ellipse cx="40" cy="82" rx="5" ry="8" class="lobster-accent"/>
+  <ellipse cx="50" cy="85" rx="4" ry="10" class="lobster-body"/>
+  <ellipse cx="60" cy="82" rx="5" ry="8" class="lobster-accent"/>
+  
+  <!-- Legs (simplified) -->
+  <line x1="45" y1="75" x2="40" y2="88" class="lobster-detail" stroke-width="1.2"/>
+  <line x1="50" y1="77" x2="50" y2="92" class="lobster-detail" stroke-width="1.2"/>
+  <line x1="55" y1="75" x2="60" y2="88" class="lobster-detail" stroke-width="1.2"/>
+</svg>

@@ -22,7 +22,7 @@ if (!MAPTILER_KEY) {
     'VITE_MAPTILER_KEY is not set — using OpenStreetMap tiles as fallback. Get a free key at cloud.maptiler.com and set it in .env for vector tiles.'
   );
 } else {
-  console.log('✅ Using MapTiler vector tiles');
+  console.log('Using MapTiler vector tiles');
 }
 
 const MAPTILER_TILES_URL = MAPTILER_KEY
@@ -37,7 +37,7 @@ const MAPTILER_ATTRIBUTION = '© <a href="https://www.maptiler.com/copyright/">M
 const OSM_TILES_URL = 'https://{a-c}.tile.openstreetmap.org/{z}/{x}/{y}.png';
 const OSM_ATTRIBUTION = '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
 
-console.log('📍 Using', MAPTILER_TILES_URL ? 'MapTiler' : 'OpenStreetMap', 'tiles');
+console.log('Using', MAPTILER_TILES_URL ? 'MapTiler' : 'OpenStreetMap', 'tiles');
 
 const SOURCE_NAME = 'maptiler';
 
@@ -106,7 +106,7 @@ const ROAD_COLOR: any = [
 function darkStyle(): StyleSpecification {
   // Try MapTiler vector tiles if available
   if (MAPTILER_TILES_URL) {
-    console.log('🗺️ Attempting MapTiler vector tiles');
+    console.log('Attempting MapTiler vector tiles');
     return {
       version: 8,
       ...(MAPTILER_GLYPHS_URL && { glyphs: MAPTILER_GLYPHS_URL }),
@@ -230,7 +230,7 @@ function darkStyle(): StyleSpecification {
   }
 
   // Fallback to OSM raster tiles if MapTiler not available
-  console.log('🗺️ Using OpenStreetMap raster tiles (fallback)');
+  console.log('Using OpenStreetMap raster tiles (fallback)');
   return {
     version: 8,
     sources: {
@@ -246,6 +246,31 @@ function darkStyle(): StyleSpecification {
         id: 'raster',
         type: 'raster',
         source: SOURCE_NAME,
+        paint: {
+          'raster-opacity': 0.85,
+        },
+      },
+    ],
+  };
+}
+
+// Hardcoded OSM fallback style used when MapTiler fails - doesn't call darkStyle()
+function osmFallbackStyle(): StyleSpecification {
+  return {
+    version: 8,
+    sources: {
+      osm: {
+        type: 'raster',
+        tiles: [OSM_TILES_URL],
+        tileSize: 256,
+        attribution: OSM_ATTRIBUTION,
+      },
+    },
+    layers: [
+      {
+        id: 'osm-raster',
+        type: 'raster',
+        source: 'osm',
         paint: {
           'raster-opacity': 0.85,
         },
@@ -323,13 +348,13 @@ export function MapCanvas({ onMapReady, onMoveEnd, onError }: Props) {
   const [mode, setMode] = useState<ViewMode>('map');
 
   useEffect(() => {
-    console.log('🗺️ MapCanvas useEffect: containerRef.current=', !!containerRef.current, 'mapRef.current=', !!mapRef.current);
+    console.log('MapCanvas useEffect: containerRef.current=', !!containerRef.current, 'mapRef.current=', !!mapRef.current);
     if (!containerRef.current || mapRef.current) return;
 
     try {
-      console.log('📍 Creating MapLibreGL instance...');
+      console.log('Creating MapLibreGL instance...');
       const style = darkStyle();
-      console.log('🎨 Style created:', {
+      console.log('Style created:', {
         version: style.version,
         sources: Object.keys(style.sources),
         layers: style.layers.length,
@@ -337,7 +362,7 @@ export function MapCanvas({ onMapReady, onMoveEnd, onError }: Props) {
       
       if (style.sources[SOURCE_NAME]?.type === 'vector') {
         const src = style.sources[SOURCE_NAME] as any;
-        console.log('📡 Vector source URL:', src.url?.substring(0, 60) + '...');
+        console.log('Vector source URL:', src.url?.substring(0, 60) + '...');
       }
       
       const map = new maplibregl.Map({
@@ -348,19 +373,19 @@ export function MapCanvas({ onMapReady, onMoveEnd, onError }: Props) {
         pitch: DEFAULT_PITCH,
         attributionControl: false, // Hide MapLibre/MapTiler attribution
       });
-      console.log('📍 MapLibreGL instance created');
+      console.log('MapLibreGL instance created');
 
       // Timeout: if load doesn't fire in 10 seconds, something's stuck
       let fallbackAttempted = false;
       const loadTimeout = setTimeout(() => {
-        console.error('⏱️ Map load timeout (10s) - ERROR_CODE: TILE_LOAD_TIMEOUT');
+        console.error('Map load timeout (10s) - ERROR_CODE: TILE_LOAD_TIMEOUT');
         if (mapRef.current === null && !fallbackAttempted) {
           fallbackAttempted = true;
-          console.log('🔄 Attempting fallback: switching to OSM tiles');
+          console.log('Attempting fallback: switching to OSM tiles');
           try {
             if (map && MAPTILER_TILES_URL) {
-              // Try OSM fallback
-              map.setStyle(darkStyle()); // Will use OSM since MapTiler failed
+              // Try OSM fallback (hardcoded, doesn't call darkStyle)
+              map.setStyle(osmFallbackStyle());
               // Restart timeout for fallback
               setTimeout(() => {
                 if (mapRef.current === null) {
@@ -377,11 +402,11 @@ export function MapCanvas({ onMapReady, onMoveEnd, onError }: Props) {
       }, 10000);
 
       map.on('dataloading', () => {
-        console.log('📥 Map data loading...');
+        console.log('Map data loading...');
       });
 
       map.on('data', (e: any) => {
-        console.log('📦 Map data event:', e.sourceDataType);
+        console.log('Map data event:', e.sourceDataType);
       });
 
       // Without this, a bad or unreachable tiles source (wrong URL, no
@@ -390,7 +415,7 @@ export function MapCanvas({ onMapReady, onMoveEnd, onError }: Props) {
       // caused it, the UI shouldn't spin forever pretending it's fine.
       map.on('error', (e: any) => {
         const msg = e.error?.message || String(e);
-        console.error('🔴 MapLibre error:', msg);
+        console.error('MapLibre error:', msg);
         clearTimeout(loadTimeout);
         
         // Classify the error
@@ -407,7 +432,7 @@ export function MapCanvas({ onMapReady, onMoveEnd, onError }: Props) {
       });
 
       map.on('load', () => {
-        console.log('✅ Map ready!');
+        console.log('Map ready');
         clearTimeout(loadTimeout);
         mapRef.current = map;
         onMapReady?.(map);
@@ -423,7 +448,7 @@ export function MapCanvas({ onMapReady, onMoveEnd, onError }: Props) {
         mapRef.current = null;
       };
     } catch (err) {
-      console.error('💥 MapLibreGL initialization failed:', err);
+      console.error('MapLibreGL initialization failed:', err);
       onError?.(`Map init failed: ${err instanceof Error ? err.message : String(err)}`);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
