@@ -49,6 +49,46 @@ async function startServer() {
     // Wire rate limiter (before all /api routes)
     app.use('/api', rateLimiterWasm);
 
+    // Tile proxy — Render's network can't reach external tile servers.
+    // Client requests tiles from this backend endpoint instead, and we
+    // fetch from OSM, then cache for 1 year. Tiles are immutable by z/x/y
+    // so this is safe to cache aggressively.
+    app.get('/api/tiles/:z/:x/:y.png', async (req, res) => {
+      const { z, x, y } = req.params;
+      try {
+        // Validate tile coordinates to prevent DoS via huge z values
+        const zoom = parseInt(z, 10);
+        if (isNaN(zoom) || zoom < 0 || zoom > 28) {
+          res.status(400).json({ error: 'Invalid zoom level' });
+          return;
+        }
+
+        // Fetch from OpenStreetMap (round-robin subdomains a, b, c)
+        const subdomain = String.fromCharCode(97 + (parseInt(x, 10) % 3)); // 'a', 'b', or 'c'
+        const osmUrl = `https://${subdomain}.tile.openstreetmap.org/${z}/${x}/${y}.png`;
+
+        const response = await fetch(osmUrl, {
+          headers: {
+            'User-Agent': 'LobsterMaps/2.0 (+https://lobster-maps.onrender.com)',
+          },
+        });
+
+        if (!response.ok) {
+          console.warn(`Tile fetch failed: ${osmUrl} returned ${response.status}`);
+          res.status(response.status).json({ error: 'Tile not found' });
+          return;
+        }
+
+        // Cache indefinitely — tiles never change
+        res.set('Cache-Control', 'public, max-age=31536000, immutable');
+        res.set('Content-Type', 'image/png');
+        res.send(Buffer.from(await response.arrayBuffer()));
+      } catch (err) {
+        console.error(`Tile proxy error for ${z}/${x}/${y}:`, err);
+        res.status(500).json({ error: 'Tile fetch failed' });
+      }
+    });
+
     // Wire routes
     app.use('/api/businesses', businessesRouter);
     app.use('/api/geocode', geocodeRouter);

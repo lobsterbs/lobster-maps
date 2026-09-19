@@ -33,8 +33,10 @@ const MAPTILER_GLYPHS_URL = MAPTILER_KEY
   : null;
 const MAPTILER_ATTRIBUTION = '© <a href="https://www.maptiler.com/copyright/">MapTiler</a>';
 
-// OpenStreetMap raster tiles (free fallback when no MapTiler key)
-const OSM_TILES_URL = 'https://{a-c}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+// OpenStreetMap raster tiles proxied through backend
+// Render's network can't reach external tile servers directly, so the
+// backend fetches tiles and caches them. Client hits /api/tiles/{z}/{x}/{y}.png
+const OSM_TILES_URL = '/api/tiles/{z}/{x}/{y}.png';
 const OSM_ATTRIBUTION = '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
 
 console.log('Using', MAPTILER_TILES_URL ? 'MapTiler' : 'OpenStreetMap', 'tiles');
