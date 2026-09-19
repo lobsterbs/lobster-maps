@@ -104,100 +104,77 @@ const ROAD_COLOR: any = [
 ];
 
 function darkStyle(): StyleSpecification {
-  // Use OSM raster tiles as fallback when MapTiler key not available
-  if (!MAPTILER_TILES_URL) {
+  // Try MapTiler vector tiles if available
+  if (MAPTILER_TILES_URL) {
+    console.log('🗺️ Attempting MapTiler vector tiles');
     return {
       version: 8,
+      ...(MAPTILER_GLYPHS_URL && { glyphs: MAPTILER_GLYPHS_URL }),
       sources: {
         [SOURCE_NAME]: {
-          type: 'raster',
-          tiles: [OSM_TILES_URL],
-          tileSize: 256,
-          attribution: OSM_ATTRIBUTION,
+          type: 'vector',
+          url: MAPTILER_TILES_URL,
+          attribution: MAPTILER_ATTRIBUTION,
         },
       },
+      // Subtle warm-tinted ambient + directional light on the 3D
+      // buildings, real MapLibre style-spec root property (confirmed via
+      // docs.maptiler.com/gl-style-specification/root/), not decorative
+      // CSS — gives the extrusions actual shading rather than flat color.
+      light: { anchor: 'viewport', color: '#fff4e6', intensity: 0.35 },
       layers: [
+        { id: 'background', type: 'background', paint: { 'background-color': '#0a0a0a' } },
         {
-          id: 'raster',
-          type: 'raster',
+          id: 'landcover',
+          type: 'fill',
           source: SOURCE_NAME,
-          paint: {
-            'raster-opacity': 0.85,
-          },
+          'source-layer': 'grass',
+          paint: { 'fill-color': '#141a13', 'fill-opacity': 0.6 },
         },
-      ],
-    };
-  }
-
-  // Use MapTiler vector tiles when key is available
-  return {
-    version: 8,
-    ...(MAPTILER_GLYPHS_URL && { glyphs: MAPTILER_GLYPHS_URL }),
-    sources: {
-      [SOURCE_NAME]: {
-        type: 'vector',
-        url: MAPTILER_TILES_URL!,
-        attribution: MAPTILER_ATTRIBUTION,
-      },
-    },
-    // Subtle warm-tinted ambient + directional light on the 3D
-    // buildings, real MapLibre style-spec root property (confirmed via
-    // docs.maptiler.com/gl-style-specification/root/), not decorative
-    // CSS — gives the extrusions actual shading rather than flat color.
-    light: { anchor: 'viewport', color: '#fff4e6', intensity: 0.35 },
-    layers: [
-      { id: 'background', type: 'background', paint: { 'background-color': '#0a0a0a' } },
-      {
-        id: 'landcover',
-        type: 'fill',
-        source: SOURCE_NAME,
-        'source-layer': 'grass',
-        paint: { 'fill-color': '#141a13', 'fill-opacity': 0.6 },
-      },
-      {
-        id: 'landuse-builtup',
-        type: 'fill',
-        source: SOURCE_NAME,
-        'source-layer': 'residential',
-        paint: { 'fill-color': '#121212' },
-      },
-      {
-        id: 'water',
-        type: 'fill',
-        source: SOURCE_NAME,
-        'source-layer': 'water',
-        paint: { 'fill-color': '#0d1620' },
-      },
-      {
-        id: 'buildings-flat',
-        type: 'fill',
-        source: SOURCE_NAME,
-        'source-layer': BUILDING_SOURCE_LAYER, // buildings are visible as flat footprints even before the 3D ramp kicks in at low zoom
-        maxzoom: 13,
-        filter: ['!=', ['get', 'underground'], true],
-        paint: { 'fill-color': '#1c1c1f' },
-      },
-      {
-        id: 'roads',
-        type: 'line',
-        source: SOURCE_NAME,
-        'source-layer': 'road',
-        layout: { 'line-cap': 'round', 'line-join': 'round' },
-        paint: { 'line-color': ROAD_COLOR, 'line-width': ROAD_WIDTH },
-      },
-      {
-        id: 'buildings-3d',
-        type: 'fill-extrusion',
-        source: SOURCE_NAME,
-        'source-layer': BUILDING_SOURCE_LAYER,
-        minzoom: 12,
-        filter: ['!=', ['get', 'underground'], true], // otherwise subway platforms and underground garages show up as floating flat shapes
-        paint: buildingPaint('#242429', 0.92),
-      },
-      {
-        id: 'road-labels',
-        type: 'symbol',
-        source: SOURCE_NAME,
+        {
+          id: 'landuse-builtup',
+          type: 'fill',
+          source: SOURCE_NAME,
+          'source-layer': 'residential',
+          paint: { 'fill-color': '#121212' },
+        },
+        {
+          id: 'water',
+          type: 'fill',
+          source: SOURCE_NAME,
+          'source-layer': 'water',
+          paint: { 'fill-color': '#0d1620' },
+        },
+        {
+          id: 'buildings-flat',
+          type: 'fill',
+          source: SOURCE_NAME,
+          'source-layer': BUILDING_SOURCE_LAYER,
+          maxzoom: 13,
+          filter: ['!=', ['get', 'underground'], true],
+          paint: { 'fill-color': '#1c1c1f' },
+        },
+        {
+          id: 'roads',
+          type: 'line',
+          source: SOURCE_NAME,
+          'source-layer': 'road',
+          layout: { 'line-cap': 'round', 'line-join': 'round' },
+          paint: { 'line-color': ROAD_COLOR, 'line-width': ROAD_WIDTH },
+        },
+        {
+          id: 'buildings-3d',
+          type: 'fill-extrusion',
+          source: SOURCE_NAME,
+          'source-layer': BUILDING_SOURCE_LAYER,
+          minzoom: 12,
+          filter: ['!=', ['get', 'underground'], true],
+          paint: buildingPaint('#242429', 0.92),
+        },
+        {
+          id: 'road-labels',
+          type: 'symbol',
+          source: SOURCE_NAME,
         'source-layer': 'road_label',
         minzoom: 13,
         layout: {
@@ -246,6 +223,31 @@ function darkStyle(): StyleSpecification {
           'text-color': '#6a6a6f',
           'text-halo-color': '#0a0a0a',
           'text-halo-width': 1,
+        },
+      },
+    ],
+  };
+  }
+
+  // Fallback to OSM raster tiles if MapTiler not available
+  console.log('🗺️ Using OpenStreetMap raster tiles (fallback)');
+  return {
+    version: 8,
+    sources: {
+      [SOURCE_NAME]: {
+        type: 'raster',
+        tiles: [OSM_TILES_URL],
+        tileSize: 256,
+        attribution: OSM_ATTRIBUTION,
+      },
+    },
+    layers: [
+      {
+        id: 'raster',
+        type: 'raster',
+        source: SOURCE_NAME,
+        paint: {
+          'raster-opacity': 0.85,
         },
       },
     ],
@@ -349,10 +351,28 @@ export function MapCanvas({ onMapReady, onMoveEnd, onError }: Props) {
       console.log('📍 MapLibreGL instance created');
 
       // Timeout: if load doesn't fire in 10 seconds, something's stuck
+      let fallbackAttempted = false;
       const loadTimeout = setTimeout(() => {
-        console.error('⏱️ Map load timeout (10s) - tiles may be unreachable');
-        if (mapRef.current === null) { // Only error if map never loaded
-          onError?.('Map tiles took too long to load. Check your network or MapTiler key.');
+        console.error('⏱️ Map load timeout (10s) - ERROR_CODE: TILE_LOAD_TIMEOUT');
+        if (mapRef.current === null && !fallbackAttempted) {
+          fallbackAttempted = true;
+          console.log('🔄 Attempting fallback: switching to OSM tiles');
+          try {
+            if (map && MAPTILER_TILES_URL) {
+              // Try OSM fallback
+              map.setStyle(darkStyle()); // Will use OSM since MapTiler failed
+              // Restart timeout for fallback
+              setTimeout(() => {
+                if (mapRef.current === null) {
+                  onError?.('Map failed to load from both MapTiler and OSM. ERROR_CODE: TILE_LOAD_FAILED_ALL_SOURCES');
+                }
+              }, 10000);
+              return;
+            }
+          } catch (fallbackErr) {
+            console.error('Fallback also failed:', fallbackErr);
+            onError?.('Map initialization failed completely. ERROR_CODE: MAP_INIT_FAILED');
+          }
         }
       }, 10000);
 
@@ -369,9 +389,21 @@ export function MapCanvas({ onMapReady, onMoveEnd, onError }: Props) {
       // way to know the map is stuck rather than still loading. Whatever
       // caused it, the UI shouldn't spin forever pretending it's fine.
       map.on('error', (e: any) => {
-        console.error('🔴 MapLibre error:', e.error?.message || String(e));
+        const msg = e.error?.message || String(e);
+        console.error('🔴 MapLibre error:', msg);
         clearTimeout(loadTimeout);
-        onError?.(e.error?.message ?? 'Map failed to load');
+        
+        // Classify the error
+        let errorCode = 'MAP_ERROR_UNKNOWN';
+        if (msg.includes('tile') || msg.includes('source')) {
+          errorCode = MAPTILER_TILES_URL ? 'ERROR_CODE: MAPTILER_TILE_FAILED' : 'ERROR_CODE: OSM_TILE_FAILED';
+        } else if (msg.includes('style')) {
+          errorCode = 'ERROR_CODE: INVALID_STYLE';
+        } else if (msg.includes('network') || msg.includes('fetch')) {
+          errorCode = 'ERROR_CODE: NETWORK_FAILED';
+        }
+        
+        onError?.(`${msg} (${errorCode})`);
       });
 
       map.on('load', () => {
