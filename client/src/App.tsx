@@ -83,6 +83,7 @@ export default function App() {
 
   // Initialize map cache and restore view state on mount
   useEffect(() => {
+    console.log('🚀 App mounted');
     if (!cacheInitializedRef.current) {
       initMapCache().catch((e) => console.error('Cache init failed:', e));
       cacheInitializedRef.current = true;
@@ -232,6 +233,7 @@ export default function App() {
 
   const handleMapReady = useCallback(
     (map: MapLibreMap) => {
+      console.log('✅ Map ready!', map);
       mapRef.current = map;
       setMapLoaded(true);
       const b = map.getBounds();
@@ -241,6 +243,7 @@ export default function App() {
   );
 
   const handleMapError = useCallback((message: string) => {
+    console.error('❌ Map error:', message);
     setMapError(message);
   }, []);
 

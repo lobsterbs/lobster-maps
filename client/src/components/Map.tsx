@@ -317,40 +317,47 @@ export function MapCanvas({ onMapReady, onMoveEnd, onError }: Props) {
   const [mode, setMode] = useState<ViewMode>('map');
 
   useEffect(() => {
+    console.log('🗺️ MapCanvas useEffect: containerRef.current=', !!containerRef.current, 'mapRef.current=', !!mapRef.current);
     if (!containerRef.current || mapRef.current) return;
 
-    const map = new maplibregl.Map({
-      container: containerRef.current,
-      style: darkStyle(),
-      center: [5.3221, 60.3913], // Bergen, Norway
-      zoom: 15,
-      pitch: DEFAULT_PITCH,
-      attributionControl: false, // Hide MapLibre/MapTiler attribution
-    });
+    try {
+      console.log('📍 Creating MapLibreGL instance...');
+      const map = new maplibregl.Map({
+        container: containerRef.current,
+        style: darkStyle(),
+        center: [5.3221, 60.3913], // Bergen, Norway
+        zoom: 15,
+        pitch: DEFAULT_PITCH,
+        attributionControl: false, // Hide MapLibre/MapTiler attribution
+      });
+      console.log('📍 MapLibreGL instance created:', map);
 
+      // Without this, a bad or unreachable tiles source (wrong URL, no
+      // CORS, host down) means 'load' never fires and the caller has no
+      // way to know the map is stuck rather than still loading. Whatever
+      // caused it, the UI shouldn't spin forever pretending it's fine.
+      map.on('error', (e: any) => {
+        onError?.(e.error?.message ?? 'Map failed to load');
+      });
 
-    // Without this, a bad or unreachable tiles source (wrong URL, no
-    // CORS, host down) means 'load' never fires and the caller has no
-    // way to know the map is stuck rather than still loading. Whatever
-    // caused it, the UI shouldn't spin forever pretending it's fine.
-    map.on('error', (e: any) => {
-      onError?.(e.error?.message ?? 'Map failed to load');
-    });
+      map.on('load', () => {
+        mapRef.current = map;
+        onMapReady?.(map);
+      });
 
-    map.on('load', () => {
-      mapRef.current = map;
-      onMapReady?.(map);
-    });
+      map.on('moveend', () => {
+        const b = map.getBounds();
+        onMoveEnd?.([b.getWest(), b.getSouth(), b.getEast(), b.getNorth()]);
+      });
 
-    map.on('moveend', () => {
-      const b = map.getBounds();
-      onMoveEnd?.([b.getWest(), b.getSouth(), b.getEast(), b.getNorth()]);
-    });
-
-    return () => {
-      map.remove();
-      mapRef.current = null;
-    };
+      return () => {
+        map.remove();
+        mapRef.current = null;
+      };
+    } catch (err) {
+      console.error('💥 MapLibreGL initialization failed:', err);
+      onError?.(`Map init failed: ${err instanceof Error ? err.message : String(err)}`);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
