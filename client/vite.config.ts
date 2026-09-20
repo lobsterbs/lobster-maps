@@ -6,6 +6,8 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': 'http://localhost:4000',
+      // VersionIndicator probes /health to report the real compute backend
+      '/health': 'http://localhost:4000',
     },
   },
   build: {

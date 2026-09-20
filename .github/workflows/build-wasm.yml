@@ -8,6 +8,10 @@ on:
       - '.github/workflows/build-wasm.yml'
   workflow_dispatch:
 
+permissions:
+  # Required for the commit step below to push pkg/ back to the branch.
+  contents: write
+
 jobs:
   build-wasm:
     runs-on: ubuntu-latest
@@ -24,7 +28,7 @@ jobs:
 
       - name: Build WASM (release)
         working-directory: ./routing-core
-        run: wasm-pack build --target bundler --release --out-dir pkg
+        run: wasm-pack build --target nodejs --release --out-dir pkg
 
       - name: Check WASM output
         run: |
@@ -34,16 +38,25 @@ jobs:
           echo "Files generated:"
           ls -la routing-core/pkg/ | grep -E '\.(wasm|js|d\.ts)$'
 
+      # Render has no Rust toolchain, so the built artifact is committed
+      # back to the repo and shipped with the deploy. `git pull --rebase`
+      # first: this job and a normal push can land close together, and a
+      # non-fast-forward push here used to be swallowed by `|| echo`,
+      # which is how a failure could look like a success.
       - name: Commit WASM artifacts
-        if: github.event_name == 'push'
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
         run: |
-          git config user.name "CI Bot"
+          set -e
+          git config user.name "lobster-ci"
           git config user.email "ci@lobstermaps.local"
-          git add routing-core/pkg/
-          git commit -m "build: WASM modules updated" || echo "No changes to commit"
-          git push || echo "Push failed (no new commits)"
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          git add -f routing-core/pkg/
+          if git diff --cached --quiet; then
+            echo "WASM output unchanged, nothing to commit"
+            exit 0
+          fi
+          git commit -m "build(wasm): rebuild routing-core/pkg [skip ci]"
+          git pull --rebase origin "${GITHUB_REF_NAME}"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
 
       - name: Upload WASM artifacts
         uses: actions/upload-artifact@v4

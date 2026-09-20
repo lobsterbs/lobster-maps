@@ -4,7 +4,9 @@
 
 use wasm_bindgen::prelude::*;
 
-#[wasm_bindgen]
+// getter_with_clone: wasm_bindgen requires pub fields to be Copy unless
+// it is told to clone them on read. `name` and `category` are Strings.
+#[wasm_bindgen(getter_with_clone)]
 pub struct Business {
     id: u32,
     pub name: String,

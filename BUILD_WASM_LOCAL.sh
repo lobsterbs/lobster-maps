@@ -37,7 +37,7 @@ echo ""
 echo "🏗️  Building WASM modules (release)..."
 cd routing-core
 wasm-pack build \
-    --target bundler \
+    --target nodejs \
     --release \
     --out-dir pkg
 

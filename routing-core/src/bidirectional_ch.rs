@@ -1,12 +1,17 @@
-use crate::graph::{Graph, Edge, RouteResult};
+use crate::graph::{Graph, RouteResult};
 use std::collections::{BinaryHeap, HashMap};
 use std::cmp::Ordering;
 
-#[derive(Clone, Eq, PartialEq)]
+// Eq cannot be derived here: `cost` is f32, which is only PartialEq.
+// BinaryHeap needs Ord (and therefore Eq), so Eq is asserted manually and
+// the ordering is defined by the Ord impl below.
+#[derive(Clone, PartialEq)]
 struct State {
     cost: f32,
     node: u32,
 }
+
+impl Eq for State {}
 
 impl Ord for State {
     fn cmp(&self, other: &Self) -> Ordering {
@@ -272,4 +277,14 @@ mod tests {
         let result = ch.query(0, 3);
         assert!(result.is_err());
     }
+}
+
+
+/// Free-function wrapper. `lib.rs` calls
+/// `crate::bidirectional_ch::query_bidirectional(graph, from, to)`, which
+/// never existed — only the `BidirectionalCH::query` method did.
+pub fn query_bidirectional(graph: &Graph, from: u32, to: u32) -> Result<RouteResult, String> {
+    let mut engine = BidirectionalCH::new();
+    engine.load_graph(graph.clone());
+    engine.query(from, to)
 }

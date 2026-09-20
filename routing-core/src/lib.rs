@@ -18,14 +18,7 @@ pub struct Router {
     multicriteria: Option<MultiCriteriaRouter>,
 }
 
-#[wasm_bindgen]
-#[derive(Clone, Serialize, Deserialize)]
-pub struct RouteResult {
-    pub distance_m: f32,
-    pub duration_s: f32,
-    pub node_sequence: Vec<u32>,
-    pub polyline: String,
-}
+pub use crate::graph::RouteResult;
 
 #[wasm_bindgen]
 impl Router {

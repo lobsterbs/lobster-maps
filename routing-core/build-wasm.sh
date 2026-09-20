@@ -15,7 +15,7 @@ fi
 # Build for bundler target (Node/Webpack compatible)
 echo "📦 Compiling to WASM (bundler target)..."
 wasm-pack build routing-core \
-    --target bundler \
+    --target nodejs \
     --release \
     --out-dir pkg
 

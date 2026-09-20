@@ -12,7 +12,7 @@ import routingRouter from './routes/routing.js';
 import searchRouter from './routes/search.js';
 import scrapeRouter from './routes/scrape.js';
 import { createMcpServer } from './mcp.js';
-import { initializeWasmModules, isWasmAvailable } from './wasm/index.js';
+import { initializeWasmModules, isWasmAvailable, getWasmStatus } from './wasm/index.js';
 import { rateLimiterWasm, tileRateLimiter } from './middleware/rateLimiterWasm.js';
 import { refreshWeatherCache } from './lib/weatherCacheWasm.js';
 
@@ -39,7 +39,12 @@ const PORT = process.env.PORT ? Number(process.env.PORT) : 4000;
 app.use(cors({ origin: process.env.CLIENT_ORIGIN || 'http://localhost:5173' }));
 app.use(express.json());
 
-app.get('/health', (_req, res) => res.json({ ok: true }));
+// Reports what is actually running, not what we hope is running. The
+// WASM status in particular was previously only visible by reading
+// startup logs.
+app.get('/health', (_req, res) =>
+  res.json({ ok: true, wasm: getWasmStatus(), uptimeSeconds: Math.round(process.uptime()) })
+);
 
 // Initialize WASM modules and start server
 async function startServer() {
@@ -219,11 +224,13 @@ async function startServer() {
 
     app.listen(PORT, () => {
       const usingWasm = isWasmAvailable();
-      console.log(`✅ LobsterMaps server listening on :${PORT}`);
-      console.log(`🚀 Rate limiter: ${usingWasm ? 'WASM (<1ms)' : 'Node.js fallback'}`);
-      console.log(`🚀 Search scorer: ${usingWasm ? 'WASM (100x faster)' : 'Node.js fallback'}`);
-      console.log(`🚀 Weather cache: ${usingWasm ? 'WASM (O(1) lookups)' : 'Node.js fallback'}`);
-      console.log('🚀 Geocoding: Nominatim + local cache');
+      console.log(`LobsterMaps server listening on :${PORT}`);
+      // Speed claims removed: they were printed unconditionally from a
+      // flag, never measured, and were being printed next to a WASM
+      // build that did not exist.
+      console.log(`Compute backend: ${usingWasm ? 'Rust/WASM' : 'Node fallback'}`);
+      if (!usingWasm) console.log(`  reason: ${getWasmStatus().reason ?? 'unknown'}`);
+      console.log('Geocoding: Nominatim + local cache');
     });
   } catch (err) {
     console.error('❌ Server startup failed:', err);

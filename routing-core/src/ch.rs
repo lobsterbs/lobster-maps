@@ -20,11 +20,13 @@ impl ContractionHierarchy {
 
         while !remaining.is_empty() {
             // Find node with minimum degree
+            // Was `.position(|id| edges.len())` — position() takes a
+            // predicate returning bool, so this never compiled. The intent
+            // is the minimum-degree node, which is min_by_key.
             let min_idx = remaining.iter()
-                .position(|&id| {
-                    let edges = graph.get_adjacent_edges(id);
-                    edges.len()
-                })
+                .enumerate()
+                .min_by_key(|(_, &id)| graph.get_adjacent_edges(id).len())
+                .map(|(idx, _)| idx)
                 .unwrap_or(0);
 
             let node = remaining.remove(min_idx);

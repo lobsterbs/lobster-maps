@@ -1,4 +1,4 @@
-use crate::graph::{Graph, RoadType};
+use crate::graph::Graph; // RoadType is defined below, in this module
 use std::collections::HashMap;
 
 #[derive(Clone, Debug)]

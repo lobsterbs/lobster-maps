@@ -1,46 +1,99 @@
 /**
- * WASM Module Integration
- * Lazy-loads and exposes Rust/WASM modules for Express
+ * WASM module integration.
+ *
+ * Four separate bugs used to make this unconditionally fall back to
+ * Node, and the logs said only "routing-core/pkg missing":
+ *
+ *  1. The crate never compiled. 16 Rust errors; the GitHub Actions
+ *     build had run exactly once, in September, and failed. So pkg/ was
+ *     never produced by anything.
+ *  2. wasm-pack was told `--target bundler`, whose output needs a
+ *     bundler to resolve the .wasm import. This server runs plain
+ *     `node dist/index.js`, so that output could never have loaded.
+ *     It is built `--target nodejs` now.
+ *  3. The import pointed at `pkg/index.js`. wasm-pack names the entry
+ *     after the crate: `lobster_routing.js`.
+ *  4. The relative path was wrong in both dev and prod. Compiled, this
+ *     file is `server/dist/wasm/index.js`, so `../../routing-core`
+ *     resolved to `server/routing-core`, which does not exist.
+ *
+ * Resolution is now explicit and candidate-based, and a failure says
+ * which paths were tried instead of guessing at the cause.
  */
 
+import { createRequire } from 'node:module';
+import { existsSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 let rateLimiter: any = null;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 let searchScorer: any = null;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 let weatherCache: any = null;
+let wasmLoadError: string | null = null;
+
+const WASM_ENTRY = 'lobster_routing.js';
+
+function candidatePaths(): string[] {
+  const here = path.dirname(fileURLToPath(import.meta.url));
+  return [
+    // server/dist/wasm -> repo root
+    path.resolve(here, '../../../routing-core/pkg', WASM_ENTRY),
+    // server/src/wasm -> repo root (tsx dev)
+    path.resolve(here, '../../../routing-core/pkg', WASM_ENTRY),
+    // whatever the process was launched from
+    path.resolve(process.cwd(), 'routing-core/pkg', WASM_ENTRY),
+    path.resolve(process.cwd(), '../routing-core/pkg', WASM_ENTRY),
+  ];
+}
 
 /**
- * Initialize all WASM modules on server startup
+ * Load the WASM modules. Never throws: the Node fallbacks below are
+ * complete implementations, not stubs, so a missing build degrades
+ * performance and nothing else.
  */
 export async function initializeWasmModules(): Promise<void> {
+  const tried = candidatePaths();
+  const found = tried.find((p) => existsSync(p));
+
+  if (!found) {
+    wasmLoadError = `no WASM build found (looked in ${[...new Set(tried.map((t) => path.dirname(t)))].join(', ')})`;
+    console.warn(`WASM: ${wasmLoadError}`);
+    console.warn('WASM: using Node fallbacks. Build with `npm run build:wasm`, or let the build-wasm workflow commit routing-core/pkg/.');
+    return;
+  }
+
   try {
-    // Try to load WASM (optional on Render without Rust toolchain)
-    let wasmPkg: any = null;
-    try {
-      // @ts-expect-error - Module may not exist at build time on Render
-      wasmPkg = await import('../../routing-core/pkg/index.js');
-    } catch (importErr: any) {
-      // This is expected on Render - just log and continue with fallbacks
-      console.warn('⚠️ WASM modules not found (routing-core/pkg missing)');
-      console.warn('   Using Node.js fallbacks for all operations.');
+    // `--target nodejs` output is CommonJS and initialises its own
+    // memory on require, so there is no async default() to await —
+    // calling one (as this used to) would have thrown even on a good
+    // build.
+    const require = createRequire(import.meta.url);
+    const pkg = require(found);
+
+    const missing = ['RateLimiter', 'SearchScorer', 'WeatherCache'].filter((n) => !pkg[n]);
+    if (missing.length > 0) {
+      wasmLoadError = `WASM build is missing exports: ${missing.join(', ')}`;
+      console.warn(`WASM: ${wasmLoadError} — staying on Node fallbacks.`);
       return;
     }
 
-    if (wasmPkg && wasmPkg.default) {
-      await wasmPkg.default();
-
-      rateLimiter = wasmPkg.RateLimiter;
-      searchScorer = wasmPkg.SearchScorer;
-      weatherCache = wasmPkg.WeatherCache;
-
-      console.log('✅ WASM modules loaded');
-      console.log('   - RateLimiter (<1ms, 1000+ req/sec)');
-      console.log('   - SearchScorer (100x faster)');
-      console.log('   - WeatherCache (O(1) lookups)');
-    }
+    rateLimiter = pkg.RateLimiter;
+    searchScorer = pkg.SearchScorer;
+    weatherCache = pkg.WeatherCache;
+    wasmLoadError = null;
+    console.log(`WASM: loaded RateLimiter, SearchScorer, WeatherCache from ${found}`);
   } catch (err) {
-    console.warn('⚠️ WASM initialization failed (will use Node.js fallbacks)');
-    console.warn('   Error:', (err as Error).message);
-    // Don't throw - let server continue with Node.js implementations
+    wasmLoadError = (err as Error).message;
+    console.warn('WASM: load failed, using Node fallbacks:', wasmLoadError);
   }
+}
+
+/** Why WASM is not active, or null when it is. For /health and logs. */
+export function getWasmStatus(): { active: boolean; reason: string | null } {
+  return { active: isWasmAvailable(), reason: wasmLoadError };
 }
 
 /**
@@ -165,11 +218,12 @@ export function createWeatherCache(): any {
  * Check if WASM modules are actually loaded
  */
 export function isWasmAvailable(): boolean {
-  return rateLimiter !== null && searchScorer !== null;
+  return rateLimiter !== null && searchScorer !== null && weatherCache !== null;
 }
 
 export default {
   initializeWasmModules,
+  getWasmStatus,
   createRateLimiter,
   getSearchScorer,
   createWeatherCache,

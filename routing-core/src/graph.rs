@@ -17,6 +17,23 @@ pub struct Edge {
     pub is_oneway: bool,
 }
 
+/// Result of a routing query. Lives here rather than in lib.rs because
+/// ch.rs, utils.rs and bidirectional_ch.rs all construct it and all
+/// imported it from `crate::graph` — the type just never existed here.
+///
+/// Deliberately NOT #[wasm_bindgen]: it never crosses the WASM boundary
+/// as a struct. Router serialises it to a JSON string first, which is
+/// also why the old wasm_bindgen version failed to compile (wasm_bindgen
+/// requires pub fields to be Copy, and Vec<u32>/String are not).
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct RouteResult {
+    pub distance_m: f32,
+    pub duration_s: f32,
+    pub node_sequence: Vec<u32>,
+    pub polyline: String,
+}
+
+#[derive(Clone)]
 pub struct Graph {
     nodes: Vec<Node>,
     edges: Vec<Edge>,
