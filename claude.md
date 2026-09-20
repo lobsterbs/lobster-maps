@@ -48,6 +48,8 @@ commercial). AGPL-3.0.
 Everything below is done and pushed. Both builds pass; the Rust is
 verified by `cargo check` and by executing the compiled `.wasm` in Node.
 
+**Last deployed:** 39721be (Sep 20, 2026) - OSM extraction fallback added
+
 ### MapTiler (earlier this session)
 
 Client no longer hand-builds a basemap. It fetches MapTiler's published
@@ -141,8 +143,11 @@ to the repo, and the deploy picks it up. Check it is live at
 4. Code-split the `maplibre` chunk (1.02 MB) the way mapillary now is —
    harder, since the map is the landing experience.
 5. No auth on `POST /api/businesses`. LobsterID is the real fix.
-6. OSM graph extraction (`npm run extract:osm`, ~30 min) has still never
-   been run, so the Router has no graph to route on.
+6. **OSM graph extraction** (Sep 20, 2026)
+   - [x] extract-osm handles Overpass API unavailability in sandbox
+   - [x] Test graph loaded locally (routes work but minimal)
+   - [ ] Deploy to Render and trigger real extraction (need outbound access)
+   - [ ] Replace test graph with full Bergen/Vestland OSM data
 7. Moderation view for the `verified` flag.
 8. Close the two CI debug issues (#2, #3) once you have read them.
 
