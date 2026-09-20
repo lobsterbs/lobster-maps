@@ -28,8 +28,29 @@ jobs:
         with:
           targets: wasm32-unknown-unknown
 
+      # `curl https://rustwasm.org/wasm-pack/installer/init.sh | sh` used to
+      # live here. That URL no longer serves the installer, and piping it
+      # into sh meant the step exited 0 having installed nothing — so the
+      # job "successfully installed" a wasm-pack that was not on PATH.
+      # cargo install is slower but cannot fail quietly.
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin
+            ~/.cargo/registry
+            ~/.cargo/git
+            routing-core/target
+          key: ${{ runner.os }}-wasm-${{ hashFiles('routing-core/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-wasm-
+
       - name: Install wasm-pack
-        run: curl https://rustwasm.org/wasm-pack/installer/init.sh -sSf | sh
+        run: |
+          set -e
+          if ! command -v wasm-pack >/dev/null 2>&1; then
+            cargo install wasm-pack --locked
+          fi
+          command -v wasm-pack
 
       - name: Show toolchain
         run: |
