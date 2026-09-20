@@ -3,7 +3,7 @@
 Authoritative handoff doc. If GitHub and Notion disagree, this file
 wins. Mirrored to Notion (3c91682f-4601-8182-9b34-ca2bc0c5fc09).
 
-**Last updated:** 20 Sep 2026
+**Last updated:** 21 Sep 2026, 22:06 UTC
 
 ---
 
@@ -126,6 +126,25 @@ to the repo, and the deploy picks it up. Check it is live at
 | Dead code | `mapbox3dTerrain.ts` / `mapbox3dBuildings.ts` / `terrainColors.ts` referenced `mapbox://` and a Mapbox `composite` source — unusable in MapLibre. Deleted |
 | Repo | 62 orphaned duplicate source files removed from root; 24 internal reports moved to `docs/` |
 | Security | Server `npm audit`: 9 (8 moderate, 1 high) → 4 moderate |
+
+---
+
+## Current Session (Sep 21, 2026 — 22:06 UTC)
+
+**Completed:**
+- ✅ Set VITE_MAPTILER_KEY in Render env vars via MCP (auto-rebuild triggered)
+- ✅ Redesigned basemap switcher: vertical dropdown → horizontal M3 pill buttons
+- ✅ Pills positioned at bottom-center, smooth transitions, emerald active state
+- ✅ Built and tested locally: `npm run build:client && npm run build:server`
+- ✅ Pushed to GitHub: commit c65d6ff
+- ✅ Render deploy triggered: dep-dao5hartqb8s73dvsq30 (build_in_progress)
+
+**Status:** Map should load vector tiles + 3D terrain now. Basemap switcher shows 7 options (Dark/Light/Outdoor/Topo/Satellite/Winter/Ocean) as horizontal M3 pills. Attribution compact control restored.
+
+**File changes:**
+- `client/src/components/Map.tsx`: Replaced vertical dropdown with horizontal pill buttons
+- `client/src/lib/maptiler.ts`: No changes (key handled via VITE_* env var)
+- Render env var: `VITE_MAPTILER_KEY=st6o11zRZ5rBnmLDbS6K`
 
 ---
 
