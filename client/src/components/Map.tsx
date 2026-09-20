@@ -310,7 +310,7 @@ export function MapCanvas({ onMapReady, onMoveEnd, onError, onStyleReload }: Pro
     if (next && map.getPitch() < 50) map.easeTo({ pitch: 65, duration: 600 });
   }
 
-  const panelTransition = useTransition(panelOpen, {
+  const pillTransition = useTransition(panelOpen, {
     from: { opacity: 0, transform: 'translateY(-8px) scale(0.96)' },
     enter: { opacity: 1, transform: 'translateY(0px) scale(1)' },
     leave: { opacity: 0, transform: 'translateY(-8px) scale(0.96)' },
@@ -339,29 +339,27 @@ export function MapCanvas({ onMapReady, onMoveEnd, onError, onStyleReload }: Pro
         />
       </div>
 
-      {panelTransition(
+      {/* M3 horizontal basemap pill switcher */}
+      {pillTransition(
         (style, open) =>
           open && (
-            <animated.div style={{ ...style, ...panelStyle }}>
+            <animated.div style={{ ...style, ...pillContainerStyle }}>
               {BASEMAPS.map((b) => {
                 const selected = b.id === basemap;
                 return (
                   <button
                     key={b.id}
-                    onClick={() => {
-                      switchBasemap(b.id);
-                      setPanelOpen(false);
-                    }}
+                    onClick={() => switchBasemap(b.id)}
+                    title={b.hint}
+                    aria-pressed={selected}
                     style={{
-                      ...basemapRowStyle,
-                      background: selected ? 'rgba(16,185,129,0.14)' : 'transparent',
+                      ...pillStyle,
+                      background: selected ? EMERALD : 'rgba(30,30,30,0.6)',
+                      color: selected ? '#fff' : TEXT_DIM,
+                      borderColor: selected ? EMERALD : 'rgba(255,255,255,0.12)',
                     }}
                   >
-                    <span style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
-                      <span style={{ fontWeight: 600, color: selected ? EMERALD : '#f1f5f9' }}>{b.label}</span>
-                      <span style={{ fontSize: 11, color: TEXT_DIM }}>{b.hint}</span>
-                    </span>
-                    {selected && <Check size={16} color={EMERALD} strokeWidth={2.5} />}
+                    {b.label}
                   </button>
                 );
               })}
@@ -431,37 +429,37 @@ const controlStackStyle: CSSProperties = {
   gap: 8,
 };
 
-const panelStyle: CSSProperties = {
+const pillContainerStyle: CSSProperties = {
   position: 'absolute',
-  top: 72,
-  right: 72,
+  bottom: 24,
+  left: 16,
+  right: 16,
   zIndex: 6,
-  width: 268,
-  maxWidth: 'calc(100vw - 96px)',
-  padding: 6,
-  borderRadius: 20,
-  background: 'rgba(21,21,21,0.86)',
-  backdropFilter: 'blur(24px) saturate(180%)',
-  WebkitBackdropFilter: 'blur(24px) saturate(180%)',
-  border: '1px solid rgba(255,255,255,0.08)',
-  boxShadow: '0 12px 40px rgba(0,0,0,0.5)',
   display: 'flex',
-  flexDirection: 'column',
-  gap: 2,
+  flexWrap: 'wrap',
+  gap: 8,
+  justifyContent: 'center',
+  padding: '12px 16px',
+  borderRadius: 28,
+  background: 'rgba(15,15,15,0.8)',
+  backdropFilter: 'blur(20px) saturate(180%)',
+  WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+  border: '1px solid rgba(255,255,255,0.1)',
+  boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+  maxWidth: 'calc(100vw - 32px)',
 };
 
-const basemapRowStyle: CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'space-between',
-  gap: 10,
-  width: '100%',
-  textAlign: 'left',
-  padding: '10px 12px',
-  minHeight: 48, // M3 minimum touch target
-  borderRadius: 14,
-  border: 'none',
+const pillStyle: CSSProperties = {
+  padding: '8px 16px',
+  minHeight: 36,
+  borderRadius: 18,
+  border: '1px solid',
   cursor: 'pointer',
   fontFamily: 'var(--font-body)',
   fontSize: 13,
+  fontWeight: 500,
+  whiteSpace: 'nowrap',
+  transition: 'all 200ms ease-out',
+  WebkitUserSelect: 'none',
+  userSelect: 'none',
 };
