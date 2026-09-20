@@ -63,6 +63,10 @@ type BusinessPointProps = {
 
 export default function App() {
   const mapRef = useRef<MapLibreMap | null>(null);
+  // setStyle() destroys every source and layer, so the route has to be
+  // redrawn after a basemap switch. Keeping the geometry here is the
+  // only way to do that without re-requesting the route.
+  const lastRouteRef = useRef<[number, number][] | null>(null);
   const businessMarkersRef = useRef(new Map<string, maplibregl.Marker>());
   const clusterMarkersRef = useRef<maplibregl.Marker[]>([]);
   const businessLookupRef = useRef(new Map<string, Business>());
@@ -307,6 +311,7 @@ export default function App() {
 
     if (!geometry) {
       // (0,0) is TripPlanner's deliberate "just clear, don't fly" sentinel, not a real destination
+      lastRouteRef.current = null;
       clearRouteFromMap(map);
       if (destination.lat !== 0 || destination.lon !== 0) {
         // transit result — no line geometry to fit to, just center on the destination
@@ -315,12 +320,19 @@ export default function App() {
       return;
     }
 
+    lastRouteRef.current = geometry;
     drawRouteOnMap(map, geometry);
     const bounds = geometry.reduce(
       (b, coord) => b.extend(coord),
       new maplibregl.LngLatBounds(geometry[0], geometry[0])
     );
     map.fitBounds(bounds, { padding: 64, duration: 500 });
+  }, []);
+
+  const handleStyleReload = useCallback((map: MapLibreMap) => {
+    // Markers are DOM-backed maplibregl.Marker instances and survive a
+    // style swap; GeoJSON sources do not.
+    if (lastRouteRef.current) drawRouteOnMap(map, lastRouteRef.current);
   }, []);
 
   const handleCategorySelect = useCallback(
@@ -338,7 +350,12 @@ export default function App() {
 
   return (
     <div style={{ position: 'fixed', inset: 0 }}>
-      <MapCanvas onMapReady={handleMapReady} onMoveEnd={handleMoveEnd} onError={handleMapError} />
+      <MapCanvas
+        onMapReady={handleMapReady}
+        onMoveEnd={handleMoveEnd}
+        onError={handleMapError}
+        onStyleReload={handleStyleReload}
+      />
       {!mapLoaded && !mapError && <LoadingMorph />}
       {mapError && (
         <div

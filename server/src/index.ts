@@ -13,7 +13,7 @@ import searchRouter from './routes/search.js';
 import scrapeRouter from './routes/scrape.js';
 import { createMcpServer } from './mcp.js';
 import { initializeWasmModules, isWasmAvailable } from './wasm/index.js';
-import { rateLimiterWasm } from './middleware/rateLimiterWasm.js';
+import { rateLimiterWasm, tileRateLimiter } from './middleware/rateLimiterWasm.js';
 import { refreshWeatherCache } from './lib/weatherCacheWasm.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -46,13 +46,28 @@ async function startServer() {
   try {
     await initializeWasmModules();
 
-    // Wire rate limiter (before all /api routes)
-    app.use('/api', rateLimiterWasm);
+    // Tile traffic is bursty (dozens of requests per viewport) and must
+    // not share a bucket with the JSON API, or one map pan 429s the next
+    // real API call.
+    //
+    // Note `/api/tiles/...` matches BOTH mounts, so the strict limiter
+    // explicitly skips it rather than running second and undoing the
+    // split. Inside an `app.use('/api', ...)` mount `req.path` is the
+    // remainder after the mount point, i.e. `/tiles/16/33736/18888.png`.
+    app.use('/api/tiles', tileRateLimiter);
+    app.use('/api', (req, res, next) => {
+      if (req.path.startsWith('/tiles/')) return next();
+      return rateLimiterWasm(req, res, next);
+    });
 
-    // Tile proxy — Render's network can't reach external tile servers.
-    // Client requests tiles from this backend endpoint instead, and we
-    // fetch from OSM, then cache for 1 year. Tiles are immutable by z/x/y
-    // so this is safe to cache aggressively.
+    // Keyless OSM raster fallback. Only used when the client was built
+    // without VITE_MAPTILER_KEY — with a key the browser goes straight
+    // to MapTiler's CDN and never touches this.
+    //
+    // (The comment that used to sit here blamed "Render can't reach
+    // external tile servers". That diagnosis was wrong: Render does not
+    // block outbound traffic, and the browser fetches tiles itself
+    // anyway. The real cause was a missing build-time API key.)
     app.get('/api/tiles/:z/:x/:y.png', async (req, res) => {
       const { z, x, y } = req.params;
       try {
@@ -89,64 +104,20 @@ async function startServer() {
       }
     });
 
-    // MapTiler proxy — forward style spec (tiles.json) request to MapTiler
-    // Client requests the style from /api/maptiler/style instead of maptiler.com
-    app.get('/api/maptiler/style', async (req, res) => {
-      const apiKey = process.env.VITE_MAPTILER_KEY;
-      if (!apiKey) {
-        res.status(400).json({ error: 'MapTiler API key not configured' });
-        return;
-      }
-
-      try {
-        const maptilerUrl = `https://api.maptiler.com/tiles/v4/tiles.json?key=${apiKey}`;
-        const response = await fetch(maptilerUrl);
-
-        if (!response.ok) {
-          console.warn(`MapTiler style fetch failed: returned ${response.status}`);
-          res.status(response.status).json({ error: 'Style fetch failed' });
-          return;
-        }
-
-        const styleJson = await response.json();
-        // Cache style spec for 1 hour (can change, but rare)
-        res.set('Cache-Control', 'public, max-age=3600');
-        res.json(styleJson);
-      } catch (err) {
-        console.error('MapTiler style proxy error:', err);
-        res.status(500).json({ error: 'Style fetch failed' });
-      }
-    });
-
-    // MapTiler glyphs proxy — forward font glyph requests to MapTiler
-    // Pattern: /api/maptiler/fonts/{fontstack}/{range}.pbf
-    app.get('/api/maptiler/fonts/:fontstack/:range.pbf', async (req, res) => {
-      const apiKey = process.env.VITE_MAPTILER_KEY;
-      if (!apiKey) {
-        res.status(400).json({ error: 'MapTiler API key not configured' });
-        return;
-      }
-
-      const { fontstack, range } = req.params;
-      try {
-        const maptilerUrl = `https://api.maptiler.com/fonts/${fontstack}/${range}.pbf?key=${apiKey}`;
-        const response = await fetch(maptilerUrl);
-
-        if (!response.ok) {
-          console.warn(`MapTiler glyph fetch failed for ${fontstack}/${range}: ${response.status}`);
-          res.status(response.status).json({ error: 'Glyph fetch failed' });
-          return;
-        }
-
-        // Cache glyphs for 1 year (immutable by fontstack/range)
-        res.set('Cache-Control', 'public, max-age=31536000, immutable');
-        res.set('Content-Type', 'application/octet-stream');
-        res.send(Buffer.from(await response.arrayBuffer()));
-      } catch (err) {
-        console.error(`MapTiler glyph proxy error for ${fontstack}/${range}:`, err);
-        res.status(500).json({ error: 'Glyph fetch failed' });
-      }
-    });
+    // The MapTiler style + glyph proxies that used to live here are
+    // gone. They pointed at `/tiles/v4/tiles.json`, and MapTiler's
+    // current endpoint is `/maps/{mapId}/style.json` (the whole v2
+    // generation is deprecated in favour of v4). More importantly the
+    // proxy never actually hid the key: a MapTiler style.json embeds
+    // key-bearing absolute URLs for its own sources, sprites and
+    // glyphs, so the browser ended up holding the key anyway — while
+    // every tile made a detour through a US Render box on its way to a
+    // user in Bergen.
+    //
+    // The client now talks to MapTiler's CDN directly. Protect the key
+    // with an origin restriction in the MapTiler dashboard
+    // (Account -> API Keys -> Edit -> allowed origins), which is the
+    // control MapTiler actually provides for browser keys.
 
     // Wire routes
     app.use('/api/businesses', businessesRouter);

@@ -1,512 +1,373 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import * as maplibregl from 'maplibre-gl';
 import { type Map as MapLibreMap, type StyleSpecification } from 'maplibre-gl';
-import { Map as MapIcon, Satellite } from 'lucide-react';
-import { animated, useSpring } from '@react-spring/web';
+import { Layers, Mountain, Check } from 'lucide-react';
+import { animated, useSpring, useTransition } from '@react-spring/web';
 import VersionIndicator from './VersionIndicator';
+import {
+  BASEMAPS,
+  DEFAULT_BASEMAP,
+  MAPTILER_ATTRIBUTION,
+  OSM_ATTRIBUTION,
+  OSM_PROXY_TILES,
+  TERRAIN_MAX_ZOOM,
+  TERRAIN_SOURCE_ID,
+  TERRAIN_TILEJSON,
+  getBasemap,
+  hasMapTiler,
+  styleUrl,
+  type BasemapId,
+} from '../lib/maptiler';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
-// Maptiler vector tiles: single source for the entire basemap now, not
-// just buildings. Free tier with API key.
+// The basemap is no longer hand-built here. Previously this file
+// assembled its own dark style layer by layer against the Planet v4
+// schema, which meant every source-layer and field name was a chance to
+// silently render nothing (that is exactly how buildings ended up flat
+// on `min_height` vs `height_min`, and how the tiles URL 404'd).
+// MapTiler publishes finished, professionally designed styles at
+// /maps/{id}/style.json with sprites, glyphs and POIs already wired, so
+// we use those and only add OUR layers on top: 3D terrain, building
+// extrusions where the style has none, and whatever App draws (routes,
+// markers).
 //
-// URL form verified directly against MapTiler's own docs
-// (docs.maptiler.com/gl-style-specification/sources/), glyphs URL
-// verified the same way (docs.maptiler.com/gl-style-specification/glyphs/).
-// First attempt at the tiles URL (/data/v3.json) was an unverified guess
-// and 404'd in production — everything below is checked against the
-// actual schema (docs.maptiler.com/schema/planet-v4/), not pattern-matched.
-const MAPTILER_KEY = import.meta.env.VITE_MAPTILER_KEY || '';
-if (!MAPTILER_KEY) {
-  console.warn(
-    'VITE_MAPTILER_KEY is not set — using OpenStreetMap tiles as fallback. Get a free key at cloud.maptiler.com and set it in .env for vector tiles.'
-  );
-} else {
-  console.log('Using MapTiler vector tiles');
-}
+// Consequence worth knowing: the browser fetches tiles straight from
+// MapTiler's CDN. See lib/maptiler.ts for why that beats proxying them
+// through Render, and lock the key down with an origin restriction in
+// the MapTiler dashboard.
 
-// Backend proxies MapTiler API — client doesn't need the key
-// Render's network can't reach MapTiler, so backend fetches with the key
-// and client just requests from /api/maptiler/*
-const MAPTILER_TILES_URL = MAPTILER_KEY ? '/api/maptiler/style' : null;
-const MAPTILER_GLYPHS_URL = MAPTILER_KEY ? '/api/maptiler/fonts/{fontstack}/{range}.pbf' : null;
-const MAPTILER_ATTRIBUTION = '© <a href="https://www.maptiler.com/copyright/">MapTiler</a>';
+const BERGEN: [number, number] = [5.3221, 60.3913];
+const DEFAULT_PITCH = 55;
+const TERRAIN_EXAGGERATION = 1.4;
+const LOAD_TIMEOUT_MS = 12000;
 
-// OpenStreetMap raster tiles proxied through backend
-// Render's network can't reach external tile servers directly, so the
-// backend fetches tiles and caches them. Client hits /api/tiles/{z}/{x}/{y}.png
-const OSM_TILES_URL = '/api/tiles/{z}/{x}/{y}.png';
-const OSM_ATTRIBUTION = '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+const BUILDING_SOURCE_LAYER = 'building'; // docs.maptiler.com/schema/planet-v4/
+const BUILDINGS_LAYER_ID = 'lobster-buildings-3d';
 
-console.log('Using', MAPTILER_TILES_URL ? 'MapTiler' : 'OpenStreetMap', 'tiles');
-
-const SOURCE_NAME = 'maptiler';
-
-// Confirmed against MapTiler Planet v4's actual published schema
-// (docs.maptiler.com/schema/planet-v4/): the building source-layer is
-// literally named "building".
-const BUILDING_SOURCE_LAYER = 'building';
-
-// "Noto Sans Regular"/"Noto Sans Bold" confirmed as real hosted font
-// names from MapTiler's own example (docs.maptiler.com/cloud/api/other/:
-// "Roboto Medium,Noto Sans Regular/0-255.pbf"), not guessed — Inter
-// (the app's actual body font) isn't necessarily hosted on their glyph
-// service and I didn't want to gamble on labels silently not rendering.
-const LABEL_FONT_REGULAR = ['Noto Sans Regular'];
-const LABEL_FONT_BOLD = ['Noto Sans Bold'];
-
-// Building height fields confirmed against the actual published schema
-// (docs.maptiler.com/schema/planet-v4/, "building" layer): "height" and
-// "height_min" — NOT "min_height", which is what this originally had
-// and would've silently rendered every building flat, no error thrown,
-// since MapLibre just treats an unmatched property as undefined.
-// Ramped 13->16 instead of the original 15->15.05: at this app's
-// default zoom (16, see below) buildings are already full height, but
-// panning out to city-wide views now grows them in gradually instead
-// of a near-instant, visually jarring cutoff at one exact zoom level.
-function buildingPaint(color: string, opacity: number) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const paint: any = {
-    'fill-extrusion-color': color,
-    'fill-extrusion-height': ['interpolate', ['linear'], ['zoom'], 13, 0, 16, ['get', 'height']],
-    'fill-extrusion-base': ['interpolate', ['linear'], ['zoom'], 13, 0, 16, ['get', 'height_min']],
-    'fill-extrusion-opacity': opacity,
-  };
-  return paint;
-}
-
-const DEFAULT_PITCH = 55; // Steeper than before — sells the 3D buildings immediately on load
-
-// Road hierarchy by the confirmed `class` field on the `road` /
-// `road_label` layers (docs.maptiler.com/schema/planet-v4/, values:
-// motorway/trunk/primary/secondary/tertiary/minor/service/...).
-// Width and color both step down the hierarchy, the same principle
-// Apple Maps and every well-made basemap uses so the eye reads
-// importance at a glance rather than every street looking identical.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const ROAD_CLASS: any = ['get', 'class'];
-// MapLibre's nested expression tuple types are notoriously strict with
-// TypeScript inference on deeply nested match/interpolate arrays. These
-// are hand-verified against the real style spec, not guessed — `any`
-// here sidesteps a type-checker fight, not a correctness gap.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const ROAD_WIDTH: any = [
-  'interpolate', ['linear'], ['zoom'],
-  6, ['match', ROAD_CLASS, ['motorway', 'trunk'], 1, ['primary'], 0.6, 0.2],
-  20, ['match', ROAD_CLASS, ['motorway', 'trunk'], 22, ['primary'], 16, ['secondary', 'tertiary'], 11, 6],
-];
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const ROAD_COLOR: any = [
-  'match', ROAD_CLASS,
-  ['motorway', 'trunk'], '#4a4a4f',
-  ['primary'], '#3f3f44',
-  ['secondary', 'tertiary'], '#333337',
-  '#2a2a2d',
-];
-
-function darkStyle(): StyleSpecification {
-  // Try MapTiler vector tiles if available
-  if (MAPTILER_TILES_URL) {
-    console.log('Attempting MapTiler vector tiles');
-    return {
-      version: 8,
-      ...(MAPTILER_GLYPHS_URL && { glyphs: MAPTILER_GLYPHS_URL }),
-      sources: {
-        [SOURCE_NAME]: {
-          type: 'vector',
-          url: MAPTILER_TILES_URL,
-          attribution: MAPTILER_ATTRIBUTION,
-        },
-      },
-      // Subtle warm-tinted ambient + directional light on the 3D
-      // buildings, real MapLibre style-spec root property (confirmed via
-      // docs.maptiler.com/gl-style-specification/root/), not decorative
-      // CSS — gives the extrusions actual shading rather than flat color.
-      light: { anchor: 'viewport', color: '#fff4e6', intensity: 0.35 },
-      layers: [
-        { id: 'background', type: 'background', paint: { 'background-color': '#0a0a0a' } },
-        {
-          id: 'landcover',
-          type: 'fill',
-          source: SOURCE_NAME,
-          'source-layer': 'grass',
-          paint: { 'fill-color': '#141a13', 'fill-opacity': 0.6 },
-        },
-        {
-          id: 'landuse-builtup',
-          type: 'fill',
-          source: SOURCE_NAME,
-          'source-layer': 'residential',
-          paint: { 'fill-color': '#121212' },
-        },
-        {
-          id: 'water',
-          type: 'fill',
-          source: SOURCE_NAME,
-          'source-layer': 'water',
-          paint: { 'fill-color': '#0d1620' },
-        },
-        {
-          id: 'buildings-flat',
-          type: 'fill',
-          source: SOURCE_NAME,
-          'source-layer': BUILDING_SOURCE_LAYER,
-          maxzoom: 13,
-          filter: ['!=', ['get', 'underground'], true],
-          paint: { 'fill-color': '#1c1c1f' },
-        },
-        {
-          id: 'roads',
-          type: 'line',
-          source: SOURCE_NAME,
-          'source-layer': 'road',
-          layout: { 'line-cap': 'round', 'line-join': 'round' },
-          paint: { 'line-color': ROAD_COLOR, 'line-width': ROAD_WIDTH },
-        },
-        {
-          id: 'buildings-3d',
-          type: 'fill-extrusion',
-          source: SOURCE_NAME,
-          'source-layer': BUILDING_SOURCE_LAYER,
-          minzoom: 12,
-          filter: ['!=', ['get', 'underground'], true],
-          paint: buildingPaint('#242429', 0.92),
-        },
-        {
-          id: 'road-labels',
-          type: 'symbol',
-          source: SOURCE_NAME,
-        'source-layer': 'road_label',
-        minzoom: 13,
-        layout: {
-          'symbol-placement': 'line',
-          'text-field': ['get', 'name'],
-          'text-font': LABEL_FONT_REGULAR,
-          'text-size': 11,
-        },
-        paint: {
-          'text-color': '#8a8a8f',
-          'text-halo-color': '#0a0a0a',
-          'text-halo-width': 1,
-        },
-      },
-      {
-        id: 'place-labels',
-        type: 'symbol',
-        source: SOURCE_NAME,
-        'source-layer': 'city_label',
-        layout: {
-          'text-field': ['get', 'name'],
-          'text-font': LABEL_FONT_BOLD,
-          // Bigger, bolder for more important (lower rank number) places
-          'text-size': ['interpolate', ['linear'], ['get', 'rank'], 1, 20, 7, 12],
-        },
-        paint: {
-          'text-color': '#f2f2f2',
-          'text-halo-color': '#0a0a0a',
-          'text-halo-width': 1.4,
-        },
-      },
-      {
-        id: 'country-labels',
-        type: 'symbol',
-        source: SOURCE_NAME,
-        'source-layer': 'country_label',
-        maxzoom: 6,
-        layout: {
-          'text-field': ['get', 'name'],
-          'text-font': LABEL_FONT_BOLD,
-          'text-size': 13,
-          'text-transform': 'uppercase',
-          'text-letter-spacing': 0.05,
-        },
-        paint: {
-          'text-color': '#6a6a6f',
-          'text-halo-color': '#0a0a0a',
-          'text-halo-width': 1,
-        },
-      },
-    ],
-  };
-  }
-
-  // Fallback to OSM raster tiles if MapTiler not available
-  console.log('Using OpenStreetMap raster tiles (fallback)');
-  return {
-    version: 8,
-    sources: {
-      [SOURCE_NAME]: {
-        type: 'raster',
-        tiles: [OSM_TILES_URL],
-        tileSize: 256,
-        attribution: OSM_ATTRIBUTION,
-      },
-    },
-    layers: [
-      {
-        id: 'raster',
-        type: 'raster',
-        source: SOURCE_NAME,
-        paint: {
-          'raster-opacity': 0.85,
-        },
-      },
-    ],
-  };
-}
-
-// Hardcoded OSM fallback style used when MapTiler fails - doesn't call darkStyle()
+/** Keyless fallback so a missing build-time key shows a map, not a void. */
 function osmFallbackStyle(): StyleSpecification {
   return {
     version: 8,
     sources: {
       osm: {
         type: 'raster',
-        tiles: [OSM_TILES_URL],
+        tiles: [OSM_PROXY_TILES],
         tileSize: 256,
         attribution: OSM_ATTRIBUTION,
       },
     },
-    layers: [
-      {
-        id: 'osm-raster',
-        type: 'raster',
-        source: 'osm',
-        paint: {
-          'raster-opacity': 0.85,
-        },
-      },
-    ],
+    layers: [{ id: 'osm-raster', type: 'raster', source: 'osm' }],
   };
 }
 
-function satelliteStyle(): StyleSpecification {
-  // Satellite view: real Esri World Imagery raster underneath, the
-  // same Maptiler building extrusions on top for a hybrid look. No
-  // road/place labels here, keep satellite view clean.
-  
-  // When MapTiler key not available, just show satellite raster without buildings
-  if (!MAPTILER_TILES_URL) {
-    return {
-      version: 8,
-      sources: {
-        satellite: {
-          type: 'raster',
-          tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
-          tileSize: 256,
-          attribution: '© Esri',
-        },
-      },
-      layers: [
-        { id: 'satellite-raster', type: 'raster', source: 'satellite' },
-      ],
-    };
+/** First vector source in the loaded style, whatever MapTiler named it. */
+function findVectorSourceId(map: MapLibreMap): string | null {
+  const sources = map.getStyle()?.sources ?? {};
+  for (const [id, src] of Object.entries(sources)) {
+    if ((src as { type?: string }).type === 'vector') return id;
   }
-
-  return {
-    version: 8,
-    sources: {
-      satellite: {
-        type: 'raster',
-        tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
-        tileSize: 256,
-        attribution: '© Esri',
-      },
-      [SOURCE_NAME]: {
-        type: 'vector',
-        url: MAPTILER_TILES_URL!,
-        attribution: MAPTILER_ATTRIBUTION,
-      },
-    },
-    layers: [
-      { id: 'satellite-raster', type: 'raster', source: 'satellite' },
-      {
-        id: 'buildings-3d-sat',
-        type: 'fill-extrusion',
-        source: SOURCE_NAME,
-        'source-layer': BUILDING_SOURCE_LAYER,
-        minzoom: 12,
-        filter: ['!=', ['get', 'underground'], true],
-        paint: buildingPaint('#e8e8e8', 0.75),
-      },
-    ],
-  };
+  return null;
 }
+
+function hasExtrusionLayer(map: MapLibreMap): boolean {
+  return (map.getStyle()?.layers ?? []).some((l) => l.type === 'fill-extrusion');
+}
+
+export type MapCanvasHandle = {
+  map: MapLibreMap | null;
+};
 
 type Props = {
   onMapReady?: (map: MapLibreMap) => void;
   onMoveEnd?: (bounds: [number, number, number, number]) => void;
   onError?: (message: string) => void;
+  /**
+   * Fired after a basemap switch has re-created the style. Anything the
+   * host drew onto the map (route lines, GeoJSON sources) is destroyed
+   * by setStyle and has to be redrawn here.
+   */
+  onStyleReload?: (map: MapLibreMap) => void;
 };
 
-type ViewMode = 'map' | 'satellite';
-
-// Exported as MapCanvas, not Map, so it doesn't shadow the built-in
-// Map constructor wherever this gets imported alongside marker tracking.
-export function MapCanvas({ onMapReady, onMoveEnd, onError }: Props) {
+export function MapCanvas({ onMapReady, onMoveEnd, onError, onStyleReload }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
-  const [mode, setMode] = useState<ViewMode>('map');
+  const loadedRef = useRef(false);
+  const [basemap, setBasemap] = useState<BasemapId>(DEFAULT_BASEMAP);
+  const [terrain, setTerrain] = useState(false);
+  const [panelOpen, setPanelOpen] = useState(false);
+
+  // Refs mirror state so the style-reload handler always reads the
+  // current selection rather than the value captured when it was bound.
+  const basemapRef = useRef(basemap);
+  const terrainRef = useRef(terrain);
+  basemapRef.current = basemap;
+  terrainRef.current = terrain;
+
+  const onStyleReloadRef = useRef(onStyleReload);
+  onStyleReloadRef.current = onStyleReload;
+
+  /** Re-attach everything that is ours, not MapTiler's. Idempotent. */
+  const applyCustomLayers = useCallback((map: MapLibreMap) => {
+    const active = getBasemap(basemapRef.current);
+
+    // --- 3D terrain -----------------------------------------------
+    if (hasMapTiler) {
+      if (!map.getSource(TERRAIN_SOURCE_ID)) {
+        map.addSource(TERRAIN_SOURCE_ID, {
+          type: 'raster-dem',
+          url: TERRAIN_TILEJSON(),
+          maxzoom: TERRAIN_MAX_ZOOM,
+        });
+      }
+      map.setTerrain(terrainRef.current ? { source: TERRAIN_SOURCE_ID, exaggeration: TERRAIN_EXAGGERATION } : null);
+      // Sky sits behind the horizon once the ground is tilted. Without
+      // it a pitched map fades to flat background above the terrain.
+      map.setSky(
+        active.dark
+          ? { 'sky-color': '#0b1220', 'horizon-color': '#1c2433', 'fog-color': '#0a0a0a' }
+          : { 'sky-color': '#88c6fc', 'horizon-color': '#dbeafe', 'fog-color': '#e8eef7' }
+      );
+    }
+
+    // --- 3D buildings ---------------------------------------------
+    // Only when the chosen MapTiler style does not already extrude.
+    // Satellite/hybrid never does, most street styles do not either at
+    // the moment, but checking means we never double-draw.
+    if (!map.getLayer(BUILDINGS_LAYER_ID) && !hasExtrusionLayer(map)) {
+      const vectorSource = findVectorSourceId(map);
+      if (vectorSource) {
+        map.addLayer({
+          id: BUILDINGS_LAYER_ID,
+          type: 'fill-extrusion',
+          source: vectorSource,
+          'source-layer': BUILDING_SOURCE_LAYER,
+          minzoom: 13,
+          filter: ['!=', ['get', 'underground'], true],
+          paint: {
+            // `height` and `height_min` are the real Planet v4 field
+            // names. Ramped over zoom so buildings grow in instead of
+            // popping at one exact zoom level.
+            'fill-extrusion-color': active.imagery ? '#e8e8e8' : active.dark ? '#242429' : '#c9ccd4',
+            'fill-extrusion-height': ['interpolate', ['linear'], ['zoom'], 13, 0, 16, ['get', 'height']],
+            'fill-extrusion-base': ['interpolate', ['linear'], ['zoom'], 13, 0, 16, ['get', 'height_min']],
+            'fill-extrusion-opacity': active.imagery ? 0.75 : 0.92,
+          },
+        });
+      }
+    }
+  }, []);
 
   useEffect(() => {
-    console.log('MapCanvas useEffect: containerRef.current=', !!containerRef.current, 'mapRef.current=', !!mapRef.current);
     if (!containerRef.current || mapRef.current) return;
 
+    const initialStyle: string | StyleSpecification = hasMapTiler
+      ? styleUrl(DEFAULT_BASEMAP)
+      : osmFallbackStyle();
+
+    if (!hasMapTiler) {
+      console.warn(
+        'VITE_MAPTILER_KEY was not set at build time — falling back to proxied OpenStreetMap raster tiles. ' +
+          'Set it in Render (and rebuild) for vector styles, 3D terrain and buildings.'
+      );
+    }
+
+    let map: MapLibreMap;
     try {
-      console.log('Creating MapLibreGL instance...');
-      const style = darkStyle();
-      console.log('Style created:', {
-        version: style.version,
-        sources: Object.keys(style.sources),
-        layers: style.layers.length,
-      });
-      
-      if (style.sources[SOURCE_NAME]?.type === 'vector') {
-        const src = style.sources[SOURCE_NAME] as any;
-        console.log('Vector source URL:', src.url?.substring(0, 60) + '...');
-      }
-      
-      const map = new maplibregl.Map({
+      map = new maplibregl.Map({
         container: containerRef.current,
-        style: style,
-        center: [5.3221, 60.3913], // Bergen, Norway
+        style: initialStyle,
+        center: BERGEN,
         zoom: 15,
         pitch: DEFAULT_PITCH,
-        attributionControl: false, // Hide MapLibre/MapTiler attribution
+        maxPitch: 85, // terrain is worth looking along, not just down at
+        attributionControl: false,
       });
-      console.log('MapLibreGL instance created');
-
-      // Timeout: if load doesn't fire in 10 seconds, something's stuck
-      let fallbackAttempted = false;
-      const loadTimeout = setTimeout(() => {
-        console.error('Map load timeout (10s) - ERROR_CODE: TILE_LOAD_TIMEOUT');
-        if (mapRef.current === null && !fallbackAttempted) {
-          fallbackAttempted = true;
-          console.log('Attempting fallback: switching to OSM tiles');
-          try {
-            if (map && MAPTILER_TILES_URL) {
-              // Try OSM fallback (hardcoded, doesn't call darkStyle)
-              map.setStyle(osmFallbackStyle());
-              // Restart timeout for fallback
-              setTimeout(() => {
-                if (mapRef.current === null) {
-                  onError?.('Map failed to load from both MapTiler and OSM. ERROR_CODE: TILE_LOAD_FAILED_ALL_SOURCES');
-                }
-              }, 10000);
-              return;
-            }
-          } catch (fallbackErr) {
-            console.error('Fallback also failed:', fallbackErr);
-            onError?.('Map initialization failed completely. ERROR_CODE: MAP_INIT_FAILED');
-          }
-        }
-      }, 10000);
-
-      map.on('dataloading', () => {
-        console.log('Map data loading...');
-      });
-
-      map.on('data', (e: any) => {
-        console.log('Map data event:', e.sourceDataType);
-      });
-
-      // Without this, a bad or unreachable tiles source (wrong URL, no
-      // CORS, host down) means 'load' never fires and the caller has no
-      // way to know the map is stuck rather than still loading. Whatever
-      // caused it, the UI shouldn't spin forever pretending it's fine.
-      map.on('error', (e: any) => {
-        const msg = e.error?.message || String(e);
-        console.error('MapLibre error:', msg);
-        clearTimeout(loadTimeout);
-        
-        // Classify the error
-        let errorCode = 'MAP_ERROR_UNKNOWN';
-        if (msg.includes('tile') || msg.includes('source')) {
-          errorCode = MAPTILER_TILES_URL ? 'ERROR_CODE: MAPTILER_TILE_FAILED' : 'ERROR_CODE: OSM_TILE_FAILED';
-        } else if (msg.includes('style')) {
-          errorCode = 'ERROR_CODE: INVALID_STYLE';
-        } else if (msg.includes('network') || msg.includes('fetch')) {
-          errorCode = 'ERROR_CODE: NETWORK_FAILED';
-        }
-        
-        onError?.(`${msg} (${errorCode})`);
-      });
-
-      map.on('load', () => {
-        console.log('Map ready');
-        clearTimeout(loadTimeout);
-        mapRef.current = map;
-        onMapReady?.(map);
-      });
-
-      map.on('moveend', () => {
-        const b = map.getBounds();
-        onMoveEnd?.([b.getWest(), b.getSouth(), b.getEast(), b.getNorth()]);
-      });
-
-      return () => {
-        map.remove();
-        mapRef.current = null;
-      };
     } catch (err) {
-      console.error('MapLibreGL initialization failed:', err);
       onError?.(`Map init failed: ${err instanceof Error ? err.message : String(err)}`);
+      return;
     }
+
+    mapRef.current = map;
+
+    map.addControl(
+      new maplibregl.AttributionControl({
+        compact: true,
+        customAttribution: hasMapTiler ? MAPTILER_ATTRIBUTION : OSM_ATTRIBUTION,
+      }),
+      'bottom-right'
+    );
+
+    // Attribution is a licence term for both MapTiler and OSM, not
+    // decoration — it was previously switched off entirely. Compact
+    // keeps it to a single "i" disc on mobile.
+
+    const loadTimeout = setTimeout(() => {
+      if (loadedRef.current) return;
+      console.error('Map load timed out after', LOAD_TIMEOUT_MS, 'ms');
+      onError?.(
+        hasMapTiler
+          ? 'The map tiles did not load in time. Check that VITE_MAPTILER_KEY is valid and that this domain is allowed on the key in your MapTiler dashboard.'
+          : 'The map tiles did not load in time, and no MapTiler key is configured.'
+      );
+    }, LOAD_TIMEOUT_MS);
+
+    // A single missing tile fires 'error' too. Treating every error as
+    // fatal is what previously replaced a working map with a full-screen
+    // failure state. Only errors before first load are fatal; after that
+    // they are logged and the map carries on.
+    map.on('error', (e) => {
+      const msg = e.error?.message ?? String(e);
+      if (loadedRef.current) {
+        console.warn('MapLibre (non-fatal):', msg);
+        return;
+      }
+      if (/40[13]|forbidden|unauthor/i.test(msg)) {
+        clearTimeout(loadTimeout);
+        onError?.(
+          'MapTiler rejected the request (401/403). The API key is missing, wrong, or this domain is not on the key allowlist.'
+        );
+        return;
+      }
+      console.warn('MapLibre (pre-load):', msg);
+    });
+
+    map.on('load', () => {
+      loadedRef.current = true;
+      clearTimeout(loadTimeout);
+      applyCustomLayers(map);
+      onMapReady?.(map);
+    });
+
+    map.on('moveend', () => {
+      const b = map.getBounds();
+      onMoveEnd?.([b.getWest(), b.getSouth(), b.getEast(), b.getNorth()]);
+    });
+
+    return () => {
+      clearTimeout(loadTimeout);
+      map.remove();
+      mapRef.current = null;
+      loadedRef.current = false;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  function handleModeChange(next: ViewMode) {
+  function switchBasemap(next: BasemapId) {
     const map = mapRef.current;
-    if (!map || next === mode) return;
-    setMode(next);
-    map.setStyle(next === 'satellite' ? satelliteStyle() : darkStyle());
-    map.easeTo({ pitch: next === 'satellite' ? 0 : DEFAULT_PITCH, duration: 500 });
+    if (!map || next === basemap || !hasMapTiler) return;
+    setBasemap(next);
+    basemapRef.current = next;
+
+    map.setStyle(styleUrl(next));
+    // setStyle discards every source and layer, ours included. Re-add
+    // them once the replacement style has parsed.
+    map.once('styledata', () => {
+      applyCustomLayers(map);
+      onStyleReloadRef.current?.(map);
+    });
   }
+
+  function toggleTerrain() {
+    const map = mapRef.current;
+    if (!map || !hasMapTiler) return;
+    const next = !terrain;
+    setTerrain(next);
+    terrainRef.current = next;
+
+    if (!map.getSource(TERRAIN_SOURCE_ID)) {
+      map.addSource(TERRAIN_SOURCE_ID, {
+        type: 'raster-dem',
+        url: TERRAIN_TILEJSON(),
+        maxzoom: TERRAIN_MAX_ZOOM,
+      });
+    }
+    map.setTerrain(next ? { source: TERRAIN_SOURCE_ID, exaggeration: TERRAIN_EXAGGERATION } : null);
+    // Tilt into the terrain so switching it on is visible immediately
+    // rather than looking like nothing happened from straight above.
+    if (next && map.getPitch() < 50) map.easeTo({ pitch: 65, duration: 600 });
+  }
+
+  const panelTransition = useTransition(panelOpen, {
+    from: { opacity: 0, transform: 'translateY(-8px) scale(0.96)' },
+    enter: { opacity: 1, transform: 'translateY(0px) scale(1)' },
+    leave: { opacity: 0, transform: 'translateY(-8px) scale(0.96)' },
+    config: { tension: 320, friction: 26 },
+  });
 
   return (
     <div style={{ position: 'absolute', inset: 0 }}>
       <div ref={containerRef} style={{ position: 'absolute', inset: 0 }} />
       <VersionIndicator />
-      <div style={togglePillStyle}>
-        <ModeToggleButton
-          icon={MapIcon}
-          label="Map"
-          tooltip="Map"
-          selected={mode === 'map'}
-          disabled={false}
-          onClick={() => handleModeChange('map')}
+
+      <div style={controlStackStyle}>
+        <IconToggle
+          icon={Layers}
+          label="Basemap"
+          active={panelOpen}
+          disabled={!hasMapTiler}
+          onClick={() => setPanelOpen((o) => !o)}
         />
-        <ModeToggleButton
-          icon={Satellite}
-          label="Satellite"
-          tooltip="Satellite"
-          selected={mode === 'satellite'}
-          disabled={false}
-          onClick={() => handleModeChange('satellite')}
+        <IconToggle
+          icon={Mountain}
+          label="3D terrain"
+          active={terrain}
+          disabled={!hasMapTiler}
+          onClick={toggleTerrain}
         />
       </div>
+
+      {panelTransition(
+        (style, open) =>
+          open && (
+            <animated.div style={{ ...style, ...panelStyle }}>
+              {BASEMAPS.map((b) => {
+                const selected = b.id === basemap;
+                return (
+                  <button
+                    key={b.id}
+                    onClick={() => {
+                      switchBasemap(b.id);
+                      setPanelOpen(false);
+                    }}
+                    style={{
+                      ...basemapRowStyle,
+                      background: selected ? 'rgba(16,185,129,0.14)' : 'transparent',
+                    }}
+                  >
+                    <span style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
+                      <span style={{ fontWeight: 600, color: selected ? EMERALD : '#f1f5f9' }}>{b.label}</span>
+                      <span style={{ fontSize: 11, color: TEXT_DIM }}>{b.hint}</span>
+                    </span>
+                    {selected && <Check size={16} color={EMERALD} strokeWidth={2.5} />}
+                  </button>
+                );
+              })}
+            </animated.div>
+          )
+      )}
     </div>
   );
 }
 
-type ModeToggleButtonProps = {
-  icon: any; // lucide-react icon component
+const EMERALD = '#10b981';
+const TEXT_DIM = '#94a3b8';
+
+type IconToggleProps = {
+  // lucide-react icon component
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  icon: any;
   label: string;
-  tooltip: string;
-  selected: boolean;
+  active: boolean;
   disabled: boolean;
   onClick: () => void;
 };
 
-// Material Design 3 Expressive emerald accent
-const EMERALD = '#10b981';
-const TEXT_DIM = '#94a3b8';
-const ON_PRIMARY = '#ffffff';
-
-function ModeToggleButton({ icon: Icon, label, tooltip, selected, disabled, onClick }: ModeToggleButtonProps) {
+function IconToggle({ icon: Icon, label, active, disabled, onClick }: IconToggleProps) {
   const style = useSpring({
-    background: selected ? EMERALD : 'transparent',
-    color: selected ? ON_PRIMARY : TEXT_DIM,
+    background: active ? EMERALD : 'rgba(21,21,21,0.72)',
+    color: active ? '#ffffff' : TEXT_DIM,
     config: { tension: 300, friction: 26 },
   });
 
@@ -514,18 +375,24 @@ function ModeToggleButton({ icon: Icon, label, tooltip, selected, disabled, onCl
     <animated.button
       onClick={onClick}
       disabled={disabled}
-      title={tooltip}
+      title={disabled ? `${label} needs a MapTiler key` : label}
+      aria-label={label}
+      aria-pressed={active}
       style={{
-        ...toggleButtonStyle,
         ...style,
-        cursor: disabled ? 'not-allowed' : 'pointer',
-        opacity: disabled ? 0.4 : 1,
+        width: 48,
+        height: 48,
+        borderRadius: 16,
+        border: '1px solid rgba(255,255,255,0.08)',
+        backdropFilter: 'blur(20px) saturate(180%)',
+        WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+        boxShadow: '0 8px 24px rgba(0,0,0,0.35)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        width: 40,
-        height: 40,
         padding: 0,
+        cursor: disabled ? 'not-allowed' : 'pointer',
+        opacity: disabled ? 0.4 : 1,
       }}
     >
       <Icon size={20} strokeWidth={2} />
@@ -533,28 +400,47 @@ function ModeToggleButton({ icon: Icon, label, tooltip, selected, disabled, onCl
   );
 }
 
-const togglePillStyle: CSSProperties = {
+const controlStackStyle: CSSProperties = {
   position: 'absolute',
   top: 16,
   right: 16,
   zIndex: 5,
   display: 'flex',
-  gap: 2,
-  padding: 4,
-  borderRadius: 999,
-  background: 'rgba(21, 21, 21, 0.72)',
-  backdropFilter: 'blur(20px) saturate(180%)',
-  WebkitBackdropFilter: 'blur(20px) saturate(180%)',
-  border: '1px solid rgba(255,255,255,0.08)',
-  boxShadow: '0 8px 24px rgba(0,0,0,0.35)',
+  flexDirection: 'column',
+  gap: 8,
 };
 
-const toggleButtonStyle: CSSProperties = {
-  padding: '8px 14px',
-  borderRadius: 999,
+const panelStyle: CSSProperties = {
+  position: 'absolute',
+  top: 72,
+  right: 72,
+  zIndex: 6,
+  width: 268,
+  maxWidth: 'calc(100vw - 96px)',
+  padding: 6,
+  borderRadius: 20,
+  background: 'rgba(21,21,21,0.86)',
+  backdropFilter: 'blur(24px) saturate(180%)',
+  WebkitBackdropFilter: 'blur(24px) saturate(180%)',
+  border: '1px solid rgba(255,255,255,0.08)',
+  boxShadow: '0 12px 40px rgba(0,0,0,0.5)',
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 2,
+};
+
+const basemapRowStyle: CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  gap: 10,
+  width: '100%',
+  textAlign: 'left',
+  padding: '10px 12px',
+  minHeight: 48, // M3 minimum touch target
+  borderRadius: 14,
   border: 'none',
   cursor: 'pointer',
   fontFamily: 'var(--font-body)',
   fontSize: 13,
-  fontWeight: 600,
 };

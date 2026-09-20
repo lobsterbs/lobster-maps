@@ -1,1 +1,0 @@
-ALTER TABLE "businesses" ADD COLUMN "image_urls" text[];
