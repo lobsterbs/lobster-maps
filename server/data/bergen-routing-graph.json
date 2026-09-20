@@ -1,0 +1,98 @@
+{
+  "nodes": [
+    [
+      "1",
+      {
+        "lat": 60.3894,
+        "lon": 5.3245,
+        "tags": {}
+      }
+    ],
+    [
+      "2",
+      {
+        "lat": 60.3912,
+        "lon": 5.3268,
+        "tags": {}
+      }
+    ],
+    [
+      "3",
+      {
+        "lat": 60.3876,
+        "lon": 5.3289,
+        "tags": {}
+      }
+    ],
+    [
+      "4",
+      {
+        "lat": 60.3855,
+        "lon": 5.3256,
+        "tags": {}
+      }
+    ]
+  ],
+  "edges": [
+    [
+      "1->2",
+      [
+        {
+          "target": "2",
+          "distance": 250,
+          "duration": 18,
+          "speed": 50,
+          "highway": "residential"
+        }
+      ]
+    ],
+    [
+      "2->3",
+      [
+        {
+          "target": "3",
+          "distance": 280,
+          "duration": 20,
+          "speed": 50,
+          "highway": "residential"
+        }
+      ]
+    ],
+    [
+      "3->4",
+      [
+        {
+          "target": "4",
+          "distance": 300,
+          "duration": 22,
+          "speed": 50,
+          "highway": "residential"
+        }
+      ]
+    ],
+    [
+      "4->1",
+      [
+        {
+          "target": "1",
+          "distance": 350,
+          "duration": 25,
+          "speed": 50,
+          "highway": "residential"
+        }
+      ]
+    ]
+  ],
+  "edgesByGeometry": [],
+  "metadata": {
+    "region": "Bergen/Vestland",
+    "extractDate": "2026-09-20T16:12:31.360Z",
+    "boundingBox": [
+      59.8,
+      4.7,
+      60.5,
+      5.9
+    ],
+    "type": "test_graph"
+  }
+}
