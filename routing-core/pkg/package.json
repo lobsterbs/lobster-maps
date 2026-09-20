@@ -1,0 +1,12 @@
+{
+  "name": "lobster-routing",
+  "description": "High-performance routing engine for LobsterMaps using Contraction Hierarchies",
+  "version": "0.1.0",
+  "files": [
+    "lobster_routing_bg.wasm",
+    "lobster_routing.js",
+    "lobster_routing.d.ts"
+  ],
+  "main": "lobster_routing.js",
+  "types": "lobster_routing.d.ts"
+}
