@@ -23,3 +23,21 @@ criterion = "0.5"
 opt-level = 3
 lto = true
 strip = true
+
+# wasm-opt (binaryen, bundled by wasm-pack) validates the module before
+# optimising it, and defaults to a feature set older than what current
+# rustc emits for wasm32. Without these flags it rejects the build with
+# "Bulk memory operations require bulk memory" and "all used features
+# should be allowed" (trunc_sat), which is a validator default, not a
+# problem with the module.
+#
+# Enabling the features explicitly keeps the -O size pass. The
+# alternative, `wasm-opt = false`, also builds but ships a bigger .wasm.
+[package.metadata.wasm-pack.profile.release]
+wasm-opt = [
+    '-O',
+    '--enable-bulk-memory',
+    '--enable-nontrapping-float-to-int',
+    '--enable-sign-ext',
+    '--enable-mutable-globals',
+]
