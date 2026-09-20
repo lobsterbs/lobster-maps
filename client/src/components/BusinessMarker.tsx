@@ -13,7 +13,9 @@ export function BusinessMarker({ name, verified, onClick }: Props) {
     config: { tension: 300, friction: 12 }, // bouncy drop-in
   });
 
-  const color = verified ? '#10b981' : '#D4A574';
+  // SVG fill resolves CSS custom properties (unlike canvas fillStyle, see
+// LoadingMorph), so these can be real tokens rather than literals.
+const color = verified ? 'var(--md-sys-color-primary)' : 'var(--md-sys-color-tertiary)';
 
   return (
     <animated.button

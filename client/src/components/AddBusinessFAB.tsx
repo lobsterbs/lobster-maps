@@ -33,7 +33,7 @@ export function AddBusinessFAB({ onClick }: Props) {
         height: 56,
         borderRadius: 16,
         border: 'none',
-        background: 'var(--md3-primary, #10b981)',
+        background: 'var(--md-sys-color-primary)',
         color: 'white',
         fontSize: 28,
         lineHeight: '56px',

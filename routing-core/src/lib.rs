@@ -6,6 +6,14 @@ pub mod ch;
 pub mod utils;
 pub mod bidirectional_ch;
 pub mod multicriteria;
+// privacy.rs and property_tests.rs were never declared as modules, so
+// nothing in them was ever compiled — the "5-layer privacy stack" and
+// the property tests existed only as files on disk. Declared now so
+// they at least type-check and show up in `cargo test`. Wiring privacy
+// into the Router is still an open piece of work.
+pub mod privacy;
+#[cfg(test)]
+pub mod property_tests;
 
 use crate::graph::Graph;
 use crate::bidirectional_ch::BidirectionalCH;

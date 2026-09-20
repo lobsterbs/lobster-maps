@@ -117,8 +117,11 @@ impl MapMatcher {
 
     /// Emission probability: GPS error model
     pub fn emission_prob(&self, gps_coord: (f64, f64), edge_coord: (f64, f64)) -> f32 {
-        let dist = ((gps_coord.0 - edge_coord.0).powi(2) + 
-                    (gps_coord.1 - edge_coord.1).powi(2)).sqrt();
+        // Coordinates are f64, emission_std_dev is f32; the original
+        // divided one by the other, which does not compile.
+        let dist = ((gps_coord.0 - edge_coord.0).powi(2)
+            + (gps_coord.1 - edge_coord.1).powi(2))
+        .sqrt() as f32;
         (-dist / self.emission_std_dev).exp()
     }
 }
@@ -169,8 +172,12 @@ impl DecoyGenerator {
         let mut decoys = Vec::new();
         
         for _ in 0..self.decoy_count {
-            let offset_lat = (rand::random::<f64>() - 0.5) * 0.02; // ±0.01 degrees ~1km
-            let offset_lng = (rand::random::<f64>() - 0.5) * 0.02;
+            // `rand` was never a dependency of this crate, and pulling it
+            // into a wasm32 build also means wiring up getrandom's js
+            // feature. js_sys is already a dependency and Math.random is
+            // available in both Node and the browser.
+            let offset_lat = (js_sys::Math::random() - 0.5) * 0.02; // ~±1km
+            let offset_lng = (js_sys::Math::random() - 0.5) * 0.02;
             
             decoys.push((target_lat + offset_lat, target_lng + offset_lng));
         }

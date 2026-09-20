@@ -194,3 +194,21 @@
   line-height: 1rem;
   letter-spacing: 0.5px;
 }
+
+
+/* Accessibility: honour the OS "reduce motion" setting.
+ *
+ * This was missing entirely, which is a WCAG 2.3.3 problem in an app
+ * this animation-heavy. CSS alone is not enough here — most motion is
+ * react-spring, driven in JS — so main.tsx also flips react-spring's
+ * global skipAnimation. This block covers everything CSS owns. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

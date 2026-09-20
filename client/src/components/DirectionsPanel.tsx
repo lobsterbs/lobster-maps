@@ -114,9 +114,9 @@ const DirectionsPanel: React.FC<DirectionsPanelProps> = ({
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
                 {route.type === 'car' ? (
-                  <Navigation size={16} color="#10b981" />
+                  <Navigation size={16} color="var(--md-sys-color-primary)" />
                 ) : (
-                  <Bus size={16} color="#10b981" />
+                  <Bus size={16} color="var(--md-sys-color-primary)" />
                 )}
                 <span style={{ fontWeight: '500', fontSize: '14px' }}>
                   {route.type === 'car' ? 'Driving' : 'Transit'}

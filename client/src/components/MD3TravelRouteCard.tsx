@@ -128,7 +128,7 @@ export const MD3TravelRouteCard: React.FC<MD3TravelRouteCardProps> = ({
   const progressFillStyle = (percentage: number): CSSProperties => ({
     height: '100%',
     width: `${percentage}%`,
-    background: 'linear-gradient(90deg, #ef4444 0%, #10b981 100%)',
+    background: 'linear-gradient(90deg, var(--md-sys-color-error) 0%, var(--md-sys-color-primary) 100%)',
   });
 
   return (

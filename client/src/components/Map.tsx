@@ -131,6 +131,27 @@ export function MapCanvas({ onMapReady, onMoveEnd, onError, onStyleReload }: Pro
       );
     }
 
+    // --- Language --------------------------------------------------
+    // MapTiler's styles label in English by default. Planet v4 carries
+    // localised names as `name:{code}` on every label layer, so a Bergen
+    // map can show Bergen's own names. Falls back to `name` wherever a
+    // Norwegian translation does not exist, which is most street names.
+    for (const layer of map.getStyle()?.layers ?? []) {
+      if (layer.type !== 'symbol') continue;
+      const textField = (layer.layout as { 'text-field'?: unknown } | undefined)?.['text-field'];
+      if (!textField) continue;
+      try {
+        map.setLayoutProperty(layer.id, 'text-field', [
+          'coalesce',
+          ['get', 'name:no'],
+          ['get', 'name'],
+        ]);
+      } catch {
+        // A layer with an exotic text-field expression is not worth
+        // failing the whole style over; leave it in the default language.
+      }
+    }
+
     // --- 3D buildings ---------------------------------------------
     // Only when the chosen MapTiler style does not already extrude.
     // Satellite/hybrid never does, most street styles do not either at

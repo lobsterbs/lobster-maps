@@ -1,8 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import type { Map as MapLibreMap, MapMouseEvent } from 'maplibre-gl';
-import { Viewer } from 'mapillary-js';
-import 'mapillary-js/dist/mapillary.css';
+// mapillary-js is ~1 MB and was imported statically, so it shipped in
+// the initial bundle for every visitor — including the majority who
+// never open a photo, and everyone when VITE_MAPILLARY_TOKEN is unset
+// and the feature cannot run at all. Imported dynamically below instead.
+import type { Viewer as MapillaryViewer } from 'mapillary-js';
 import { Eye } from 'lucide-react';
 
 // Real street-level imagery via Mapillary, not Google Street View —
@@ -36,7 +39,7 @@ export function StreetViewLayer({ map }: Props) {
   const [viewerLoading, setViewerLoading] = useState(false);
   const [viewerError, setViewerError] = useState<string | null>(null);
   const viewerContainerRef = useRef<HTMLDivElement>(null);
-  const viewerInstanceRef = useRef<Viewer | null>(null);
+  const viewerInstanceRef = useRef<MapillaryViewer | null>(null);
 
   // Add/remove the coverage layer as the toggle flips
   useEffect(() => {
@@ -113,15 +116,30 @@ export function StreetViewLayer({ map }: Props) {
   useEffect(() => {
     if (!viewerImageId || !viewerContainerRef.current) return;
 
-    const viewer = new Viewer({
-      accessToken: MAPILLARY_TOKEN,
-      container: viewerContainerRef.current,
-      imageId: viewerImageId,
+    let disposed = false;
+    const container = viewerContainerRef.current;
+
+    (async () => {
+      const [{ Viewer }] = await Promise.all([
+        import('mapillary-js'),
+        import('mapillary-js/dist/mapillary.css'),
+      ]);
+      // The user can close the panel while the chunk is still in flight.
+      if (disposed || !container) return;
+      const viewer = new Viewer({
+        accessToken: MAPILLARY_TOKEN,
+        container,
+        imageId: viewerImageId,
+      });
+      viewerInstanceRef.current = viewer;
+    })().catch((err) => {
+      console.error('Street View viewer failed to load:', err);
+      setViewerError('Street View failed to load.');
     });
-    viewerInstanceRef.current = viewer;
 
     return () => {
-      viewer.remove();
+      disposed = true;
+      viewerInstanceRef.current?.remove();
       viewerInstanceRef.current = null;
     };
   }, [viewerImageId]);
