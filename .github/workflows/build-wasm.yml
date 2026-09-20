@@ -9,8 +9,13 @@ on:
   workflow_dispatch:
 
 permissions:
-  # Required for the commit step below to push pkg/ back to the branch.
+  # contents: required for the commit step below to push pkg/ back.
+  # issues: on failure the job opens an issue containing the compiler
+  #   output. Actions logs are served from a storage host that is not
+  #   always reachable, and a WASM build that fails silently is exactly
+  #   how this crate stayed broken from September to now.
   contents: write
+  issues: write
 
 jobs:
   build-wasm:
@@ -26,9 +31,33 @@ jobs:
       - name: Install wasm-pack
         run: curl https://rustwasm.org/wasm-pack/installer/init.sh -sSf | sh
 
+      - name: Show toolchain
+        run: |
+          rustc --version
+          cargo --version
+          wasm-pack --version
+
       - name: Build WASM (release)
         working-directory: ./routing-core
-        run: wasm-pack build --target nodejs --release --out-dir pkg
+        run: |
+          set -o pipefail
+          wasm-pack build --target nodejs --release --out-dir pkg 2>&1 | tee /tmp/wasm-build.log
+
+      - name: Report build failure
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          {
+            echo "Commit \`${GITHUB_SHA}\`, run ${GITHUB_RUN_ID}."
+            echo
+            echo '```'
+            tail -c 50000 /tmp/wasm-build.log 2>/dev/null || echo "(no log captured)"
+            echo '```'
+          } > /tmp/body.md
+          gh issue create \
+            --title "WASM build failed (${GITHUB_SHA:0:8})" \
+            --body-file /tmp/body.md || true
 
       - name: Check WASM output
         run: |

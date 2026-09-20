@@ -8,7 +8,7 @@ description = "High-performance routing engine for LobsterMaps using Contraction
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-wasm-bindgen = "=0.2.92"
+wasm-bindgen = "0.2"
 # Date::now() in rate_limiter.rs and weather_cache.rs needs this; it was
 # used but never declared, so the crate could not compile.
 js-sys = "0.3"
