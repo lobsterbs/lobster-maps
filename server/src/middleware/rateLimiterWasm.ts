@@ -77,19 +77,37 @@ export function createRateLimiterMiddleware(options: RateLimiterOptions) {
 
     let allowed = true;
     let remaining = options.capacity;
+    let remainingFromPackedResult = false;
 
     if (limiter) {
       if (typeof limiter.allow_request === 'function') {
         const result = limiter.allow_request();
-        allowed = typeof result === 'boolean' ? result : Boolean(result);
+        if (typeof result === 'boolean') {
+          // Node fallback returns a plain boolean.
+          allowed = result;
+        } else {
+          // The Rust build packs both answers into one u32: MSB set
+          // means allowed, the low 31 bits are the tokens left. Reading
+          // it as a plain truthy value happens to work today only
+          // because a denial floors to 0 — decode it properly instead,
+          // and skip the second call into WASM for the remainder.
+          allowed = (result & 0x80000000) !== 0;
+          remaining = result & 0x7fffffff;
+          remainingFromPackedResult = true;
+        }
       } else if (typeof limiter.allowRequest === 'function') {
         allowed = Boolean(limiter.allowRequest());
       }
 
-      if (typeof limiter.get_remaining === 'function') {
-        remaining = limiter.get_remaining();
-      } else if (typeof limiter.getRemaining === 'function') {
-        remaining = limiter.getRemaining();
+      // Only ask for the remainder separately when the packed value did
+      // not already carry it. Testing that by calling allow_request()
+      // again would consume a second token per request.
+      if (!remainingFromPackedResult) {
+        if (typeof limiter.get_remaining === 'function') {
+          remaining = limiter.get_remaining();
+        } else if (typeof limiter.getRemaining === 'function') {
+          remaining = limiter.getRemaining();
+        }
       }
     }
 

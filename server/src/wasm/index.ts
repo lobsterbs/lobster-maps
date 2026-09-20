@@ -73,7 +73,11 @@ export async function initializeWasmModules(): Promise<void> {
     const require = createRequire(import.meta.url);
     const pkg = require(found);
 
-    const missing = ['RateLimiter', 'SearchScorer', 'WeatherCache'].filter((n) => !pkg[n]);
+    // Checked against the generated lobster_routing.d.ts, not assumed.
+    // There is no `SearchScorer` class — search scoring is exposed as
+    // free functions, which is why a previous version of this check
+    // would have refused a perfectly good build.
+    const missing = ['RateLimiter', 'WeatherCache', 'score_business'].filter((n) => !pkg[n]);
     if (missing.length > 0) {
       wasmLoadError = `WASM build is missing exports: ${missing.join(', ')}`;
       console.warn(`WASM: ${wasmLoadError} — staying on Node fallbacks.`);
@@ -81,8 +85,23 @@ export async function initializeWasmModules(): Promise<void> {
     }
 
     rateLimiter = pkg.RateLimiter;
-    searchScorer = pkg.SearchScorer;
     weatherCache = pkg.WeatherCache;
+    // Shape the free functions into the object callers already expect
+    // (searchScorerWasm.ts calls `scorer.score_business(...)`).
+    searchScorer = {
+      score_business: pkg.score_business,
+      score_businesses_batch: pkg.score_businesses_batch,
+      // Not provided by the crate; kept so the interface matches the
+      // Node fallback for any caller that wants a plain text score.
+      score: (query: string, text: string) => {
+        const q = query.toLowerCase();
+        const t = (text || '').toLowerCase();
+        if (t === q) return 1.0;
+        if (t.startsWith(q)) return 0.9;
+        if (t.includes(q)) return 0.8;
+        return 0.4;
+      },
+    };
     wasmLoadError = null;
     console.log(`WASM: loaded RateLimiter, SearchScorer, WeatherCache from ${found}`);
   } catch (err) {
