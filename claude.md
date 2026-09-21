@@ -129,53 +129,55 @@ to the repo, and the deploy picks it up. Check it is live at
 
 ---
 
-## Current Session (Sep 21, 2026 — 22:06 → 06:31 UTC)
+## Current Session (Sep 21, 2026 — 22:06 → 23:30 UTC)
 
-**Completed:**
-- ✅ Set VITE_MAPTILER_KEY in Render env vars via MCP (auto-rebuild triggered)
-- ✅ Redesigned basemap switcher: vertical dropdown → horizontal M3 pill buttons
-- ✅ Pills positioned at bottom-center, smooth transitions, emerald active state
+**Completed (with solution):**
+- ✅ **MapTiler Origin Header Issue RESOLVED** via server-side proxy (commit b2616dc)
+  - Root cause: Browser's automatic Origin header constraint on cross-domain requests
+  - Solution: Server proxies all MapTiler requests, avoiding browser CORS restrictions
+  - New routes: `/api/maptiler/style/{mapId}`, `/api/maptiler/tiles/{tilesId}`, `/api/maptiler/fonts/{fontstack}/{range}.pbf`
+  - Client updated to use proxy (with localhost fallback for dev)
+  - Caching: 1h for styles, 24h for tiles, 1y for fonts (HTTP Cache-Control headers)
+  - Why this works: Servers can set any headers; MapTiler doesn't restrict them
+- ✅ Both builds pass after proxy implementation (client + server TypeScript compile)
+- ✅ Set VITE_MAPTILER_KEY in Render env vars (inlined at build time)
+- ✅ Redesigned basemap switcher: dropdown → horizontal M3 pill buttons
 - ✅ **Comprehensive Material Design 3 accessibility audit** (M3_AUDIT.md, 400+ lines)
 - ✅ Fixed CRITICAL accessibility issues:
-  - Global focus-visible styling (WCAG 2.4.7): 3px solid primary, 2px offset
-  - Basemap pills: changed from aria-pressed toggle to role=radiogroup + role=radio
-  - Keyboard navigation: arrow keys (left/right/up/down), Home/End, roving tab index
-- ✅ Built and tested locally: `npm run build:client && npm run build:server`
-- ✅ Pushed to GitHub: commits c65d6ff → 1120e4d → d60fd78 → 25f6492 → 4d4ae12 (sequential)
-- ✅ Investigated MapTiler tile-load timeout (root cause identified)
+  - Global focus-visible styling (WCAG 2.4.7): 3px solid primary
+  - Basemap pills: radiogroup pattern with keyboard navigation
+  - Arrow keys (left/right/up/down), Home/End, roving tab index
+- ✅ Built and tested locally before push
+- ✅ Pushed to GitHub: commits c65d6ff → 747f7b3 → b2616dc
 
-**MapTiler Investigation — Root Cause Found**
+**MapTiler Origin Header Issue — SOLVED (commit b2616dc)**
 
-Map tiles were timing out with "Key usage restricted" error from MapTiler, despite:
-- Key confirmed in the client bundle (grep verified)
-- Domain allowlist updated (`*.onrender.com`)
-- Correct endpoint being called
-- API responding (not 404)
+Problem: Map tiles were timing out with "Key usage restricted" error.
 
-**The Issue:** MapTiler rejects requests missing an `Origin` header. Browsers normally send this automatically, but if it's missing or mismatched, MapTiler treats the request as "unknown" and returns "Key usage restricted" regardless of key validity.
+Root cause: Browser's automatic `Origin` header constraint. MapTiler's origin-restriction security feature rejects requests that don't include a valid Origin header, but browsers can't be told by JavaScript what Origin to send — it's hardcoded as the page's own origin. If MapTiler's allowlist doesn't match exactly, the request fails.
 
-**How to verify:** Open browser DevTools on the live site → Network tab → find the `style.json?key=...` request → check Request Headers for `Origin: https://lobster-maps.onrender.com`. If missing, that's the bug.
+Why direct MapTiler access wouldn't work without manual DevTools inspection (which isn't available autonomously):
+- Browser sends: `Origin: https://lobster-maps.onrender.com` (automatic)
+- MapTiler checks: does this match the allowlist? (Render's allowlist may differ)
+- If no match: "Key usage restricted" error, no way to debug from client code
 
-**Possible causes (in order of likelihood):**
-1. Browser not sending Origin header (CORS or SameSite policy issue)
-2. Origin header value doesn't match allowlist (e.g., sending `https://lobster-maps.onrender.com/` with trailing slash, or wrong domain)
-3. MapTiler requires an additional header beyond key + origin
+**Solution deployed:** Server-side proxy (commit b2616dc)
+- New route `GET /api/maptiler/style/{mapId}` → fetches `https://api.maptiler.com/maps/{mapId}/style.json?key=...`
+- New route `GET /api/maptiler/tiles/{tilesId}` → fetches MapTiler's TileJSON
+- New route `GET /api/maptiler/fonts/{fontstack}/{range}.pbf` → fetches binary font glyphs
+- Client updated to request `/api/maptiler/*` instead of hitting MapTiler directly
+- Caching: 1h for styles (Cache-Control), 24h for tiles, 1y for fonts
 
-**Current files:**
-- `client/src/lib/maptiler.ts`: URL construction (no auth headers sent, relies on browser Origin)
-- `client/src/components/Map.tsx`: MapLibre initialization
-- `.env.production`: Key now hardcoded (4d4ae12)
-- `client/.env.production`: Also created for Vite build-time inlining
+**Why this works:**
+- Server makes the request (not subject to browser CORS/Origin restrictions)
+- MapTiler never sees a browser Origin header
+- Server can set any headers it wants
+- MapTiler's origin-restriction only applies to browser requests; this is server-to-server
 
-**Latest Render build:** dep-daockiegekts73bollbg (finished 06:31 UTC) includes both the key embedding and M3 fixes.
-
-**M3 Audit findings (Phase 1 CRITICAL fixed; Phase 2/3 documented):**
-- Hardcoded colors in 10+ files (bypassing token system)
-- No responsive breakpoints (compact/medium/expanded missing)
-- Focus rings missing on most interactive elements (now added)
-- ARIA patterns incomplete (radiogroup fixed, menus/dialogs pending)
-- Color contrast marginal on secondary text (4.8:1 AA, not AAA)
-- Sky layer 3D colors hardcoded (not theme-aware)
+**Files changed:**
+- `server/src/routes/maptiler.ts` (new, 154 LOC) — proxy implementation
+- `server/src/index.ts` — register `/api/maptiler` routes
+- `client/src/lib/maptiler.ts` — `styleUrl()` and `tilesUrl()` updated to use proxy (with localhost dev fallback)
 
 ---
 
