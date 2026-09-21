@@ -1,0 +1,133 @@
+/**
+ * MapTiler API proxy
+ *
+ * The browser's Origin header is restricted and can cause "Key usage restricted"
+ * errors from MapTiler. This proxy avoids that by having the server fetch on
+ * behalf of the client, then serving it back.
+ *
+ * Usage:
+ * - GET /api/maptiler/style/{mapId} → MapTiler's style.json
+ * - GET /api/maptiler/tiles/{tilesId} → MapTiler's tiles.json
+ * - GET /api/maptiler/fonts/{fontstack}/{range}.pbf → MapTiler's fonts
+ */
+
+import express from 'express';
+
+const router = express.Router();
+const MAPTILER_KEY = process.env.VITE_MAPTILER_KEY || '';
+
+/**
+ * GET /api/maptiler/style/:mapId
+ * Proxy MapTiler style.json to avoid browser Origin header issues
+ */
+router.get('/style/:mapId', async (req, res) => {
+  const { mapId } = req.params;
+
+  if (!MAPTILER_KEY) {
+    res.status(400).json({ error: 'MapTiler API key not configured (VITE_MAPTILER_KEY)' });
+    return;
+  }
+
+  // Sanitize map ID to prevent path traversal
+  if (!/^[a-z0-9-]+$/.test(mapId)) {
+    res.status(400).json({ error: 'Invalid map ID format' });
+    return;
+  }
+
+  try {
+    const url = `https://api.maptiler.com/maps/${mapId}/style.json?key=${MAPTILER_KEY}`;
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      console.warn(`MapTiler style.json failed: ${url} returned ${response.status}`);
+      res.status(response.status).json({ error: `MapTiler API error: ${response.status}` });
+      return;
+    }
+
+    const data = await response.json();
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Cache-Control', 'public, max-age=3600'); // Cache 1 hour
+    res.json(data);
+  } catch (error) {
+    console.error('MapTiler proxy error:', error);
+    res.status(500).json({ error: 'Failed to fetch MapTiler style' });
+  }
+});
+
+/**
+ * GET /api/maptiler/tiles/:tilesId
+ * Proxy MapTiler tiles.json (for terrain DEM, etc.)
+ */
+router.get('/tiles/:tilesId', async (req, res) => {
+  const { tilesId } = req.params;
+
+  if (!MAPTILER_KEY) {
+    res.status(400).json({ error: 'MapTiler API key not configured (VITE_MAPTILER_KEY)' });
+    return;
+  }
+
+  // Sanitize tiles ID
+  if (!/^[a-z0-9-]+$/.test(tilesId)) {
+    res.status(400).json({ error: 'Invalid tileset ID format' });
+    return;
+  }
+
+  try {
+    const url = `https://api.maptiler.com/tiles/${tilesId}/tiles.json?key=${MAPTILER_KEY}`;
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      console.warn(`MapTiler tiles.json failed: ${url} returned ${response.status}`);
+      res.status(response.status).json({ error: `MapTiler API error: ${response.status}` });
+      return;
+    }
+
+    const data = await response.json();
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Cache-Control', 'public, max-age=86400'); // Cache 24 hours
+    res.json(data);
+  } catch (error) {
+    console.error('MapTiler proxy error:', error);
+    res.status(500).json({ error: 'Failed to fetch MapTiler tileset' });
+  }
+});
+
+/**
+ * GET /api/maptiler/fonts/:fontstack/:range.pbf
+ * Proxy MapTiler font glyphs (binary PBF data)
+ */
+router.get('/fonts/:fontstack/:range', async (req, res) => {
+  const { fontstack, range } = req.params;
+
+  if (!MAPTILER_KEY) {
+    res.status(400).json({ error: 'MapTiler API key not configured (VITE_MAPTILER_KEY)' });
+    return;
+  }
+
+  // Sanitize fontstack and range
+  if (!/^[a-zA-Z0-9\s,%]+$/.test(fontstack) || !/^\d+-\d+$/.test(range)) {
+    res.status(400).json({ error: 'Invalid font parameters' });
+    return;
+  }
+
+  try {
+    const url = `https://api.maptiler.com/fonts/${encodeURIComponent(fontstack)}/${range}.pbf?key=${MAPTILER_KEY}`;
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      console.warn(`MapTiler fonts failed: ${url} returned ${response.status}`);
+      res.status(response.status).send(null);
+      return;
+    }
+
+    // Return binary PBF data as-is
+    res.setHeader('Content-Type', 'application/octet-stream');
+    res.setHeader('Cache-Control', 'public, max-age=31536000'); // Cache 1 year
+    res.send(Buffer.from(await response.arrayBuffer()));
+  } catch (error) {
+    console.error('MapTiler fonts proxy error:', error);
+    res.status(500).json({ error: 'Failed to fetch MapTiler fonts' });
+  }
+});
+
+export default router;

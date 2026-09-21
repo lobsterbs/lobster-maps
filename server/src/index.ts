@@ -11,6 +11,7 @@ import geocodeRouter from './routes/geocode.js';
 import routingRouter from './routes/routing.js';
 import searchRouter from './routes/search.js';
 import scrapeRouter from './routes/scrape.js';
+import maptilerRouter from './routes/maptiler.js';
 import { createMcpServer } from './mcp.js';
 import { initializeWasmModules, isWasmAvailable, getWasmStatus } from './wasm/index.js';
 import { rateLimiterWasm, tileRateLimiter } from './middleware/rateLimiterWasm.js';
@@ -128,6 +129,7 @@ async function startServer() {
     app.use('/api/businesses', businessesRouter);
     app.use('/api/geocode', geocodeRouter);
     app.use('/api/route', routingRouter);
+    app.use('/api/maptiler', maptilerRouter); // MapTiler proxy (solves Origin header issue)
     app.use('/api', searchRouter); // Search endpoint
     app.use('/api/scrape', scrapeRouter); // Scraping endpoint
 

@@ -35,13 +35,30 @@ export const MAPTILER_ATTRIBUTION =
   '<a href="https://www.maptiler.com/copyright/" target="_blank" rel="noreferrer">&copy; MapTiler</a> ' +
   '<a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">&copy; OpenStreetMap contributors</a>';
 
-/** Style JSON URL for a MapTiler map id. */
+/**
+ * Style JSON URL for a MapTiler map id.
+ * Uses server proxy to avoid browser Origin header issues with MapTiler.
+ * If the server proxy is available, uses that; otherwise falls back to direct.
+ */
 export function styleUrl(mapId: string): string {
+  // Use server proxy if available (no key needed, server has it)
+  if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
+    return `/api/maptiler/style/${mapId}`;
+  }
+  // Fallback to direct MapTiler for localhost dev
   return `https://api.maptiler.com/maps/${mapId}/style.json?key=${MAPTILER_KEY}`;
 }
 
-/** TileJSON URL for a MapTiler tileset id. */
+/**
+ * TileJSON URL for a MapTiler tileset id.
+ * Uses server proxy to avoid browser Origin header issues.
+ */
 export function tilesUrl(tilesId: string): string {
+  // Use server proxy if available
+  if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
+    return `/api/maptiler/tiles/${tilesId}`;
+  }
+  // Fallback to direct MapTiler for localhost dev
   return `https://api.maptiler.com/tiles/${tilesId}/tiles.json?key=${MAPTILER_KEY}`;
 }
 
