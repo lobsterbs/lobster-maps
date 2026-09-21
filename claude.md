@@ -3,7 +3,7 @@
 Authoritative handoff doc. If GitHub and Notion disagree, this file
 wins. Mirrored to Notion (3c91682f-4601-8182-9b34-ca2bc0c5fc09).
 
-**Last updated:** 21 Sep 2026, 22:06 UTC
+**Last updated:** 21 Sep 2026, 06:10 UTC
 
 ---
 
@@ -129,22 +129,37 @@ to the repo, and the deploy picks it up. Check it is live at
 
 ---
 
-## Current Session (Sep 21, 2026 — 22:06 UTC)
+## Current Session (Sep 21, 2026 — 22:06 → 06:10 UTC)
 
 **Completed:**
 - ✅ Set VITE_MAPTILER_KEY in Render env vars via MCP (auto-rebuild triggered)
 - ✅ Redesigned basemap switcher: vertical dropdown → horizontal M3 pill buttons
 - ✅ Pills positioned at bottom-center, smooth transitions, emerald active state
+- ✅ **Comprehensive Material Design 3 accessibility audit** (M3_AUDIT.md, 400+ lines)
+- ✅ Fixed CRITICAL accessibility issues:
+  - Global focus-visible styling (WCAG 2.4.7): 3px solid primary, 2px offset
+  - Basemap pills: changed from aria-pressed toggle to role=radiogroup + role=radio
+  - Keyboard navigation: arrow keys (left/right/up/down), Home/End, roving tab index
 - ✅ Built and tested locally: `npm run build:client && npm run build:server`
-- ✅ Pushed to GitHub: commit c65d6ff
-- ✅ Render deploy triggered: dep-dao5hartqb8s73dvsq30 (build_in_progress)
+- ✅ Pushed to GitHub: commits c65d6ff → 1120e4d → d60fd78 (sequential)
+- ✅ Triggered new Render rebuild: dep-daockiegekts73bollbg (build_in_progress, 06:10 UTC)
 
-**Status:** Map should load vector tiles + 3D terrain now. Basemap switcher shows 7 options (Dark/Light/Outdoor/Topo/Satellite/Winter/Ocean) as horizontal M3 pills. Attribution compact control restored.
+**Status:** New Render build includes both MapTiler key embedding + M3 accessibility fixes. Should finish in 3-5 min. Map tiles should load once deployed. Basemap switcher now keyboard-accessible.
 
 **File changes:**
-- `client/src/components/Map.tsx`: Replaced vertical dropdown with horizontal pill buttons
-- `client/src/lib/maptiler.ts`: No changes (key handled via VITE_* env var)
+- `client/src/components/Map.tsx`: Pill buttons + radiogroup ARIA + keyboard handlers
+- `client/src/components/MD3Button.tsx`: TODO comment (hardcoded emerald in state layer)
+- `client/src/styles/material3-theme.css`: Global focus-visible rule (WCAG 2.4.7)
+- `M3_AUDIT.md`: Detailed audit findings + remediation roadmap (Phase 1/2/3)
 - Render env var: `VITE_MAPTILER_KEY=st6o11zRZ5rBnmLDbS6K`
+
+**M3 Audit findings (Phase 1 CRITICAL fixed; Phase 2/3 documented):**
+- Hardcoded colors in 10+ files (bypassing token system)
+- No responsive breakpoints (compact/medium/expanded missing)
+- Focus rings missing on most interactive elements (now added)
+- ARIA patterns incomplete (radiogroup fixed, menus/dialogs pending)
+- Color contrast marginal on secondary text (4.8:1 AA, not AAA)
+- Sky layer 3D colors hardcoded (not theme-aware)
 
 ---
 
