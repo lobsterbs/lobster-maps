@@ -275,6 +275,29 @@ export function MapCanvas({ onMapReady, onMoveEnd, onError, onStyleReload }: Pro
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  function handleBasemapKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
+    const currentIdx = BASEMAPS.findIndex((b) => b.id === basemap);
+    let nextIdx = currentIdx;
+
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+      e.preventDefault();
+      nextIdx = (currentIdx + 1) % BASEMAPS.length;
+    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      nextIdx = (currentIdx - 1 + BASEMAPS.length) % BASEMAPS.length;
+    } else if (e.key === 'Home') {
+      e.preventDefault();
+      nextIdx = 0;
+    } else if (e.key === 'End') {
+      e.preventDefault();
+      nextIdx = BASEMAPS.length - 1;
+    }
+
+    if (nextIdx !== currentIdx) {
+      switchBasemap(BASEMAPS[nextIdx].id);
+    }
+  }
+
   function switchBasemap(next: BasemapId) {
     const map = mapRef.current;
     if (!map || next === basemap || !hasMapTiler) return;
@@ -343,7 +366,12 @@ export function MapCanvas({ onMapReady, onMoveEnd, onError, onStyleReload }: Pro
       {pillTransition(
         (style, open) =>
           open && (
-            <animated.div style={{ ...style, ...pillContainerStyle }}>
+            <animated.div 
+              style={{ ...style, ...pillContainerStyle }}
+              role="radiogroup"
+              aria-label="Basemap options"
+              onKeyDown={handleBasemapKeyDown}
+            >
               {BASEMAPS.map((b) => {
                 const selected = b.id === basemap;
                 return (
@@ -351,7 +379,9 @@ export function MapCanvas({ onMapReady, onMoveEnd, onError, onStyleReload }: Pro
                     key={b.id}
                     onClick={() => switchBasemap(b.id)}
                     title={b.hint}
-                    aria-pressed={selected}
+                    role="radio"
+                    aria-checked={selected}
+                    tabIndex={selected ? 0 : -1}
                     style={{
                       ...pillStyle,
                       background: selected ? EMERALD : 'rgba(30,30,30,0.6)',

@@ -139,6 +139,23 @@
   gap: 0.5rem;
 }
 
+/* WCAG 2.4.7: Visible Focus Indicator
+ * All interactive elements must have a visible focus ring.
+ * M3 spec: 3px solid primary color, 2px offset */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 3px solid var(--md-sys-color-primary);
+  outline-offset: 2px;
+}
+
+/* Exception: buttons already manage their own focus (like MD3Button) */
+button[data-has-custom-focus]:focus-visible {
+  outline: none;
+}
+
 .md-btn-filled {
   background-color: var(--md-sys-color-primary);
   color: var(--md-sys-color-on-primary);
