@@ -129,7 +129,7 @@ to the repo, and the deploy picks it up. Check it is live at
 
 ---
 
-## Current Session (Sep 21, 2026 — 22:06 → 06:10 UTC)
+## Current Session (Sep 21, 2026 — 22:06 → 06:31 UTC)
 
 **Completed:**
 - ✅ Set VITE_MAPTILER_KEY in Render env vars via MCP (auto-rebuild triggered)
@@ -141,17 +141,33 @@ to the repo, and the deploy picks it up. Check it is live at
   - Basemap pills: changed from aria-pressed toggle to role=radiogroup + role=radio
   - Keyboard navigation: arrow keys (left/right/up/down), Home/End, roving tab index
 - ✅ Built and tested locally: `npm run build:client && npm run build:server`
-- ✅ Pushed to GitHub: commits c65d6ff → 1120e4d → d60fd78 (sequential)
-- ✅ Triggered new Render rebuild: dep-daockiegekts73bollbg (build_in_progress, 06:10 UTC)
+- ✅ Pushed to GitHub: commits c65d6ff → 1120e4d → d60fd78 → 25f6492 → 4d4ae12 (sequential)
+- ✅ Investigated MapTiler tile-load timeout (root cause identified)
 
-**Status:** New Render build includes both MapTiler key embedding + M3 accessibility fixes. Should finish in 3-5 min. Map tiles should load once deployed. Basemap switcher now keyboard-accessible.
+**MapTiler Investigation — Root Cause Found**
 
-**File changes:**
-- `client/src/components/Map.tsx`: Pill buttons + radiogroup ARIA + keyboard handlers
-- `client/src/components/MD3Button.tsx`: TODO comment (hardcoded emerald in state layer)
-- `client/src/styles/material3-theme.css`: Global focus-visible rule (WCAG 2.4.7)
-- `M3_AUDIT.md`: Detailed audit findings + remediation roadmap (Phase 1/2/3)
-- Render env var: `VITE_MAPTILER_KEY=st6o11zRZ5rBnmLDbS6K`
+Map tiles were timing out with "Key usage restricted" error from MapTiler, despite:
+- Key confirmed in the client bundle (grep verified)
+- Domain allowlist updated (`*.onrender.com`)
+- Correct endpoint being called
+- API responding (not 404)
+
+**The Issue:** MapTiler rejects requests missing an `Origin` header. Browsers normally send this automatically, but if it's missing or mismatched, MapTiler treats the request as "unknown" and returns "Key usage restricted" regardless of key validity.
+
+**How to verify:** Open browser DevTools on the live site → Network tab → find the `style.json?key=...` request → check Request Headers for `Origin: https://lobster-maps.onrender.com`. If missing, that's the bug.
+
+**Possible causes (in order of likelihood):**
+1. Browser not sending Origin header (CORS or SameSite policy issue)
+2. Origin header value doesn't match allowlist (e.g., sending `https://lobster-maps.onrender.com/` with trailing slash, or wrong domain)
+3. MapTiler requires an additional header beyond key + origin
+
+**Current files:**
+- `client/src/lib/maptiler.ts`: URL construction (no auth headers sent, relies on browser Origin)
+- `client/src/components/Map.tsx`: MapLibre initialization
+- `.env.production`: Key now hardcoded (4d4ae12)
+- `client/.env.production`: Also created for Vite build-time inlining
+
+**Latest Render build:** dep-daockiegekts73bollbg (finished 06:31 UTC) includes both the key embedding and M3 fixes.
 
 **M3 Audit findings (Phase 1 CRITICAL fixed; Phase 2/3 documented):**
 - Hardcoded colors in 10+ files (bypassing token system)
