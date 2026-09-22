@@ -114,12 +114,110 @@
   --md-sys-state-layer-opacity-focus: 0.12;
   --md-sys-state-layer-opacity-pressed: 0.12;
   --md-sys-state-layer-opacity-drag: 0.16;
+  
+  /* Responsive Spacing (overridden by @media queries at breakpoints) */
+  /* Defaults: medium layout (480–839px) */
+  --md-sys-spacing-compact: 6px;
+  --md-sys-spacing-xs: 12px;
+  --md-sys-spacing-sm: 16px;
+  --md-sys-spacing-md: 20px;
+  --md-sys-spacing-lg: 24px;
+  --md-sys-spacing-xl: 28px;
+  
+  /* Component padding (compact and normal densities) */
+  --md-sys-component-padding-compact: 10px 16px;
+  --md-sys-component-padding-normal: 14px 20px;
+  
+  /* Layout grid density */
+  --md-sys-layout-columns: 8;
+  
+  /* Icon sizing for different densities */
+  --md-sys-icon-size-small: 20px;
+  --md-sys-icon-size-normal: 24px;
+  --md-sys-icon-size-large: 36px;
 }
 
 /* Dark mode is default (Material 3 standard for maps) */
 @media (prefers-color-scheme: dark) {
   :root {
     /* Already set above */
+  }
+}
+
+/* Material 3 Responsive Density — per spec, layout changes at viewport breakpoints */
+
+/* Compact layout: < 480px (phones in portrait) */
+@media (max-width: 479px) {
+  :root {
+    /* Reduced padding and margins for small screens */
+    --md-sys-spacing-compact: 4px;
+    --md-sys-spacing-xs: 8px;
+    --md-sys-spacing-sm: 12px;
+    --md-sys-spacing-md: 16px;
+    --md-sys-spacing-lg: 20px;
+    --md-sys-spacing-xl: 24px;
+    
+    /* Compact button and component sizing */
+    --md-sys-component-padding-compact: 8px 12px;
+    --md-sys-component-padding-normal: 12px 16px;
+    
+    /* Single-column layouts */
+    --md-sys-layout-columns: 4;
+    
+    /* Reduced FAB and icon sizes */
+    --md-sys-icon-size-small: 18px;
+    --md-sys-icon-size-normal: 24px;
+    --md-sys-icon-size-large: 32px;
+  }
+}
+
+/* Medium layout: 480px–839px (tablets in portrait, phones in landscape) */
+@media (min-width: 480px) and (max-width: 839px) {
+  :root {
+    /* Standard spacing for medium screens */
+    --md-sys-spacing-compact: 6px;
+    --md-sys-spacing-xs: 12px;
+    --md-sys-spacing-sm: 16px;
+    --md-sys-spacing-md: 20px;
+    --md-sys-spacing-lg: 24px;
+    --md-sys-spacing-xl: 28px;
+    
+    /* Standard button sizing */
+    --md-sys-component-padding-compact: 10px 16px;
+    --md-sys-component-padding-normal: 14px 20px;
+    
+    /* Two-column layouts */
+    --md-sys-layout-columns: 8;
+    
+    /* Standard icon sizes */
+    --md-sys-icon-size-small: 20px;
+    --md-sys-icon-size-normal: 24px;
+    --md-sys-icon-size-large: 36px;
+  }
+}
+
+/* Expanded layout: >= 840px (tablets in landscape, desktops) */
+@media (min-width: 840px) {
+  :root {
+    /* Generous spacing for large screens */
+    --md-sys-spacing-compact: 8px;
+    --md-sys-spacing-xs: 16px;
+    --md-sys-spacing-sm: 20px;
+    --md-sys-spacing-md: 24px;
+    --md-sys-spacing-lg: 28px;
+    --md-sys-spacing-xl: 32px;
+    
+    /* Larger components on expansive displays */
+    --md-sys-component-padding-compact: 12px 20px;
+    --md-sys-component-padding-normal: 16px 24px;
+    
+    /* Three or more column layouts */
+    --md-sys-layout-columns: 12;
+    
+    /* Larger icon sizes */
+    --md-sys-icon-size-small: 22px;
+    --md-sys-icon-size-normal: 24px;
+    --md-sys-icon-size-large: 40px;
   }
 }
 

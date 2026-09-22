@@ -6,6 +6,7 @@
 import React, { useState, CSSProperties } from 'react';
 import { MapPin, Clock, TrendingUp, AlertCircle, ArrowRight } from 'lucide-react';
 import { MD3Button } from './MD3Button';
+import { SPACING, GAP, CARD_PADDING } from '../styles/spacing';
 
 export interface Route {
   id: string;
@@ -45,7 +46,7 @@ export const MD3RoutePlannerCard: React.FC<MD3RoutePlannerCardProps> = ({
   const cardStyle: CSSProperties = {
     backgroundColor: isPrimary ? 'var(--md-sys-color-surface-container-high)' : 'var(--md-sys-color-surface-container)',
     borderRadius: '12px',
-    padding: '16px',
+    padding: CARD_PADDING.standard,
     border: `1px solid var(--md-sys-color-outline-variant)`,
     boxShadow: isPrimary ? 'var(--md-sys-elevation-shadow-2)' : 'var(--md-sys-elevation-shadow-1)',
     transition: 'all var(--app-duration-short2) var(--app-ease-standard)',
@@ -55,21 +56,21 @@ export const MD3RoutePlannerCard: React.FC<MD3RoutePlannerCardProps> = ({
     display: 'flex',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
-    marginBottom: '16px',
-    gap: '12px',
+    marginBottom: SPACING.md,
+    gap: GAP.sm,
   };
 
   const locationsStyle: CSSProperties = {
     flex: 1,
     display: 'flex',
     flexDirection: 'column',
-    gap: '8px',
+    gap: GAP.xs,
   };
 
   const locationRowStyle: CSSProperties = {
     display: 'flex',
     alignItems: 'center',
-    gap: '8px',
+    gap: GAP.xs,
     fontSize: '14px',
   };
 
@@ -86,9 +87,9 @@ export const MD3RoutePlannerCard: React.FC<MD3RoutePlannerCardProps> = ({
   const metricsStyle: CSSProperties = {
     display: 'grid',
     gridTemplateColumns: 'repeat(3, 1fr)',
-    gap: '12px',
-    marginBottom: '16px',
-    paddingBottom: '16px',
+    gap: GAP.sm,
+    marginBottom: SPACING.md,
+    paddingBottom: SPACING.md,
     borderBottom: `1px solid var(--md-sys-color-outline-variant)`,
   };
 
@@ -103,13 +104,13 @@ export const MD3RoutePlannerCard: React.FC<MD3RoutePlannerCardProps> = ({
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: '4px',
+    gap: SPACING.compact,
   };
 
   const metricLabelStyle: CSSProperties = {
     fontSize: '11px',
     color: 'var(--md-sys-color-on-surface-variant)',
-    marginTop: '4px',
+    marginTop: SPACING.compact,
     textTransform: 'uppercase',
     letterSpacing: '0.5px',
   };
@@ -117,9 +118,9 @@ export const MD3RoutePlannerCard: React.FC<MD3RoutePlannerCardProps> = ({
   const detailsStyle: CSSProperties = {
     display: expanded ? 'flex' : 'none',
     flexDirection: 'column',
-    gap: '8px',
-    marginBottom: '12px',
-    paddingBottom: '12px',
+    gap: GAP.xs,
+    marginBottom: SPACING.sm,
+    paddingBottom: SPACING.sm,
     borderBottom: `1px solid var(--md-sys-color-outline-variant)`,
   };
 
@@ -142,12 +143,12 @@ export const MD3RoutePlannerCard: React.FC<MD3RoutePlannerCardProps> = ({
   const warningStyle: CSSProperties = {
     display: 'flex',
     alignItems: 'flex-start',
-    gap: '8px',
+    gap: GAP.xs,
     backgroundColor: 'rgba(220, 38, 38, 0.08)',
     borderRadius: '8px',
     padding: '8px 12px',
     border: `1px solid var(--md-sys-color-error)`,
-    marginBottom: '12px',
+    marginBottom: SPACING.sm,
   };
 
   const warningIconStyle: CSSProperties = {
@@ -170,7 +171,7 @@ export const MD3RoutePlannerCard: React.FC<MD3RoutePlannerCardProps> = ({
     borderRadius: '8px',
     cursor: 'pointer',
     fontSize: '13px',
-    marginBottom: '12px',
+    marginBottom: SPACING.sm,
     transition: 'all var(--app-duration-short2) var(--app-ease-standard)',
   };
 

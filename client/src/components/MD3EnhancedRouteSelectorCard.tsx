@@ -16,6 +16,7 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { MD3Button } from './MD3Button';
+import { SPACING, GAP, CARD_PADDING } from '../styles/spacing';
 
 export interface RouteWithRisk {
   id: string;
@@ -82,7 +83,7 @@ export const MD3EnhancedRouteSelectorCard: React.FC<
   const containerStyle: CSSProperties = {
     display: 'flex',
     flexDirection: 'column',
-    gap: '12px',
+    gap: GAP.sm,
   };
 
   const routeButtonStyle = (isSelected: boolean, typeColor: ReturnType<typeof getTypeColor>): CSSProperties => ({
@@ -91,7 +92,7 @@ export const MD3EnhancedRouteSelectorCard: React.FC<
     backgroundColor: typeColor.bg,
     border: `2px solid ${typeColor.border}`,
     borderRadius: '16px',
-    padding: '16px',
+    padding: CARD_PADDING.standard,
     cursor: 'pointer',
     transition: 'all var(--app-duration-short2) var(--app-ease-standard)',
     boxShadow: isSelected ? 'var(--md-sys-elevation-shadow-3)' : 'var(--md-sys-elevation-shadow-1)',
@@ -102,11 +103,11 @@ export const MD3EnhancedRouteSelectorCard: React.FC<
     display: 'flex',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
-    marginBottom: '12px',
+    marginBottom: SPACING.sm,
   };
 
   const iconBoxStyle = (color: string): CSSProperties => ({
-    padding: '8px',
+    padding: SPACING.xs,
     backgroundColor: 'rgba(255, 255, 255, 0.12)',
     borderRadius: '8px',
     color: color,
