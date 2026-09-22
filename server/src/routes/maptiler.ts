@@ -64,6 +64,29 @@ router.get('/style/:mapId', async (req, res) => {
     }
 
     const data = await response.json();
+    
+    // Rewrite embedded MapTiler URLs to use proxy endpoints
+    // This prevents domain restriction errors when MapLibre fetches tiles/fonts
+    if (data.sources) {
+      Object.values(data.sources).forEach((source: any) => {
+        if (typeof source === 'object' && source.url) {
+          // Rewrite tile sources: https://api.maptiler.com/tiles/{id}/tiles.json?key=... → /api/maptiler/tiles/{id}
+          const tileMatch = source.url.match(/https:\/\/api\.maptiler\.com\/tiles\/([^/?]+)\/tiles\.json/);
+          if (tileMatch) {
+            source.url = `/api/maptiler/tiles/${tileMatch[1]}`;
+          }
+        }
+      });
+    }
+    
+    if (data.glyphs) {
+      // Rewrite glyphs: https://api.maptiler.com/fonts/{fontstack}/{range}.pbf?key=... → /api/maptiler/fonts/{fontstack}/{range}
+      data.glyphs = data.glyphs.replace(
+        /https:\/\/api\.maptiler\.com\/fonts\//g,
+        '/api/maptiler/fonts/'
+      ).replace(/\?key=[^&]*/, ''); // Remove key from URL
+    }
+    
     res.setHeader('Content-Type', 'application/json');
     res.setHeader('Cache-Control', 'public, max-age=3600'); // Cache 1 hour
     res.json(data);
