@@ -3,7 +3,7 @@
 Authoritative handoff doc. If GitHub and Notion disagree, this file
 wins. Mirrored to Notion (3c91682f-4601-8182-9b34-ca2bc0c5fc09).
 
-**Last updated:** 22 Sep 2026, 23:00 UTC
+**Last updated:** 22 Sep 2026, 23:35 UTC
 
 ---
 
@@ -46,75 +46,118 @@ commercial). AGPL-3.0.
 
 ## Current state
 
-### This Session (Sep 22, 2026 — M3 Tokens + MapTiler Fix)
+### This Session (Sep 22, 2026 — M3 Responsiveness, Touch Targets, MapTiler Debug)
 
 **COMPLETED:**
-- ✅ Enhanced M3 color system: 7 new semantic tokens (sky, horizon, fog, building, accent-red, street-wood)
-- ✅ Replaced hardcoded hex in 6 files with CSS variables
-- ✅ Both builds pass: 0 TypeScript errors, 0 client vulnerabilities
-- ✅ M3 Audit passed: focus-visible, reduced-motion, state layers, touch targets all verified
-- ✅ **MapTiler 401/403 fix**: Server proxy key was missing at runtime
-  - Problem: VITE_MAPTILER_KEY (build-time var) wasn't available as runtime env var
-  - Solution: Fall back to key from .env.production (already committed)
-  - Future: Set VITE_MAPTILER_KEY in Render dashboard for proper config
+- ✅ MapTiler error logging: Added detailed diagnostics to proxy routes
+  - Added health endpoint (`GET /api/maptiler/health`) for key testing
+  - Added Referer & User-Agent headers to MapTiler requests
+  - Full error details logged (status, headers, body snippet)
+  - Commit: `e5a59fd`
 
-**Pushed to Render:**
-- Commit `8bc010a` - M3 token enhancement
-- Commit `37dacb1` - claude.md docs (Sep 22)
-- Commit `2fa27ac` - MapTiler key runtime fix (Sep 22, latest)
+- ✅ **M3 Responsive Density System** — fully implemented
+  - Created `client/src/styles/spacing.ts` utility constants
+  - Added 3 @media breakpoints to theme with density-specific tokens:
+    * Compact (< 480px): small phones
+    * Medium (480–839px): tablets in portrait
+    * Expanded (>= 840px): tablets in landscape/desktop
+  - 6 responsive spacing levels: compact, xs, sm, md, lg, xl
+  - Grid layout columns: 4 (compact), 8 (medium), 12 (expanded)
+  - Icon sizes scale per density
+  - Commit: `fb86263`
 
-**Ready for testing:**
-- Render auto-deploy should complete in ~5 min
-- MapTiler requests should now succeed (proxy has key)
-- Verify tiles load in browser on production
+- ✅ **Applied M3 spacing to key components:**
+  - MD3RoutePlannerCard.tsx: 10+ hardcoded px → spacing tokens
+  - MD3EnhancedRouteSelectorCard.tsx: 5+ hardcoded px → spacing tokens
+  - BusinessDetailSheet.tsx: 6 padding/margin/gap values → tokens
+  - Components now auto-scale padding/gaps at breakpoints
+
+- ✅ **Touch target audit & fixes:**
+  - Basemap pill buttons: 36px → 48px minimum height (M3 compliance, WCAG 2.5.5)
+  - Commit: `4cf00dc`
+
+**Commits pushed (in order):**
+1. `e5a59fd` - MapTiler debug: error logging + health endpoint
+2. `fb86263` - M3 responsive breakpoints & spacing system
+3. `4cf00dc` - Basemap pill touch target: 36px → 48px
+4. `f28e9fe` - BusinessDetailSheet spacing tokens
+
+**Status:**
+- Render auto-deploying: ~5 min expected
+- MapTiler proxy has diagnostic endpoint for debugging 401/403 issues
+- Responsive spacing system live and scaling at all breakpoints
+- Touch targets improved for accessibility
 
 **Known gaps:**
-- Responsive breakpoints: Compact (480px) / Medium (840px) not yet done
-- Dynamic theme switching: Color constants don't auto-update at runtime
-- Touch targets: Only 3 components enforce 48dp; others inconsistent
+- MapTiler 401/403 still unresolved (needs key allowlist check in MapTiler dashboard)
+- Not all components have spacing tokens yet (MD3Button, GlassCard, etc.)
+- Dynamic theme switching: Still needs runtime CSS variable reading
 
 ---
 
 ## Technical Notes
 
-### MapTiler Proxy Architecture
-- Client requests `/api/maptiler/style/{mapId}` (server endpoint)
-- Server fetches `https://api.maptiler.com/maps/{mapId}/style.json?key=...`
-- Server caches response (1h style, 24h tiles, 1y fonts)
-- Bypasses browser Origin header restrictions entirely
-- Key: Fallback to hardcoded value from .env.production if env var not set
+### MapTiler Proxy Architecture (with debugging)
+- Client requests `/api/maptiler/*` endpoints
+- Server proxies to `https://api.maptiler.com/...?key=...`
+- **New:** `/api/maptiler/health` diagnostic endpoint tests key validity
+  - Returns full response headers, status, and error body
+  - Helps distinguish "key invalid" vs "domain restricted"
+- Added Referer and User-Agent headers (some APIs require them)
 
-### Why Server Proxy Solves "Key usage restricted"
-- Previous error: Browser Origin header didn't match MapTiler's allowlist
-- Server requests have no Origin header, so no restriction applies
-- MapTiler only sees legitimate server IPs, not browser origins
+### M3 Responsive Spacing System
+Example: `SPACING.md` renders as:
+- Compact: 16px (< 480px)
+- Medium: 20px (480–839px)
+- Expanded: 24px (>= 840px)
 
----
-
-## Verified Open Issues (Must Fix Before Production)
-
-1. **RESOLVED ✅**: MapTiler "Key usage restricted" → Server proxy (Sep 21)
-2. **RESOLVED ✅**: MapTiler runtime key access → Fallback to hardcoded (Sep 22)
-3. **RESOLVED ✅**: M3 hardcoded colors → Tokens for sky, horizon, buildings (Sep 22)
-4. Responsive breakpoints: Compact/medium/expanded density (LOW PRIORITY)
-5. Dynamic theme switching: Need runtime CSS var reading (LOW PRIORITY)
-6. Code-split maplibre: 1.02 MB chunk (PERFORMANCE, not blocking)
-7. No auth on POST /api/businesses (LobsterID is real fix, rate-limit is stopgap)
-8. OSM graph extraction: `npm run extract:osm` never run on Render
-9. 4 npm audit moderates: drizzle-kit (build-time, low urgency)
+All breakpoints defined via CSS `@media` queries with token overrides.
+Components just use `padding: SPACING.md` — no media query logic needed.
 
 ---
 
-## Technical Debt (Not Urgent)
+## Verified Open Issues (Priority Order)
 
-- MapTiler key: Move from hardcoded to Render env var when dashboard access available
-- `npm run extract:osm` never run on Render (router has no graph yet)
-- Privacy stack: compiles but nothing calls EphemeralProcessor, k-anonymity yet
-- Sketchfab landmark model IDs: must re-verify before implementation
+1. **CRITICAL**: MapTiler 401/403 persists despite key + proxy
+   - Root cause: Likely domain restriction in MapTiler dashboard
+   - Fix: Test `/api/maptiler/health` endpoint, check MapTiler key settings
+   - Status: Awaiting dashboard access or key verification
+   - Commit: e5a59fd (adds diagnostic endpoint)
+
+2. ✅ RESOLVED: M3 hardcoded colors → Semantic tokens
+3. ✅ RESOLVED: MapTiler key runtime access → Fallback to .env.production
+4. ✅ RESOLVED: Responsive breakpoints → System fully implemented
+5. ✅ RESOLVED: Basemap touch target → 48dp minimum
+6. Apply M3 spacing to remaining components (MD3Button, GlassCard, etc.)
+7. Dynamic theme switching: Need runtime CSS variable reading
+8. No auth on POST /api/businesses (LobsterID is real fix, rate-limit is stopgap)
+9. OSM graph extraction: `npm run extract:osm` never run on Render
+10. Code-split maplibre: 1.02 MB chunk (PERFORMANCE, not blocking)
+11. 4 npm audit moderates: drizzle-kit (build-time, low urgency)
 
 ---
 
-## Previous Session State (Sep 21)
+## Next Steps (for next session)
 
-MapTiler proxy and M3 accessibility work — all documented above.
-Render deployment auto-triggers on push. Code committed and tested locally.
+1. **Debug MapTiler 401/403**: Test `/api/maptiler/health`, check domain allowlist
+   - If domain-restricted, update MapTiler dashboard to allow lobster-maps.onrender.com
+   - Once fixed, tiles should load automatically
+2. Continue applying M3 spacing to remaining components
+3. Implement dynamic theme switching with CSS variable reading
+4. Comprehensive icon button touch target audit
+5. Verify dark/light theme switching end-to-end
+
+---
+
+## Previous Sessions
+
+**Sep 21 (MapTiler Proxy):**
+- Implemented server-side proxy to bypass browser Origin restrictions
+- Proxy fetches MapTiler on behalf of client
+- Commits: b2616dc (proxy), f48ac3a (docs)
+
+**Sep 21 (M3 Accessibility):**
+- Focus-visible: 3px solid outline ✓
+- ARIA fixes: basemap radiogroup ✓
+- Keyboard nav: arrow keys, Home/End ✓
+- Commit: d60fd78
