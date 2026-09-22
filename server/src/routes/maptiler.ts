@@ -41,11 +41,25 @@ router.get('/style/:mapId', async (req, res) => {
 
   try {
     const url = `https://api.maptiler.com/maps/${mapId}/style.json?key=${MAPTILER_KEY}`;
-    const response = await fetch(url);
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': 'LobsterMaps/1.0',
+        'Referer': 'https://lobster-maps.onrender.com/',
+      },
+    });
 
     if (!response.ok) {
-      console.warn(`MapTiler style.json failed: ${url} returned ${response.status}`);
-      res.status(response.status).json({ error: `MapTiler API error: ${response.status}` });
+      const errorText = await response.text().catch(() => '(no body)');
+      console.error(`MapTiler style.json failed:`, {
+        status: response.status,
+        url,
+        headers: Object.fromEntries(response.headers.entries()),
+        body: errorText.slice(0, 500),
+      });
+      res.status(response.status).json({ 
+        error: `MapTiler API error: ${response.status}`,
+        details: errorText.slice(0, 200),
+      });
       return;
     }
 
@@ -79,11 +93,25 @@ router.get('/tiles/:tilesId', async (req, res) => {
 
   try {
     const url = `https://api.maptiler.com/tiles/${tilesId}/tiles.json?key=${MAPTILER_KEY}`;
-    const response = await fetch(url);
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': 'LobsterMaps/1.0',
+        'Referer': 'https://lobster-maps.onrender.com/',
+      },
+    });
 
     if (!response.ok) {
-      console.warn(`MapTiler tiles.json failed: ${url} returned ${response.status}`);
-      res.status(response.status).json({ error: `MapTiler API error: ${response.status}` });
+      const errorText = await response.text().catch(() => '(no body)');
+      console.error(`MapTiler tiles.json failed:`, {
+        status: response.status,
+        url,
+        headers: Object.fromEntries(response.headers.entries()),
+        body: errorText.slice(0, 500),
+      });
+      res.status(response.status).json({ 
+        error: `MapTiler API error: ${response.status}`,
+        details: errorText.slice(0, 200),
+      });
       return;
     }
 
@@ -117,10 +145,20 @@ router.get('/fonts/:fontstack/:range', async (req, res) => {
 
   try {
     const url = `https://api.maptiler.com/fonts/${encodeURIComponent(fontstack)}/${range}.pbf?key=${MAPTILER_KEY}`;
-    const response = await fetch(url);
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': 'LobsterMaps/1.0',
+        'Referer': 'https://lobster-maps.onrender.com/',
+      },
+    });
 
     if (!response.ok) {
-      console.warn(`MapTiler fonts failed: ${url} returned ${response.status}`);
+      console.error(`MapTiler fonts failed:`, {
+        status: response.status,
+        url,
+        fontstack,
+        range,
+      });
       res.status(response.status).send(null);
       return;
     }
@@ -132,6 +170,42 @@ router.get('/fonts/:fontstack/:range', async (req, res) => {
   } catch (error) {
     console.error('MapTiler fonts proxy error:', error);
     res.status(500).json({ error: 'Failed to fetch MapTiler fonts' });
+  }
+});
+
+/**
+ * GET /api/maptiler/health
+ * Diagnostic endpoint: test MapTiler key without requiring a specific map ID
+ * Returns: key status, response from MapTiler, and any error details
+ */
+router.get('/health', async (req, res) => {
+  const testUrl = `https://api.maptiler.com/maps?key=${MAPTILER_KEY}`;
+  
+  try {
+    const response = await fetch(testUrl, {
+      headers: {
+        'User-Agent': 'LobsterMaps/1.0',
+        'Referer': 'https://lobster-maps.onrender.com/',
+      },
+    });
+
+    const body = await response.text().catch(() => '(no body)');
+    
+    res.json({
+      keyConfigured: !!MAPTILER_KEY,
+      keyLength: MAPTILER_KEY.length,
+      testUrl: `${testUrl.split('?')[0]}?key=***`,
+      maptilerStatus: response.status,
+      maptilerStatusText: response.statusText,
+      maptilerHeaders: Object.fromEntries(response.headers.entries()),
+      maptilerBody: body.slice(0, 500),
+      success: response.ok,
+    });
+  } catch (error) {
+    res.json({
+      keyConfigured: !!MAPTILER_KEY,
+      error: String(error),
+    });
   }
 });
 
