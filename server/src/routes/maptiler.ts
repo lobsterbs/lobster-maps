@@ -152,7 +152,7 @@ router.get('/tiles/:tilesId', async (req, res) => {
  * GET /api/maptiler/fonts/:fontstack/:range.pbf
  * Proxy MapTiler font glyphs (binary PBF data)
  */
-router.get('/fonts/:fontstack/:range', async (req, res) => {
+router.get('/fonts/:fontstack/:range.pbf', async (req, res) => {
   const { fontstack, range } = req.params;
 
   if (!MAPTILER_KEY) {
