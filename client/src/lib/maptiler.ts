@@ -73,9 +73,8 @@ export const TERRAIN_TILEJSON = () => tilesUrl('terrain-rgb-v2');
 export const TERRAIN_MAX_ZOOM = 14;
 
 export type BasemapId =
-  | 'streets-v4-dark'
   | 'streets-v4'
-  | 'outdoor-v4-dark'
+  | 'outdoor-v4'
   | 'topo-v4'
   | 'hybrid-v4'
   | 'winter-v4'
@@ -101,13 +100,6 @@ export type Basemap = {
  */
 export const BASEMAPS: Basemap[] = [
   {
-    id: 'streets-v4-dark',
-    label: 'Dark',
-    hint: 'Default. Dark street map, matches the app surface.',
-    dark: true,
-    imagery: false,
-  },
-  {
     id: 'streets-v4',
     label: 'Light',
     hint: 'Standard daytime street map.',
@@ -115,7 +107,7 @@ export const BASEMAPS: Basemap[] = [
     imagery: false,
   },
   {
-    id: 'outdoor-v4-dark',
+    id: 'outdoor-v4',
     label: 'Outdoor',
     hint: 'Trails, contours and paths for the seven mountains.',
     dark: true,
@@ -151,7 +143,7 @@ export const BASEMAPS: Basemap[] = [
   },
 ];
 
-export const DEFAULT_BASEMAP: BasemapId = 'streets-v4-dark';
+export const DEFAULT_BASEMAP: BasemapId = 'streets-v4';
 
 export function getBasemap(id: BasemapId): Basemap {
   return BASEMAPS.find((b) => b.id === id) ?? BASEMAPS[0];
