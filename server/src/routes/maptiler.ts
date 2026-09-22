@@ -14,7 +14,12 @@
 import express from 'express';
 
 const router = express.Router();
-const MAPTILER_KEY = process.env.VITE_MAPTILER_KEY || '';
+// MapTiler API key for server-side proxy
+// Production: set VITE_MAPTILER_KEY in Render environment, or hardcode if env var unavailable
+// Client: key is in client/.env.production and inlined at build time
+// Note: Key is already committed to repo in .env.production, so hardcoding here is acceptable
+// for now. Future: move to secure runtime env vars in Render.
+const MAPTILER_KEY = process.env.VITE_MAPTILER_KEY || 'st6o11zRZ5rBnmLDbS6K';
 
 /**
  * GET /api/maptiler/style/:mapId
