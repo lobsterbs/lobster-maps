@@ -14,6 +14,8 @@ type Props = {
 // Animated via requestAnimationFrame mutating the polyline's `points`
 // directly through a ref, not React state, so a 60fps redraw doesn't
 // trigger a React re-render every frame.
+// 
+// Default color is M3 accent-red (--md-sys-color-accent-red: #E83F3F).
 export function WavyLinearProgress({ width = 240, height = 16, color = '#E83F3F' }: Props) {
   const polylineRef = useRef<SVGPolylineElement>(null);
   const offsetRef = useRef(0);

@@ -74,6 +74,20 @@ function hasExtrusionLayer(map: MapLibreMap): boolean {
   return (map.getStyle()?.layers ?? []).some((l) => l.type === 'fill-extrusion');
 }
 
+/** Get M3 semantic colors from CSS variables (respects dark/light theme) */
+function getM3Colors() {
+  const root = document.documentElement;
+  const getVar = (name: string) => getComputedStyle(root).getPropertyValue(name).trim();
+  return {
+    skyDark: getVar('--md-sys-color-sky-dark'),
+    horizonDark: getVar('--md-sys-color-horizon-dark'),
+    fogDark: getVar('--md-sys-color-fog-dark'),
+    buildingDark: getVar('--md-sys-color-building-dark'),
+    buildingDim: getVar('--md-sys-color-building-dim'),
+    buildingSatellite: getVar('--md-sys-color-building-satellite'),
+  };
+}
+
 export type MapCanvasHandle = {
   map: MapLibreMap | null;
 };
@@ -124,11 +138,12 @@ export function MapCanvas({ onMapReady, onMoveEnd, onError, onStyleReload }: Pro
       map.setTerrain(terrainRef.current ? { source: TERRAIN_SOURCE_ID, exaggeration: TERRAIN_EXAGGERATION } : null);
       // Sky sits behind the horizon once the ground is tilted. Without
       // it a pitched map fades to flat background above the terrain.
-      map.setSky(
-        active.dark
-          ? { 'sky-color': '#0b1220', 'horizon-color': '#1c2433', 'fog-color': '#0a0a0a' }
-          : { 'sky-color': '#88c6fc', 'horizon-color': '#dbeafe', 'fog-color': '#e8eef7' }
-      );
+      const colors = getM3Colors();
+      map.setSky({
+        'sky-color': colors.skyDark,
+        'horizon-color': colors.horizonDark,
+        'fog-color': colors.fogDark,
+      });
     }
 
     // --- Language --------------------------------------------------
@@ -159,6 +174,10 @@ export function MapCanvas({ onMapReady, onMoveEnd, onError, onStyleReload }: Pro
     if (!map.getLayer(BUILDINGS_LAYER_ID) && !hasExtrusionLayer(map)) {
       const vectorSource = findVectorSourceId(map);
       if (vectorSource) {
+        const colors = getM3Colors();
+        const buildingColor = active.imagery 
+          ? colors.buildingSatellite 
+          : colors.buildingDark;
         map.addLayer({
           id: BUILDINGS_LAYER_ID,
           type: 'fill-extrusion',
@@ -170,7 +189,7 @@ export function MapCanvas({ onMapReady, onMoveEnd, onError, onStyleReload }: Pro
             // `height` and `height_min` are the real Planet v4 field
             // names. Ramped over zoom so buildings grow in instead of
             // popping at one exact zoom level.
-            'fill-extrusion-color': active.imagery ? '#e8e8e8' : active.dark ? '#242429' : '#c9ccd4',
+            'fill-extrusion-color': buildingColor,
             'fill-extrusion-height': ['interpolate', ['linear'], ['zoom'], 13, 0, 16, ['get', 'height']],
             'fill-extrusion-base': ['interpolate', ['linear'], ['zoom'], 13, 0, 16, ['get', 'height_min']],
             'fill-extrusion-opacity': active.imagery ? 0.75 : 0.92,
@@ -400,8 +419,12 @@ export function MapCanvas({ onMapReady, onMoveEnd, onError, onStyleReload }: Pro
   );
 }
 
-const EMERALD = '#10b981';
-const TEXT_DIM = '#94a3b8';
+// M3 semantic colors - these are token values from material3-theme.css.
+// CSS variable names: --md-sys-color-primary and --md-sys-color-text-dim
+// Note: dynamic theme switching would require reading these from CSS at runtime
+// via getComputedStyle() for proper dark/light mode support.
+const EMERALD = '#10b981'; // --md-sys-color-primary
+const TEXT_DIM = '#94a3b8'; // --md-sys-color-text-dim
 
 type IconToggleProps = {
   // lucide-react icon component

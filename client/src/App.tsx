@@ -40,7 +40,7 @@ function drawRouteOnMap(map: MapLibreMap, coordinates: [number, number][]) {
       type: 'line',
       source: ROUTE_SOURCE_ID,
       layout: { 'line-cap': 'round', 'line-join': 'round' },
-      paint: { 'line-color': '#d4a574', 'line-width': 5, 'line-opacity': 0.9 },
+      paint: { 'line-color': getComputedStyle(document.documentElement).getPropertyValue('--md-sys-color-street-wood').trim(), 'line-width': 5, 'line-opacity': 0.9 },
     });
   }
 }

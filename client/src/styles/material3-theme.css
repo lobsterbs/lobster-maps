@@ -58,6 +58,20 @@
   --md-sys-color-shadow: #000000;
   --md-sys-color-scrim: #000000;
   
+  /* Map-specific colors (sky, horizon, buildings) - dark theme */
+  --md-sys-color-sky-dark: #0b1220;
+  --md-sys-color-horizon-dark: #1c2433;
+  --md-sys-color-fog-dark: #0a0a0a;
+  --md-sys-color-building-dark: #242429;
+  --md-sys-color-building-dim: #c9ccd4;
+  --md-sys-color-building-satellite: #e8e8e8;
+  
+  /* Additional semantic colors */
+  --md-sys-color-accent-red: #E83F3F;
+  --md-sys-color-street-wood: #d4a574;
+  --md-sys-color-text-dim: #94a3b8;
+  --md-sys-color-surface-dim: rgba(30, 30, 30, 0.6);
+  
   /* Elevation (Material elevation system) */
   --md-sys-elevation-0: none;
   --md-sys-elevation-1: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
@@ -122,6 +136,14 @@
     
     --md-sys-color-surface: #fffbfe;
     --md-sys-color-on-surface: #1a1a1a;
+    
+    /* Light theme map colors */
+    --md-sys-color-sky-dark: #88c6fc;
+    --md-sys-color-horizon-dark: #dbeafe;
+    --md-sys-color-fog-dark: #e8eef7;
+    --md-sys-color-building-dark: #d9dce0;
+    --md-sys-color-building-dim: #9ca3af;
+    --md-sys-color-building-satellite: #f0f0f0;
   }
 }
 

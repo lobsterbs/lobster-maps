@@ -66,7 +66,7 @@ export function StreetViewLayer({ map }: Props) {
         source: COVERAGE_SOURCE_ID,
         'source-layer': 'sequence',
         paint: {
-          'line-color': '#d4a574',
+          'line-color': getComputedStyle(document.documentElement).getPropertyValue('--md-sys-color-street-wood').trim(),
           'line-width': 2,
           'line-opacity': 0.75,
         },
