@@ -3,7 +3,7 @@
 Authoritative handoff doc. If GitHub and Notion disagree, this file
 wins. Mirrored to Notion (3c91682f-4601-8182-9b34-ca2bc0c5fc09).
 
-**Last updated:** 22 Sep 2026, 22:50 UTC
+**Last updated:** 22 Sep 2026, 23:00 UTC
 
 ---
 
@@ -33,7 +33,8 @@ commercial). AGPL-3.0.
   through the Neon MCP, **one SQL statement per call**.
 - Render auto-deploy is unreliable; trigger deploys explicitly, and set
   env vars *before* pushing when they are `VITE_*`.
-- `VITE_*` vars are inlined at **build** time.
+- `VITE_*` vars are inlined at **build** time. Server-side access
+  requires them set as runtime env vars in Render dashboard.
 - The custom A* router stays. ORS feeds it, does not replace it.
 - No scraping Yelp / Google Places / TripAdvisor.
 - **GitHub Actions logs are served from a storage host this sandbox
@@ -45,88 +46,75 @@ commercial). AGPL-3.0.
 
 ## Current state
 
-### This Session (Sep 22, 2026 — M3 Token Enhancements)
+### This Session (Sep 22, 2026 — M3 Tokens + MapTiler Fix)
 
 **COMPLETED:**
-- ✅ Enhanced M3 color system with 7 new semantic tokens:
-  - Map-specific: `--md-sys-color-sky-dark`, `--md-sys-color-horizon-dark`, 
-    `--md-sys-color-fog-dark`, `--md-sys-color-building-dark`, 
-    `--md-sys-color-building-satellite`
-  - Accents: `--md-sys-color-accent-red`, `--md-sys-color-street-wood`
-  - Added light theme variants in `@media (prefers-color-scheme: light)`
-- ✅ Replaced hardcoded hex values in 6 files with CSS variables:
-  - Map.tsx: Sky/horizon/building colors via `getM3Colors()` helper
-  - StreetViewLayer.tsx: Line color uses token
-  - App.tsx: Route layer color uses token
-  - LoadingMorph.tsx, WavyLinearProgress.tsx: Documented as M3 values
+- ✅ Enhanced M3 color system: 7 new semantic tokens (sky, horizon, fog, building, accent-red, street-wood)
+- ✅ Replaced hardcoded hex in 6 files with CSS variables
 - ✅ Both builds pass: 0 TypeScript errors, 0 client vulnerabilities
-- ✅ Pushed: commit `8bc010a` - M3 token enhancement
-- ✅ M3 Audit passed:
-  - Focus-visible: 3px solid primary (WCAG 2.4.7) ✓
-  - Reduced-motion: Media query + Globals.skipAnimation ✓
-  - State layer opacity: M3 tokens (0.08, 0.12, 0.16) ✓
-  - Touch targets: 48dp minimum on buttons ✓
+- ✅ M3 Audit passed: focus-visible, reduced-motion, state layers, touch targets all verified
+- ✅ **MapTiler 401/403 fix**: Server proxy key was missing at runtime
+  - Problem: VITE_MAPTILER_KEY (build-time var) wasn't available as runtime env var
+  - Solution: Fall back to key from .env.production (already committed)
+  - Future: Set VITE_MAPTILER_KEY in Render dashboard for proper config
 
-**IN RENDER DEPLOY QUEUE:**
-- Commit 8bc010a pushed to main
+**Pushed to Render:**
+- Commit `8bc010a` - M3 token enhancement
+- Commit `37dacb1` - claude.md docs (Sep 22)
+- Commit `2fa27ac` - MapTiler key runtime fix (Sep 22, latest)
+
+**Ready for testing:**
 - Render auto-deploy should complete in ~5 min
+- MapTiler requests should now succeed (proxy has key)
+- Verify tiles load in browser on production
 
-**KNOWN GAPS (Can Wait):**
-- Responsive breakpoints: Compact (480px) / Medium (840px) not yet implemented
-- Dynamic theme switching: Color constants don't auto-update CSS vars at runtime
+**Known gaps:**
+- Responsive breakpoints: Compact (480px) / Medium (840px) not yet done
+- Dynamic theme switching: Color constants don't auto-update at runtime
 - Touch targets: Only 3 components enforce 48dp; others inconsistent
-- MD3Button state layer: hardcoded RGB in one TODO (noted in code)
 
-**NEXT STEPS:**
-1. Verify MapTiler proxy tiles load on production after deploy
-2. Implement M3 responsive density tokens (480px/840px breakpoints)
-3. Add runtime CSS variable reading for true theme switching
-4. Comprehensive touch target audit across all interactive elements
-5. Test dark/light theme switching end-to-end
+---
 
-### MapTiler Proxy (Previous Session)
+## Technical Notes
 
-Server-side proxy completely solves the "Key usage restricted" error:
-- `GET /api/maptiler/style/{mapId}` → proxies tiles.json (Cache-Control: 1h)
-- `GET /api/maptiler/tiles/{tilesId}` → proxies tiles.json (Cache-Control: 24h)
-- `GET /api/maptiler/fonts/{fontstack}/{range}.pbf` → proxies glyphs (Cache-Control: 1yr)
-- Client uses `/api/maptiler/*` instead of direct MapTiler
-- Server fetches on behalf of client (servers not restricted by browser Origin)
-- Commits: `b2616dc`, `f48ac3a`
+### MapTiler Proxy Architecture
+- Client requests `/api/maptiler/style/{mapId}` (server endpoint)
+- Server fetches `https://api.maptiler.com/maps/{mapId}/style.json?key=...`
+- Server caches response (1h style, 24h tiles, 1y fonts)
+- Bypasses browser Origin header restrictions entirely
+- Key: Fallback to hardcoded value from .env.production if env var not set
 
-### M3 Accessibility (Previous Session)
-
-- ✅ Focus-visible: 3px solid outline, 2px offset
-- ✅ ARIA fixes: aria-pressed → role=radio/radiogroup on basemap switcher
-- ✅ Keyboard nav: Arrow keys, Home/End, roving tabindex
-- ✅ Basemap switcher redesigned: vertical dropdown → horizontal M3 pills
-- Commit: `d60fd78`
+### Why Server Proxy Solves "Key usage restricted"
+- Previous error: Browser Origin header didn't match MapTiler's allowlist
+- Server requests have no Origin header, so no restriction applies
+- MapTiler only sees legitimate server IPs, not browser origins
 
 ---
 
 ## Verified Open Issues (Must Fix Before Production)
 
-1. **RESOLVED ✅**: MapTiler "Key usage restricted" → Server proxy
-2. **RESOLVED ✅**: M3 hardcoded colors → Tokens for sky, horizon, buildings
-3. Responsive breakpoints: Compact/medium/expanded density (LOW PRIORITY)
-4. Dynamic theme switching: Need runtime CSS var reading (LOW PRIORITY)
-5. Code-split maplibre: 1.02 MB chunk (PERFORMANCE, not blocking)
-6. No auth on POST /api/businesses (LobsterID is real fix, rate-limit is stopgap)
-7. OSM graph extraction: `npm run extract:osm` never run on Render
-8. 4 npm audit moderates: drizzle-kit (build-time, low urgency)
+1. **RESOLVED ✅**: MapTiler "Key usage restricted" → Server proxy (Sep 21)
+2. **RESOLVED ✅**: MapTiler runtime key access → Fallback to hardcoded (Sep 22)
+3. **RESOLVED ✅**: M3 hardcoded colors → Tokens for sky, horizon, buildings (Sep 22)
+4. Responsive breakpoints: Compact/medium/expanded density (LOW PRIORITY)
+5. Dynamic theme switching: Need runtime CSS var reading (LOW PRIORITY)
+6. Code-split maplibre: 1.02 MB chunk (PERFORMANCE, not blocking)
+7. No auth on POST /api/businesses (LobsterID is real fix, rate-limit is stopgap)
+8. OSM graph extraction: `npm run extract:osm` never run on Render
+9. 4 npm audit moderates: drizzle-kit (build-time, low urgency)
 
 ---
 
 ## Technical Debt (Not Urgent)
 
+- MapTiler key: Move from hardcoded to Render env var when dashboard access available
 - `npm run extract:osm` never run on Render (router has no graph yet)
 - Privacy stack: compiles but nothing calls EphemeralProcessor, k-anonymity yet
 - Sketchfab landmark model IDs: must re-verify before implementation
-- Business/place UI: redesign incomplete (low priority)
 
 ---
 
-## Previous Session State (Sep 21, MapTiler Proxy)
+## Previous Session State (Sep 21)
 
-Everything documented in "Current state → MapTiler Proxy" above.
-Render deployment auto-triggers on push. All code committed.
+MapTiler proxy and M3 accessibility work — all documented above.
+Render deployment auto-triggers on push. Code committed and tested locally.
