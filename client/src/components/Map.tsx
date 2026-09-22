@@ -503,9 +503,9 @@ const pillContainerStyle: CSSProperties = {
 };
 
 const pillStyle: CSSProperties = {
-  padding: '8px 16px',
-  minHeight: 36,
-  borderRadius: 18,
+  padding: '12px 16px',
+  minHeight: 48,
+  borderRadius: 24,
   border: '1px solid',
   cursor: 'pointer',
   fontFamily: 'var(--font-body)',
