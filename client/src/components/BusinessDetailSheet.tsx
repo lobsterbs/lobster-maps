@@ -4,6 +4,7 @@ import { animated, useTransition } from '@react-spring/web';
 import { Phone, Globe, Navigation } from 'lucide-react';
 import { fetchBusinessById, type Business } from '../lib/api';
 import { getFaviconUrl } from '../lib/favicon';
+import { SPACING, GAP, CARD_PADDING } from '../styles/spacing';
 
 type Props = {
   business: Business | null;
@@ -95,10 +96,10 @@ export function BusinessDetailSheet({ business, onClose, onGetDirections }: Prop
                 </div>
               )}
 
-              <div style={{ padding: '16px 16px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
+              <div style={{ padding: `${SPACING.md} ${SPACING.md} 0`, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: GAP.sm }}>
                 <div style={{ minWidth: 0, flex: 1 }}>
                   <h2 style={titleStyle}>{biz.name}</h2>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: GAP.xs, marginTop: SPACING.compact }}>
                     <span style={{ color: 'var(--lobster-text-dim)', fontSize: 13 }}>{biz.category}</span>
                     {biz.verified && <span style={verifiedBadgeStyle}>Verified</span>}
                   </div>
@@ -108,7 +109,7 @@ export function BusinessDetailSheet({ business, onClose, onGetDirections }: Prop
                 </button>
               </div>
 
-              <div style={{ padding: '0 16px', marginTop: 8 }}>
+              <div style={{ padding: `0 ${SPACING.md}`, marginTop: SPACING.xs }}>
                 <p style={addressStyle}>{biz.address}</p>
 
                 {loadingFull && <div style={skeletonBlockStyle} />}
@@ -198,7 +199,7 @@ const sheetStyle: CSSProperties = {
   borderTop: '1px solid rgba(255,255,255,0.08)',
   borderTopLeftRadius: 28,
   borderTopRightRadius: 28,
-  padding: '12px 0 0',
+  padding: `${SPACING.sm} 0 0`,
   boxShadow: '0 -8px 32px rgba(0,0,0,0.45)',
 };
 
@@ -207,7 +208,7 @@ const handleStyle: CSSProperties = {
   height: 4,
   borderRadius: 999,
   background: 'rgba(255,255,255,0.2)',
-  margin: '0 auto 12px',
+  margin: `0 auto ${SPACING.sm}`,
 };
 
 const imageGalleryStyle: CSSProperties = {
