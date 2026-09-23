@@ -176,7 +176,7 @@ export const MD3NavigationFlow: React.FC<NavigationFlowProps> = ({
   };
 
   const emptyStateStyle: CSSProperties = {
-    backgroundColor: 'rgba(16, 185, 129, 0.08)',
+    backgroundColor: 'var(--md-sys-state-primary-hover)',
     borderRadius: '8px',
     padding: '16px',
     textAlign: 'center',

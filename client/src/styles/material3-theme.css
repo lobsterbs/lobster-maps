@@ -49,6 +49,9 @@
   
   --md-sys-color-surface: #1e293b;
   --md-sys-color-on-surface: #f1f5f9;
+  --md-sys-color-surface-container: #293548;
+  --md-sys-color-surface-container-high: #34495e;
+  --md-sys-color-surface-container-highest: #475569;
   --md-sys-color-surface-variant: #334155;
   --md-sys-color-on-surface-variant: #cbd5e1;
   
@@ -114,6 +117,19 @@
   --md-sys-state-layer-opacity-focus: 0.12;
   --md-sys-state-layer-opacity-pressed: 0.12;
   --md-sys-state-layer-opacity-drag: 0.16;
+  
+  /* Semantic state layer colors (primary, error, secondary) */
+  --md-sys-state-primary-hover: rgba(16, 185, 129, var(--md-sys-state-layer-opacity-hover));
+  --md-sys-state-primary-focus: rgba(16, 185, 129, var(--md-sys-state-layer-opacity-focus));
+  --md-sys-state-primary-pressed: rgba(16, 185, 129, var(--md-sys-state-layer-opacity-pressed));
+  
+  --md-sys-state-error-hover: rgba(239, 68, 68, var(--md-sys-state-layer-opacity-hover));
+  --md-sys-state-error-focus: rgba(239, 68, 68, var(--md-sys-state-layer-opacity-focus));
+  --md-sys-state-error-pressed: rgba(239, 68, 68, var(--md-sys-state-layer-opacity-pressed));
+  
+  /* Glass surface state (dark semi-transparent background) */
+  --md-sys-state-glass-base: rgba(15, 23, 42, 0.6);
+  --md-sys-state-glass-hover: rgba(15, 23, 42, 0.7);
   
   /* Responsive Spacing (overridden by @media queries at breakpoints) */
   /* Defaults: medium layout (480–839px) */
@@ -310,6 +326,106 @@ button[data-has-custom-focus]:focus-visible {
 
 .md-card:hover {
   box-shadow: var(--md-sys-elevation-3);
+}
+
+/* Location card with state layers */
+.md-location-card {
+  background-color: var(--md-sys-color-surface-container);
+  position: relative;
+  transition: background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.md-location-card:hover {
+  background-color: var(--md-sys-color-surface-container-high);
+  box-shadow: var(--md-sys-elevation-2);
+}
+
+.md-location-card:focus-within {
+  box-shadow: 0 0 0 3px var(--md-sys-color-primary);
+  outline: none;
+}
+
+/* Icon button with error state layer */
+.md-icon-button-error {
+  background-color: transparent;
+  color: var(--md-sys-color-on-surface-variant);
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: var(--md-sys-shape-corner-medium);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.md-icon-button-error:hover {
+  background-color: var(--md-sys-state-error-hover);
+  color: var(--md-sys-color-error);
+}
+
+.md-icon-button-error:active {
+  background-color: var(--md-sys-state-error-pressed);
+}
+
+.md-icon-button-error:focus-visible {
+  outline: 3px solid var(--md-sys-color-error);
+  outline-offset: 2px;
+}
+
+/* Primary state layer button (green/emerald) */
+.md-button-primary-state {
+  background-color: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 8px 12px;
+  border-radius: var(--md-sys-shape-corner-medium);
+  transition: background-color 0.2s ease;
+}
+
+.md-button-primary-state:hover {
+  background-color: var(--md-sys-state-primary-hover);
+}
+
+.md-button-primary-state:active {
+  background-color: var(--md-sys-state-primary-pressed);
+}
+
+.md-button-primary-state:focus-visible {
+  outline: 3px solid var(--md-sys-color-primary);
+  outline-offset: 2px;
+}
+
+/* Glass surface with state layer */
+.md-glass-surface {
+  background-color: var(--md-sys-state-glass-base);
+  border-radius: var(--md-sys-shape-corner-large);
+  backdrop-filter: blur(8px);
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+/* Interactive glass surface shows hover effect */
+.md-glass-interactive:hover {
+  background-color: var(--md-sys-state-glass-hover);
+  border-color: rgba(148, 163, 184, 0.2);
+}
+
+/* Error state container */
+.md-container-error {
+  background-color: var(--md-sys-state-error-hover);
+  border: 1px solid var(--md-sys-color-error);
+  border-radius: var(--md-sys-shape-corner-medium);
+  padding: 8px 12px;
+}
+
+/* Search bar option (shows hover only if not selected) */
+.md-search-option[data-selected="false"]:hover {
+  background-color: var(--md-sys-state-primary-hover);
+}
+
+/* Search suggestion with hover state */
+.md-search-suggestion:hover {
+  background-color: var(--md-sys-state-primary-hover);
 }
 
 /* Material 3 Typography */

@@ -136,8 +136,7 @@ export const MD3LocationCard: React.FC<LocationCardProps> = ({ location, onDelet
   return (
     <div
       style={cardStyle}
-      onMouseEnter={(e) => onSelect && (e.currentTarget.style.backgroundColor = 'var(--md-sys-color-surface-container-high)')}
-      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'var(--md-sys-color-surface-container)')}
+      className="md-location-card"
       onClick={() => onSelect?.(location)}
     >
       <div style={headerStyle}>
@@ -156,14 +155,7 @@ export const MD3LocationCard: React.FC<LocationCardProps> = ({ location, onDelet
               onDelete(location.id);
             }}
             style={deleteButtonStyle}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = 'rgba(220, 38, 38, var(--md-sys-state-hover-opacity))';
-              e.currentTarget.style.color = 'var(--md-sys-color-error)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = 'transparent';
-              e.currentTarget.style.color = 'var(--md-sys-color-on-surface-variant)';
-            }}
+            className="md-icon-button-error"
           >
             <Trash2 size={16} />
           </button>

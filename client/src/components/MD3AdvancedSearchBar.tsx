@@ -250,22 +250,14 @@ export const MD3AdvancedSearchBar: React.FC<MD3AdvancedSearchBarProps> = ({
                   display: 'flex',
                   alignItems: 'center',
                   gap: '12px',
-                  backgroundColor: isSelected ? `rgba(16, 185, 129, var(--md-sys-state-selected-opacity))` : 'transparent',
+                  backgroundColor: isSelected ? `var(--md-sys-state-primary-focus)` : 'transparent',
                   color: 'var(--md-sys-color-on-surface)',
                   border: 'none',
                   cursor: 'pointer',
                   transition: 'background-color var(--app-duration-short2) var(--app-ease-standard)',
                 }}
-                onMouseEnter={(e) => {
-                  if (!isSelected) {
-                    e.currentTarget.style.backgroundColor = `rgba(16, 185, 129, var(--md-sys-state-hover-opacity))`;
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!isSelected) {
-                    e.currentTarget.style.backgroundColor = 'transparent';
-                  }
-                }}
+                className="md-search-option"
+                data-selected={isSelected}
               >
                 <div style={{ color: 'var(--md-sys-color-primary)', flexShrink: 0 }}>
                   {getIcon()}
@@ -355,12 +347,7 @@ export const MD3AdvancedSearchBar: React.FC<MD3AdvancedSearchBarProps> = ({
                 transition: 'background-color var(--app-duration-short2) var(--app-ease-standard)',
                 fontSize: '14px',
               }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = `rgba(16, 185, 129, var(--md-sys-state-hover-opacity))`;
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'transparent';
-              }}
+              className="md-search-suggestion"
             >
               <Clock size={14} style={{ color: 'var(--md-sys-color-on-surface-variant)', flexShrink: 0 }} />
               <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>

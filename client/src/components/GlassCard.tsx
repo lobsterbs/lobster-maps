@@ -15,26 +15,14 @@ const GlassCard: React.FC<GlassCardProps> = ({ children, onClick, interactive = 
   return (
     <div
       onClick={onClick}
+      className={`md-glass-surface ${interactive ? 'md-glass-interactive' : ''}`}
       style={{
-        backgroundColor: 'rgba(15, 23, 42, 0.6)',
         backdropFilter: 'blur(12px)',
         border: '1px solid rgba(148, 163, 184, 0.1)',
         borderRadius: '12px',
         padding: '16px',
         cursor: interactive ? 'pointer' : 'default',
         transition: 'all 200ms ease',
-      }}
-      onMouseEnter={(e) => {
-        if (interactive) {
-          e.currentTarget.style.backgroundColor = 'rgba(15, 23, 42, 0.7)';
-          e.currentTarget.style.borderColor = 'rgba(148, 163, 184, 0.2)';
-        }
-      }}
-      onMouseLeave={(e) => {
-        if (interactive) {
-          e.currentTarget.style.backgroundColor = 'rgba(15, 23, 42, 0.6)';
-          e.currentTarget.style.borderColor = 'rgba(148, 163, 184, 0.1)';
-        }
       }}
     >
       {children}

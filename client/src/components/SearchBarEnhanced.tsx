@@ -76,7 +76,7 @@ const SearchBarEnhanced: React.FC<SearchBarEnhancedProps> = ({ onLocationSelect 
           alignItems: 'center',
           gap: '8px',
           padding: '8px 12px',
-          backgroundColor: 'rgba(15, 23, 42, 0.7)',
+          backgroundColor: 'var(--md-sys-state-glass-hover)',
           backdropFilter: 'blur(12px)',
           border: '1px solid rgba(148, 163, 184, 0.1)',
           borderRadius: '8px',

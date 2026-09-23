@@ -139,6 +139,15 @@ router.get('/tiles/:tilesId', async (req, res) => {
     }
 
     const data = await response.json();
+    
+    // Rewrite embedded glyphs/fonts URLs in TileJSON if present
+    if (data.glyphs) {
+      data.glyphs = data.glyphs.replace(
+        /https:\/\/api\.maptiler\.com\/fonts\//g,
+        '/api/maptiler/fonts/'
+      ).replace(/\?key=[^&]*/, ''); // Remove key from URL
+    }
+    
     res.setHeader('Content-Type', 'application/json');
     res.setHeader('Cache-Control', 'public, max-age=86400'); // Cache 24 hours
     res.json(data);
