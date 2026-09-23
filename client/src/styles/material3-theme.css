@@ -83,6 +83,17 @@
   --md-sys-elevation-4: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
   --md-sys-elevation-5: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
   
+  /* M3 Expressive Motion - Physics-based spring system */
+  /* Fast-spatial spring: damping 0.6, stiffness 800 (for expand/collapse toolbars, FABs) */
+  /* Ports as CSS cubic-bezier with overshoot: cubic-bezier(0.35, 1.1, 0.6, 1) — 350ms */
+  --md-sys-motion-spring-fast-spatial: cubic-bezier(0.35, 1.1, 0.6, 1);
+  --md-sys-motion-spring-standard-spatial: cubic-bezier(0.4, 0, 0.2, 1);
+  
+  /* Motion duration tokens */
+  --md-sys-motion-duration-short: 100ms;
+  --md-sys-motion-duration-medium: 200ms;
+  --md-sys-motion-duration-long: 350ms;
+  
   /* Typography (Material Design 3 scale) */
   --md-sys-typescale-display-large: 3.5rem;
   --md-sys-typescale-display-medium: 2.8125rem;
@@ -442,6 +453,79 @@ button[data-has-custom-focus]:focus-visible {
 /* Search result item hover */
 .md-search-result:hover {
   background-color: var(--md-sys-state-primary-hover);
+}
+
+/* M3 Expressive Toolbar - Floating */
+.md-toolbar-floating {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px;
+  height: 64px;
+  border-radius: 32px;
+  box-shadow: var(--md-sys-elevation-3);
+  transition: all 350ms var(--md-sys-motion-spring-fast-spatial);
+  backdrop-filter: blur(4px);
+}
+
+/* M3 Expressive Toolbar - Docked */
+.md-toolbar-docked {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+  padding: 8px 16px;
+  height: 64px;
+  width: 100%;
+  box-shadow: var(--md-sys-elevation-1);
+  transition: all 200ms var(--md-sys-motion-spring-standard-spatial);
+}
+
+/* Toolbar action button base */
+.md-toolbar-action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 48px;
+  min-height: 48px;
+  padding: 8px;
+  border: none;
+  border-radius: var(--md-sys-shape-corner-medium);
+  background-color: transparent;
+  color: var(--md-sys-color-on-surface);
+  cursor: pointer;
+  transition: background-color 200ms var(--md-sys-motion-spring-standard-spatial);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.md-toolbar-action:hover {
+  background-color: var(--md-sys-state-primary-hover);
+}
+
+.md-toolbar-action:active {
+  background-color: var(--md-sys-state-primary-pressed);
+}
+
+.md-toolbar-action[data-selected="true"] {
+  background-color: var(--md-sys-state-primary-focus);
+}
+
+.md-toolbar-action[data-destructive="true"] {
+  color: var(--md-sys-color-error);
+}
+
+.md-toolbar-action[data-destructive="true"]:hover {
+  background-color: var(--md-sys-state-error-hover);
+}
+
+.md-toolbar-action:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+}
+
+.md-toolbar-action:focus-visible {
+  outline: 3px solid var(--md-sys-color-primary);
+  outline-offset: 2px;
 }
 
 /* Material 3 Typography */
