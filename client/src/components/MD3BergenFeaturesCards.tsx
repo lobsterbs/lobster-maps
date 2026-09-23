@@ -79,7 +79,7 @@ interface SpeedCameraAlert {
 
 export const MD3SpeedCameraCard: React.FC<{ camera: SpeedCameraAlert }> = ({ camera }) => {
   const cardStyle: CSSProperties = {
-    backgroundColor: 'rgba(220, 38, 38, 0.08)',
+    backgroundColor: 'var(--md-sys-state-error-hover)',
     border: `1px solid var(--md-sys-color-error)`,
     borderRadius: '12px',
     padding: '12px',

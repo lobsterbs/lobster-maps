@@ -148,16 +148,8 @@ export const MD3TimelineRail: React.FC<MD3TimelineRailProps> = ({
             key={step.id}
             style={stepStyle(isActive)}
             onClick={() => onStepClick?.(step.id)}
-            onMouseEnter={(e) => {
-              if (!isActive) {
-                e.currentTarget.style.backgroundColor = 'rgba(16, 185, 129, var(--md-sys-state-hover-opacity))';
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (!isActive) {
-                e.currentTarget.style.backgroundColor = 'transparent';
-              }
-            }}
+            className="md-timeline-step"
+            data-active={isActive}
           >
             <div style={timelineStyle}>
               <div style={markerStyle(isActive)}>

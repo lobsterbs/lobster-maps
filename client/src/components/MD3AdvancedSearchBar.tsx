@@ -187,7 +187,7 @@ export const MD3AdvancedSearchBar: React.FC<MD3AdvancedSearchBarProps> = ({
           onFocus={(e) => {
             setShowSuggestions(true);
             e.currentTarget.style.borderColor = 'var(--md-sys-color-primary)';
-            e.currentTarget.style.boxShadow = '0 0 0 3px rgba(16, 185, 129, 0.12)';
+            e.currentTarget.style.boxShadow = '0 0 0 3px var(--md-sys-state-primary-focus)';
           }}
           onBlur={(e) => {
             e.currentTarget.style.borderColor = 'var(--md-sys-color-outline-variant)';

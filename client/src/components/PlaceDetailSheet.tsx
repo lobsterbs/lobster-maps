@@ -189,7 +189,7 @@ const PlaceDetailSheet: React.FC<PlaceDetailSheetProps> = ({ place, onClose = ()
             href={`tel:${place.phone}`}
             style={{
               padding: '12px',
-              backgroundColor: `rgba(16, 185, 129, 0.12)`,
+              backgroundColor: `var(--md-sys-state-primary-focus)`,
               color: 'var(--md-sys-color-primary)',
               border: `1px solid var(--md-sys-color-primary)`,
               borderRadius: '8px',

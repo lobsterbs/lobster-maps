@@ -79,17 +79,12 @@ export const MD3Button = React.forwardRef<HTMLButtonElement, MD3ButtonProps>(
     const sizeStyle = sizeStyles[size];
 
     // Compute state-layer overlay based on M3 spec
-    // Uses primary color from CSS variable — portable across themes
+    // Uses CSS variables for portable theming
     const getStateLayerColor = () => {
-      if (isActive) return `rgba(16, 185, 129, var(--md-sys-state-layer-opacity-pressed))`;
-      if (isHovered) return `rgba(16, 185, 129, var(--md-sys-state-layer-opacity-hover))`;
+      if (isActive) return `var(--md-sys-state-primary-pressed)`;
+      if (isHovered) return `var(--md-sys-state-primary-hover)`;
       return 'transparent';
     };
-    
-    // TODO: Replace hardcoded emerald (16, 185, 129) with CSS variable extraction
-    // This requires JS to read computed styles or a new token for state-layer-color
-    // For now, leaving as-is since CSS can't extract color channels directly.
-    // Alternative: Move state layer logic to CSS ::before pseudo-element
 
     const buttonStyle: CSSProperties = {
       ...variantStyle,

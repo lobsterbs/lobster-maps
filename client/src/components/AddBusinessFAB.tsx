@@ -40,7 +40,7 @@ export function AddBusinessFAB({ onClick }: Props) {
         textAlign: 'center',
         fontFamily: 'var(--font-heading)',
         cursor: 'pointer',
-        boxShadow: '0 4px 14px rgba(16, 185, 129, 0.4)',
+        boxShadow: '0 4px 14px var(--md-sys-state-primary-shadow)',
         overflow: 'hidden',
       }}
       aria-label="Add a business"
