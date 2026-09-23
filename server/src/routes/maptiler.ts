@@ -87,6 +87,26 @@ router.get('/style/:mapId', async (req, res) => {
       ).replace(/\?key=[^&]*/, ''); // Remove key from URL
     }
     
+    if (data.sprite) {
+      // Rewrite sprite URLs: https://api.maptiler.com/maps/{mapId}/sprite → /api/maptiler/sprite/{mapId}
+      if (typeof data.sprite === 'string') {
+        data.sprite = data.sprite.replace(
+          /https:\/\/api\.maptiler\.com\/maps\/([^/?]+)\/sprite/g,
+          '/api/maptiler/sprite/$1'
+        ).replace(/\?key=[^&]*/, '');
+      } else if (Array.isArray(data.sprite)) {
+        data.sprite = data.sprite.map((s: any) => {
+          if (s && s.url) {
+            s.url = s.url.replace(
+              /https:\/\/api\.maptiler\.com\/maps\/([^/?]+)\/sprite/g,
+              '/api/maptiler/sprite/$1'
+            ).replace(/\?key=[^&]*/, '');
+          }
+          return s;
+        });
+      }
+    }
+    
     res.setHeader('Content-Type', 'application/json');
     res.setHeader('Cache-Control', 'public, max-age=3600'); // Cache 1 hour
     res.json(data);
@@ -238,6 +258,51 @@ router.get('/health', async (req, res) => {
       keyConfigured: !!MAPTILER_KEY,
       error: String(error),
     });
+  }
+});
+
+/**
+ * GET /api/maptiler/sprite/:mapId
+ * Proxy MapTiler sprite sheets (PNG + JSON for icon sprites)
+ */
+router.get('/sprite/:mapId', async (req, res) => {
+  const { mapId } = req.params;
+
+  if (!MAPTILER_KEY) {
+    res.status(400).json({ error: 'MapTiler API key not configured (VITE_MAPTILER_KEY)' });
+    return;
+  }
+
+  // Sanitize map ID (allow alphanumeric, dash, @2x for retina)
+  if (!/^[a-z0-9-]+(@\d+x)?$/.test(mapId)) {
+    res.status(400).json({ error: 'Invalid sprite ID format' });
+    return;
+  }
+
+  try {
+    const url = `https://api.maptiler.com/maps/${mapId}?key=${MAPTILER_KEY}`;
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': 'LobsterMaps/1.0',
+        'Referer': 'https://lobster-maps.onrender.com/',
+      },
+    });
+
+    if (!response.ok) {
+      console.error(`MapTiler sprite failed: ${response.status} ${mapId}`);
+      res.status(response.status).json({ error: `Sprite fetch failed: ${response.status}` });
+      return;
+    }
+
+    const contentType = response.headers.get('Content-Type') || 'application/octet-stream';
+    const buffer = await response.arrayBuffer();
+
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Cache-Control', 'public, max-age=31536000'); // Cache 1 year
+    res.send(Buffer.from(buffer));
+  } catch (error) {
+    console.error('MapTiler sprite proxy error:', error);
+    res.status(500).json({ error: 'Failed to fetch sprite' });
   }
 });
 
