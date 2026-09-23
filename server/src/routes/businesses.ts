@@ -64,6 +64,18 @@ router.get(
       }
       const [minLng, minLat, maxLng, maxLat] = parts;
 
+      // Validate bbox coordinates
+      if (
+        minLng < -180 || minLng > 180 || maxLng < -180 || maxLng > 180 ||
+        minLat < -90 || minLat > 90 || maxLat < -90 || maxLat > 90 ||
+        minLng >= maxLng || minLat >= maxLat
+      ) {
+        return res.status(400).json({
+          error: 'Invalid bbox coordinates',
+          details: 'Must be minLng,minLat,maxLng,maxLat where min < max and coords in valid ranges',
+        });
+      }
+
       // Businesses "not from us" — real OSM data — get merged in live
       // here, not just via the manual seed script. Cached by grid
       // cell so this doesn't hammer Overpass on every pan, see

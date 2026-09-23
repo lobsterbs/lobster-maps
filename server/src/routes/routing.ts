@@ -60,8 +60,22 @@ const handleRouteCalculation = async (req: Request, res: Response) => {
       });
     }
 
-    const { lat: fromLat, lon: fromLng } = from;
-    const { lat: toLat, lon: toLng } = to;
+    // Parse and validate coordinates
+    const fromLat = Number(from.lat);
+    const fromLng = Number(from.lon);
+    const toLat = Number(to.lat);
+    const toLng = Number(to.lon);
+
+    if (
+      isNaN(fromLat) || isNaN(fromLng) || isNaN(toLat) || isNaN(toLng) ||
+      fromLat < -90 || fromLat > 90 || toLat < -90 || toLat > 90 ||
+      fromLng < -180 || fromLng > 180 || toLng < -180 || toLng > 180
+    ) {
+      return res.status(400).json({
+        error: 'Invalid coordinate values',
+        details: 'lat must be between -90 and 90, lon between -180 and 180',
+      });
+    }
 
     // Check cache
     const cacheKey = `route:${fromLat}:${fromLng}:${toLat}:${toLng}`;

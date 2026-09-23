@@ -33,6 +33,18 @@ router.post('/search', async (req: Request, res: Response) => {
       return;
     }
 
+    // Validate numeric parameters
+    const parsedLat = lat ? Number(lat) : undefined;
+    const parsedLon = lon ? Number(lon) : undefined;
+    const parsedRadius = Number(radius);
+
+    if ((parsedLat !== undefined && (isNaN(parsedLat) || parsedLat < -90 || parsedLat > 90)) ||
+        (parsedLon !== undefined && (isNaN(parsedLon) || parsedLon < -180 || parsedLon > 180)) ||
+        isNaN(parsedRadius) || parsedRadius <= 0) {
+      res.status(400).json({ error: 'Invalid lat/lon/radius parameters' });
+      return;
+    }
+
     console.log(`🔍 Search: "${q}"`);
 
     // Step 1: Try geocoding query
@@ -41,8 +53,9 @@ router.post('/search', async (req: Request, res: Response) => {
       return null;
     });
 
-    const userLat = lat || (geocoded ? geocoded.lat : 60.3913);
-    const userLon = lon || (geocoded ? geocoded.lon : 5.3221);
+    const userLat = parsedLat || (geocoded ? geocoded.lat : 60.3913);
+    const userLon = parsedLon || (geocoded ? geocoded.lon : 5.3221);
+    const searchRadius = parsedRadius;
 
     const results: any[] = [];
     if (geocoded) {
@@ -70,10 +83,10 @@ router.post('/search', async (req: Request, res: Response) => {
     if (type === 'business' || type === 'all') {
       try {
         const bounds: [number, number, number, number] = [
-          userLon - radius / 111,
-          userLat - radius / 111,
-          userLon + radius / 111,
-          userLat + radius / 111,
+          userLon - searchRadius / 111,
+          userLat - searchRadius / 111,
+          userLon + searchRadius / 111,
+          userLat + searchRadius / 111,
         ];
 
         const businesses = await fetchBusinessesInView(bounds).catch((err) => {
