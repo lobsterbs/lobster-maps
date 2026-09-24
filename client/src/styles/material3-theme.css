@@ -2,7 +2,25 @@
  * Material Design 3 (Material You) theme for LobsterMaps
  * Dark theme with dynamic color system
  * Primary color: Emerald (privacy-aligned green)
+ * Typography: Google Sans Flex (100-900 weights)
  */
+
+html {
+  font-family: 'Google Sans Flex', system-ui, -apple-system, sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  margin: 0;
+  padding: 0;
+}
 
 :root {
   /* Material Design 3 Color System */

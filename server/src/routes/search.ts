@@ -55,7 +55,17 @@ router.post('/search', async (req: Request, res: Response) => {
 
     const userLat = parsedLat || (geocoded ? geocoded.lat : 60.3913);
     const userLon = parsedLon || (geocoded ? geocoded.lon : 5.3221);
-    const searchRadius = parsedRadius;
+    
+    // Convert km radius to degrees, accounting for latitude (111km per degree at equator)
+    // At Bergen (60°N), use cos(lat) to get more accurate bbox
+    const latRadians = (userLat * Math.PI) / 180;
+    const lngPerDegree = 111 * Math.cos(latRadians);
+    const latPerDegree = 111;
+    
+    const searchRadiusDeg = {
+      lat: parsedRadius / latPerDegree,
+      lng: parsedRadius / lngPerDegree,
+    };
 
     const results: any[] = [];
     if (geocoded) {
@@ -83,10 +93,10 @@ router.post('/search', async (req: Request, res: Response) => {
     if (type === 'business' || type === 'all') {
       try {
         const bounds: [number, number, number, number] = [
-          userLon - searchRadius / 111,
-          userLat - searchRadius / 111,
-          userLon + searchRadius / 111,
-          userLat + searchRadius / 111,
+          userLon - searchRadiusDeg.lng,
+          userLat - searchRadiusDeg.lat,
+          userLon + searchRadiusDeg.lng,
+          userLat + searchRadiusDeg.lat,
         ];
 
         const businesses = await fetchBusinessesInView(bounds).catch((err) => {
@@ -103,12 +113,10 @@ router.post('/search', async (req: Request, res: Response) => {
       }
     }
 
-
     res.json({
       results,
       center: { lat: userLat, lon: userLon },
       count: results.length,
-      error: null,
     });
   } catch (err) {
     console.error('Search error:', err);
