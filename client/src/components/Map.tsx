@@ -2,9 +2,16 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import * as maplibregl from 'maplibre-gl';
 import { type Map as MapLibreMap, type StyleSpecification } from 'maplibre-gl';
-import { Layers, Mountain, Check } from 'lucide-react';
+import { Layers, Mountain, Check, Plus, MapPin, AlertCircle } from 'lucide-react';
 import { animated, useSpring, useTransition } from '@react-spring/web';
 import VersionIndicator from './VersionIndicator';
+import { MD3NavRail, type MD3NavRailItem } from './MD3NavRail';
+import { MD3FABMenu, type FABMenuAction } from './MD3FABMenu';
+import { MD3SegmentedButton, type SegmentedButtonOption } from './MD3SegmentedButton';
+import { MD3Breadcrumb, type BreadcrumbItem } from './MD3Breadcrumb';
+import { MD3Skeleton, MD3MapSkeleton } from './MD3Skeleton';
+import { MapWatermark } from './MapWatermark';
+import { AppVersion } from '../lib/versions';
 import {
   BASEMAPS,
   DEFAULT_BASEMAP,
@@ -111,6 +118,14 @@ export function MapCanvas({ onMapReady, onMoveEnd, onError, onStyleReload }: Pro
   const [basemap, setBasemap] = useState<BasemapId>(DEFAULT_BASEMAP);
   const [terrain, setTerrain] = useState(false);
   const [panelOpen, setPanelOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [selectedMode, setSelectedMode] = useState<'driving' | 'transit' | 'walking'>('driving');
+  const [breadcrumbItems, setBreadcrumbItems] = useState<BreadcrumbItem[]>([
+    { id: 'bergen', label: 'Bergen', onClick: () => {
+      mapRef.current?.flyTo({ center: BERGEN, zoom: 15 });
+    }},
+  ]);
+  const [fabMenuOpen, setFabMenuOpen] = useState(false);
 
   // Refs mirror state so the style-reload handler always reads the
   // current selection rather than the value captured when it was bound.
@@ -276,6 +291,7 @@ export function MapCanvas({ onMapReady, onMoveEnd, onError, onStyleReload }: Pro
     map.on('load', () => {
       loadedRef.current = true;
       clearTimeout(loadTimeout);
+      setLoading(false);
       applyCustomLayers(map);
       onMapReady?.(map);
     });
@@ -359,62 +375,130 @@ export function MapCanvas({ onMapReady, onMoveEnd, onError, onStyleReload }: Pro
     config: { tension: 320, friction: 26 },
   });
 
+  // M3E NavRail items (categories + saved places)
+  const navRailItems: MD3NavRailItem[] = [
+    { id: 'map', icon: <MapPin size={24} />, label: 'Map' },
+    { id: 'nearby', icon: <AlertCircle size={24} />, label: 'Nearby' },
+  ];
+
+  // M3E FAB Menu actions (add business, add location, report)
+  const fabMenuActions: FABMenuAction[] = [
+    { id: 'add-business', icon: <Plus size={20} />, label: 'Add Business', onClick: () => console.log('Add business') },
+    { id: 'add-location', icon: <MapPin size={20} />, label: 'Add Location', onClick: () => console.log('Add location') },
+    { id: 'report', icon: <AlertCircle size={20} />, label: 'Report Issue', onClick: () => console.log('Report') },
+  ];
+
+  // M3E Segmented Button options (driving, transit, walking)
+  const modeOptions: SegmentedButtonOption[] = [
+    { id: 'driving', label: 'Car', icon: <Layers size={18} /> },
+    { id: 'transit', label: 'Transit', icon: <Mountain size={18} /> },
+    { id: 'walking', label: 'Walk', icon: <Check size={18} /> },
+  ];
+
   return (
-    <div style={{ position: 'absolute', inset: 0 }}>
-      <div ref={containerRef} style={{ position: 'absolute', inset: 0 }} />
-      <VersionIndicator />
+    <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'row' }}>
+      {/* M3E NavRail (left sidebar) */}
+      <MD3NavRail
+        items={navRailItems}
+        selectedId="map"
+        onSelect={(id) => console.log('NavRail:', id)}
+        fab={<button style={{ width: 56, height: 56, borderRadius: 'var(--md-sys-shape-corner-medium)', backgroundColor: 'var(--md-sys-color-primary)', color: 'var(--md-sys-color-on-primary)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24 }} title="Add"><Plus size={24} /></button>}
+        fabPosition="bottom"
+      />
 
-      <div style={controlStackStyle}>
-        <IconToggle
-          icon={Layers}
-          label="Basemap"
-          active={panelOpen}
-          disabled={!hasMapTiler}
-          onClick={() => setPanelOpen((o) => !o)}
-        />
-        <IconToggle
-          icon={Mountain}
-          label="3D terrain"
-          active={terrain}
-          disabled={!hasMapTiler}
-          onClick={toggleTerrain}
-        />
+      {/* Main map container + overlays */}
+      <div style={{ flex: 1, position: 'relative' }}>
+        {/* Map canvas */}
+        <div ref={containerRef} style={{ position: 'absolute', inset: 0 }} />
+
+        {/* Loading skeleton overlay */}
+        {loading && <MD3MapSkeleton />}
+
+        {/* M3E Breadcrumb (top) */}
+        <div style={{ position: 'absolute', top: 16, left: 80, zIndex: 10 }}>
+          <MD3Breadcrumb items={breadcrumbItems} />
+        </div>
+
+        {/* M3E SegmentedButton (mode toggle) */}
+        <div style={{ position: 'absolute', top: 16, right: 200, zIndex: 10 }}>
+          <MD3SegmentedButton
+            options={modeOptions}
+            selectedId={selectedMode}
+            onSelect={(id: string) => setSelectedMode(id as 'driving' | 'transit' | 'walking')}
+            multiSelect={false}
+          />
+        </div>
+
+        {/* Version indicator */}
+        <VersionIndicator />
+
+        {/* M3 control stack (basemap, 3D terrain toggles) */}
+        <div style={controlStackStyle}>
+          <IconToggle
+            icon={Layers}
+            label="Basemap"
+            active={panelOpen}
+            disabled={!hasMapTiler}
+            onClick={() => setPanelOpen((o) => !o)}
+          />
+          <IconToggle
+            icon={Mountain}
+            label="3D terrain"
+            active={terrain}
+            disabled={!hasMapTiler}
+            onClick={toggleTerrain}
+          />
+        </div>
+
+        {/* M3 horizontal basemap pill switcher */}
+        {pillTransition(
+          (style, open) =>
+            open && (
+              <animated.div 
+                style={{ ...style, ...pillContainerStyle }}
+                role="radiogroup"
+                aria-label="Basemap options"
+                onKeyDown={handleBasemapKeyDown}
+              >
+                {BASEMAPS.map((b) => {
+                  const selected = b.id === basemap;
+                  return (
+                    <button
+                      key={b.id}
+                      onClick={() => switchBasemap(b.id)}
+                      title={b.hint}
+                      role="radio"
+                      aria-checked={selected}
+                      tabIndex={selected ? 0 : -1}
+                      style={{
+                        ...pillStyle,
+                        background: selected ? EMERALD : 'rgba(30,30,30,0.6)',
+                        color: selected ? '#fff' : TEXT_DIM,
+                        borderColor: selected ? EMERALD : 'rgba(255,255,255,0.12)',
+                      }}
+                    >
+                      {b.label}
+                    </button>
+                  );
+                })}
+              </animated.div>
+            )
+        )}
+
+        {/* M3E FAB Menu (main action) */}
+        <div style={{ position: 'absolute', bottom: 24, right: 24, zIndex: 20 }}>
+          <MD3FABMenu
+            icon={<Plus size={24} />}
+            label="Add"
+            actions={fabMenuActions}
+            onActionClick={(id: string) => console.log('FAB action:', id)}
+            showLabels={true}
+          />
+        </div>
+
+        {/* M3E Watermark (version overlay) */}
+        <MapWatermark version={AppVersion.display} />
       </div>
-
-      {/* M3 horizontal basemap pill switcher */}
-      {pillTransition(
-        (style, open) =>
-          open && (
-            <animated.div 
-              style={{ ...style, ...pillContainerStyle }}
-              role="radiogroup"
-              aria-label="Basemap options"
-              onKeyDown={handleBasemapKeyDown}
-            >
-              {BASEMAPS.map((b) => {
-                const selected = b.id === basemap;
-                return (
-                  <button
-                    key={b.id}
-                    onClick={() => switchBasemap(b.id)}
-                    title={b.hint}
-                    role="radio"
-                    aria-checked={selected}
-                    tabIndex={selected ? 0 : -1}
-                    style={{
-                      ...pillStyle,
-                      background: selected ? EMERALD : 'rgba(30,30,30,0.6)',
-                      color: selected ? '#fff' : TEXT_DIM,
-                      borderColor: selected ? EMERALD : 'rgba(255,255,255,0.12)',
-                    }}
-                  >
-                    {b.label}
-                  </button>
-                );
-              })}
-            </animated.div>
-          )
-      )}
     </div>
   );
 }
