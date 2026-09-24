@@ -123,7 +123,7 @@ export function MapCanvas({ onMapReady, onMoveEnd, onError, onStyleReload }: Pro
   const [loading, setLoading] = useState(true);
   const [selectedMode, setSelectedMode] = useState<string>('driving');
   const [searchValue, setSearchValue] = useState('');
-  const [searchSuggestions, setSearchSuggestions] = useState<Array<{ id: string; label: string; desc?: string }>>([]);
+  const [searchSuggestions, setSearchSuggestions] = useState<Array<{ id: string; label: string; desc?: string; lat?: number; lon?: number }>>([]);
 
   // Refs mirror state so the style-reload handler always reads the
   // current selection rather than the value captured when it was bound.
@@ -398,6 +398,8 @@ export function MapCanvas({ onMapReady, onMoveEnd, onError, onStyleReload }: Pro
             id: r.id,
             label: r.name,
             desc: r.type || 'Location',
+            lat: r.lat,
+            lon: r.lon,
           }))
         );
       }
@@ -408,10 +410,15 @@ export function MapCanvas({ onMapReady, onMoveEnd, onError, onStyleReload }: Pro
 
   const handleSearchSelect = (id: string) => {
     const result = searchSuggestions.find((s) => s.id === id);
-    if (result) {
-      // TODO: Fly to result location
+    if (result && result.lat !== undefined && result.lon !== undefined) {
       setSearchValue(result.label);
       setSearchSuggestions([]);
+      // Fly to result location with smooth animation
+      mapRef.current?.flyTo({
+        center: [result.lon, result.lat],
+        zoom: 16,
+        duration: 1200, // 1.2s smooth transition
+      });
     }
   };
 

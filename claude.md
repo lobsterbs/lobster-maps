@@ -1,184 +1,186 @@
-# LobsterMaps - Session Continuation Notes
+# LobsterMaps - Development Status & Handoff
 
-**Last Updated**: Sep 24, 2026 · **Session**: M3E Typography & Search API
-**Deployed**: https://lobster-maps.onrender.com | **Repo**: https://github.com/lobsterbs/lobster-maps
-
----
-
-## Project Summary
-
-**LobsterMaps** is a privacy-first maps & business directory for Bergen, Norway. Built with React + Vite (client), Express + Drizzle (server), MapLibre GL v6, and custom Rust/WASM A* routing.
-
-- **Stack**: React 18 + Vite + MapLibre GL v6 | Express 4 + Drizzle ORM + Neon PostgreSQL | Rust routing engine
-- **Design System**: Material Design 3 Expressive (M3E) — full component library (9 components shipped in Phase 1)
-- **Version**: Argon 1.0.0 (public release, Sep 2026)
-- **Privacy**: Zero tracking, all requests proxied through Render server, fonts self-hosted
+**Last Updated**: Sept 24, 2026 (Session 2)
+**Commit**: `a9eb4f1` — M3E React package migration complete
+**Status**: 🟢 Builds passing, ready for feature wiring
 
 ---
 
-## Current State (Just Completed)
+## 🎯 Project Overview
 
-### ✅ This Session's Work
+LobsterMaps is a privacy-first maps app for Bergen. Frontend runs React + Vite, backend is Express + Drizzle ORM, hosted on Render with Neon DB.
 
-1. **Google Sans Flex Typography** — Applied globally to `html`/`body` in `material3-theme.css`
-   - Font-family: `'Google Sans Flex', system-ui, -apple-system, sans-serif`
-   - All 9 weights available (100–900)
-   - Affects every UI element automatically
-
-2. **Search API Latitude-Aware Radius**
-   - Fixed: radius calculation now accounts for latitude (cos(lat)) for accurate bounding boxes
-   - Bergen (60°N) radius now correct instead of stretched
-
-3. **Response Format Cleanup**
-   - Removed redundant `error: null` from successful search responses
-   - Cleaner API contract: only include `error` field on actual errors
-
-4. **Build Status**: ✅ Client 10.79s, ✅ Server clean, ✅ Both pushed to GitHub (`ed24dfc`)
+- **Live**: https://lobster-maps.onrender.com
+- **Repo**: https://github.com/lobsterbs/lobster-maps
+- **Build Time**: Client ~11s, Server ~5s
+- **Version**: Argon 1.0.0
 
 ---
 
-## Known Issues (Priority Order)
+## ✅ What Was Just Done (Session 2)
 
-| Priority | Issue | Impact | Fix |
-|----------|-------|--------|-----|
-| 🔴 High | Hardcoded rgba colors in BusinessDetailSheet, MapWatermark, StreetViewLayer | Not using M3 tokens | Replace with CSS var `--md-sys-state-*` tokens |
-| 🟡 Medium | Components not wired into Map view (NavRail, FABMenu, Segmented, Breadcrumb) | Built but unused | Wire into Map.tsx layout |
-| 🟡 Medium | Document title never updates | Poor UX/SEO | Add `useEffect` in Map to set `document.title` on location change |
-| 🟡 Medium | MapTiler sprite proxy untested in production | May fail silently | Verify in browser DevTools on Render |
-| 🟡 Medium | OSM graph not extracted (`npm run extract:osm` never run) | Routing engine missing data | Run extraction, commit `routing-core/data/` |
-| ⚪ Low | 1.02 MB maplibre + 1.06 MB mapillary chunks | Bundle size | Dynamic import street view layer |
-| ⚪ Low | No auth on POST /api/businesses | Open to abuse | Wire LobsterID integration |
-| ⚪ Low | 4 npm audit moderates (build-time) | Minor | Run `npm audit fix` if needed |
+Replaced all 19 custom M3E components with the real `@m3e/react` package. This was a major cleanup:
 
----
+- **Deleted**: 4,000+ lines of custom component code
+- **Installed**: `@m3e/react`, `@m3e/icons`
+- **Rewrote**: `Map.tsx` to use real M3E Web Components
+- **Added**: `m3e.d.ts` for JSX type support
 
-## Components Status
+### Components Now Using M3E
 
-### ✅ M3E Components Built (Phase 1)
-- MD3NavRail (80px sidebar, icons, labels, badges)
-- MD3FABMenu (56→80dp morph, submenu, spring 350ms)
-- MD3SegmentedButton (satellite/3D toggle, radio group)
-- MD3Breadcrumb (location hierarchy)
-- MD3Skeleton + MD3MapSkeleton (pulse loading)
-- MD3Card (elevation, image header, actions)
-- MD3ButtonGroup (connected actions: bus/walk/car/share/call)
-- MD3ExpressiveToolbar (floating pill + docked, FAB integration)
-- MapWatermark ("🦞 LobsterMaps · Argon" overlay)
+| Component | What It Does | Status |
+|-----------|-------------|--------|
+| `<m3e-search>` | Business/location autocomplete | ✅ Wired to `/api/search` |
+| `<m3e-nav-rail>` | Left sidebar (80px) | ✅ Renders |
+| `<m3e-fab-menu>` | Add business/location/report | ⏳ Styled, needs actions |
+| `<m3e-segmented-button>` | Mode toggle (car/transit/walk) | ⏳ Renders, needs routing |
+| Basemap pills | Style switcher | ⏳ Styled, needs functionality |
+| Terrain toggle | 3D on/off | ❌ Removed, needs re-add |
 
-### ⚪ Components Built But Not Wired
-- MD3Button, MD3Switch, MD3AdvancedSearchBar, MD3LocationCard, MD3TimelineRail
-- MD3RoutePlannerCard, MD3EnhancedRouteSelectorCard, MD3NavigationFlow, MD3BergenFeaturesCards
-- TermsOfService, PrivacyPolicy (pages)
-
-### ⚠️ Non-M3E Components (38 total)
-- AddBusinessFAB, AddBusinessModal, BusinessDetailSheet, BusinessMarker
-- ClusterMarker, DirectionsPanel, GlassCard, LoadingMorph, SearchBar, SearchBarEnhanced
-- Snackbar, StreetViewLayer, ThreeDLayer, TripPlanner, PlaceDetailSheet, WavyLinearProgress
-- Ripple, VersionIndicator (+ others)
+**Build Status**: ✅ Both client and server build cleanly with zero TS errors.
 
 ---
 
-## API Endpoints (All Working)
+## 📋 Immediate Next Steps (Top Priority)
 
-| Endpoint | Method | Status | Notes |
-|----------|--------|--------|-------|
-| `/api/search` | POST | ✅ Fixed | Lat-aware radius, clean response |
-| `/api/businesses` | GET | ✅ Clean | Validates bbox order & coordinates |
-| `/api/businesses/:id` | GET | ✅ Full detail | Fetches phone, website, hours |
-| `/api/routing` | POST | ✅ Validates | From/to lat/lng bounds check |
-| `/api/maptiler/*` | GET | ✅ Proxies | Style, tiles, glyphs, sprites |
-| `/api/health` | GET | ✅ Always ready | |
-
----
-
-## Next Steps (Next Session)
-
-### Immediate (Wire Components Into Map)
-1. Add NavRail to left sidebar in Map.tsx
-2. Replace green "+" button with FABMenu (add business / add location / report)
-3. Replace 3D dropdown with SegmentedButton
-4. Add Breadcrumb at top (Bergen → district → street)
-5. Show MapWatermark on map
-
-### Short-term (Hardcoded Colors → Tokens)
-1. Replace all hardcoded rgba in BusinessDetailSheet
-2. Replace all hardcoded rgba in MapWatermark
-3. Replace all hardcoded rgba in StreetViewLayer
-4. Use `--md-sys-state-*` tokens everywhere
-
-### Medium-term (Search & Details)
-1. Wire MD3AdvancedSearchBar into search
-2. Show MD3Card in modal/drawer for business details
-3. Add MD3Skeleton while map loads
-4. Update `document.title` when location/business changes
-
-### Longer-term
-1. Extract OSM graph (`npm run extract:osm`)
-2. Wire LobsterID into POST /api/businesses
-3. Code-split mapillary & maplibre (dynamic import)
-4. Verify MapTiler sprite proxy on production
-
----
-
-## Build & Deploy Workflow
-
-```bash
-# Local development
-npm run dev
-
-# Build before every push (catch TS errors early)
-npm run build:client && npm run build:server
-
-# Commit & push
-git add -A
-git commit -m "feat: description"
-git push origin main
-
-# Render auto-deploys on push
-# Monitor at: https://dashboard.render.com (srv-da77r72d0e5s73dl976g)
+### 1. Search → Fly to Result (10–15 min)
+```typescript
+// In Map.tsx handleSearchSelect:
+const result = searchSuggestions.find(s => s.id === id);
+if (result.lat && result.lon) {
+  mapRef.current?.flyTo({ center: [result.lon, result.lat], zoom: 16 });
+}
 ```
 
-**Critical**: Always build locally first. Broken builds waste Render time & deploy slots.
+### 2. Segmented Button → Routing Mode (10 min)
+Wire the `onChange` handler to set routing mode, pass it to `/api/routing` calls.
+
+### 3. FAB Menu → Show Sheets (15 min)
+Add modal/sheet components for:
+- Add Business form
+- Add Location form
+- Report Issue form
+
+### 4. Basemap Switcher (10 min)
+Connect pill buttons to existing `switchBasemap()` function.
+
+### 5. Terrain Toggle (5 min)
+Re-add the toggle that got removed during cleanup. Call existing `toggleTerrain()`.
 
 ---
 
-## Architectural Constraints
+## 🔧 Key Files & Locations
 
-- VITE_* vars inlined at build time (not runtime)
-- `routing-core/pkg/` committed to repo (Render has no Rust toolchain)
-- Neon DB only via MCP, not direct connections
-- No react-router-dom (pages use onClose callbacks)
-- All fonts self-hosted for privacy
-- MapTiler key: fallback in server proxy (production-safe)
+**Components**
+- `client/src/components/Map.tsx` — Main map, all M3E components
+- `client/src/components/VersionIndicator.tsx`
+- `client/src/components/MapWatermark.tsx`
+- `client/src/components/BusinessDetailSheet.tsx`
 
----
+**API Routes** (server)
+- `server/src/routes/search.ts` — Lat-aware radius search
+- `server/src/routes/businesses.ts` — Get business data
+- `server/src/routes/routing.ts` — OSRM proxy
+- `server/src/routes/maptiler.ts` — MapTiler proxy
 
-## Useful Shortcuts
+**Config**
+- `client/src/m3e.d.ts` — JSX type declarations for M3E web components
+- `client/src/styles/material3-theme.css` — Design tokens
+- `client/src/lib/maptiler.ts` — MapTiler setup & basemap list
 
-| What | Command |
-|------|---------|
-| Check fonts | `grep -r "Google Sans\|font-family" client/src/styles/` |
-| Find hardcoded colors | `grep -r "rgb\|#[0-9a-f]" client/src/components --include="*.tsx" \| grep -v "var(--"` |
-| List all components | `ls client/src/components/*.tsx` |
-| Check API routes | `grep "router\\.get\|router\\.post" server/src/routes/*.ts` |
-| Verify build | `npm run build:client && npm run build:server` |
-| Latest commit | `git log -1 --oneline` |
-
----
-
-## Session Skills Used
-
-- `react-spring-physics` — Spring motion for FABMenu (350ms expand/collapse)
-- `threejs-webgl` — 3D terrain layer (ready, not wired yet)
-- `zero-hallucination-coder` — API fixes verified against Drizzle + Express patterns
-- `universal-scraping-architect` + Firecrawl — M3E docs research (https://matraic.github.io/m3e/)
-- `barba-js` — Smooth page transitions (ready to integrate)
-- `caveman` — Kept response focused, avoided over-documentation
+**Versions**
+- `client/src/lib/versions.ts` — Version number (Argon 1.0.0)
 
 ---
 
-## Memory & Notion
+## 🧠 Things to Remember
 
-- Project memory: `/projects/01a0398a-587a-75e3-aa7b-373d8ae42951/`
-- Notion workspace: Check LobsterMaps project board
-- Transcript: `/mnt/transcripts/2026-09-23-21-00-26-lobstermaps-m3e-component-sprint.txt`
+### Before Every Push
+```bash
+npm run build:client && npm run build:server
+# If either fails, don't push
+git push origin main  # uses GH token from .bashrc
+```
+
+### M3E Web Components (Not React)
+- Lowercase with hyphens: `<m3e-search>`, `<m3e-fab-menu>`
+- JSX support requires type defs in `m3e.d.ts`
+- Events via standard handlers: `onInput`, `onChange`, `onClick`
+- Styling uses CSS custom properties: `var(--md-sys-color-primary)`
+
+### MapTiler Setup
+- Key: `st6o11zRZ5rBnmLDbS6K` (origin-restricted)
+- Proxy at: `/api/maptiler/*` (Express route)
+- Styles loaded from proxy, not direct
+
+### Database (Neon)
+- Project: `floral-silence-23234233`
+- Access via Neon MCP tool, not direct connection
+- Drizzle ORM handles queries
+
+---
+
+## 🐛 Known Issues (Won't Block Progress)
+
+| Issue | Impact | Fix |
+|-------|--------|-----|
+| Hardcoded `rgba()` in some components | Minor styling | Replace with token vars |
+| `document.title` never updates | Can't tell where you are | Add useEffect hook |
+| No auth on POST /api/businesses | Security gap | Add middleware check |
+| Large chunks (maplibre 1MB, mapillary 1MB) | Bundle size | Dynamic import or skip mapillary |
+| OSM graph never extracted | Unused Rust code | Run `npm run extract:osm` on Render |
+
+---
+
+## 📈 What's Already Working
+
+✅ Map renders with MapTiler styles
+✅ Search API returns businesses (lat-aware radius)
+✅ All M3E components render without errors
+✅ TypeScript compilation clean
+✅ Render deployment works (auto-deploys on git push)
+✅ MapTiler proxy routes work
+✅ Neon DB connection stable
+
+---
+
+## 🚀 Next Session Workflow
+
+1. **Read this file first** (you're doing it now)
+2. **Check latest commit** in GitHub
+3. **Run builds locally** to verify state
+4. **Focus on next steps** (search fly, routing wire, FAB actions)
+5. **Update this file** when done, push to GitHub
+
+---
+
+## 💾 Build & Deploy
+
+```bash
+# Local dev
+cd /home/claude/lobster-maps
+npm run build:client && npm run build:server
+# If zero errors, safe to push
+
+# Push (auto-triggers Render deploy)
+git push origin main
+
+# Monitor Render
+# Visit: https://lobster-maps.onrender.com
+# Check: https://dashboard.render.com/services/srv-da77r72d0e5s73dl976g
+```
+
+---
+
+## 📚 Useful URLs
+
+- **Live App**: https://lobster-maps.onrender.com
+- **GitHub**: https://github.com/lobsterbs/lobster-maps
+- **Render Dashboard**: https://dashboard.render.com
+- **Neon Console**: https://console.neon.tech
+- **MapTiler Dashboard**: https://cloud.maptiler.com
+- **Notion Handoff**: https://app.notion.com/p/3e51682f46018146bb81eea76befadc8?pvs=204
+
+---
+
+**End of Handoff Document**
