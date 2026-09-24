@@ -1,15 +1,17 @@
+'use client';
+
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import * as maplibregl from 'maplibre-gl';
 import { type Map as MapLibreMap, type StyleSpecification } from 'maplibre-gl';
-import { Layers, Mountain, Check, Plus, MapPin, AlertCircle } from 'lucide-react';
 import { animated, useSpring, useTransition } from '@react-spring/web';
+import 'maplibre-gl/dist/maplibre-gl.css';
+import '@m3e/react/search';
+import '@m3e/react/nav-rail';
+import '@m3e/react/fab-menu';
+import '@m3e/react/fab';
+import '@m3e/react/segmented-button';
 import VersionIndicator from './VersionIndicator';
-import { MD3NavRail, type MD3NavRailItem } from './MD3NavRail';
-import { MD3FABMenu, type FABMenuAction } from './MD3FABMenu';
-import { MD3SegmentedButton, type SegmentedButtonOption } from './MD3SegmentedButton';
-import { MD3Breadcrumb, type BreadcrumbItem } from './MD3Breadcrumb';
-import { MD3Skeleton, MD3MapSkeleton } from './MD3Skeleton';
 import { MapWatermark } from './MapWatermark';
 import { AppVersion } from '../lib/versions';
 import {
@@ -119,13 +121,9 @@ export function MapCanvas({ onMapReady, onMoveEnd, onError, onStyleReload }: Pro
   const [terrain, setTerrain] = useState(false);
   const [panelOpen, setPanelOpen] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [selectedMode, setSelectedMode] = useState<'driving' | 'transit' | 'walking'>('driving');
-  const [breadcrumbItems, setBreadcrumbItems] = useState<BreadcrumbItem[]>([
-    { id: 'bergen', label: 'Bergen', onClick: () => {
-      mapRef.current?.flyTo({ center: BERGEN, zoom: 15 });
-    }},
-  ]);
-  const [fabMenuOpen, setFabMenuOpen] = useState(false);
+  const [selectedMode, setSelectedMode] = useState<string>('driving');
+  const [searchValue, setSearchValue] = useState('');
+  const [searchSuggestions, setSearchSuggestions] = useState<Array<{ id: string; label: string; desc?: string }>>([]);
 
   // Refs mirror state so the style-reload handler always reads the
   // current selection rather than the value captured when it was bound.
@@ -375,186 +373,155 @@ export function MapCanvas({ onMapReady, onMoveEnd, onError, onStyleReload }: Pro
     config: { tension: 320, friction: 26 },
   });
 
-  // M3E NavRail items (categories + saved places)
-  const navRailItems: MD3NavRailItem[] = [
-    { id: 'map', icon: <MapPin size={24} />, label: 'Map' },
-    { id: 'nearby', icon: <AlertCircle size={24} />, label: 'Nearby' },
-  ];
+  const handleSearchInput = async (query: string) => {
+    setSearchValue(query);
+    if (query.length < 2) {
+      setSearchSuggestions([]);
+      return;
+    }
 
-  // M3E FAB Menu actions (add business, add location, report)
-  const fabMenuActions: FABMenuAction[] = [
-    { id: 'add-business', icon: <Plus size={20} />, label: 'Add Business', onClick: () => console.log('Add business') },
-    { id: 'add-location', icon: <MapPin size={20} />, label: 'Add Location', onClick: () => console.log('Add location') },
-    { id: 'report', icon: <AlertCircle size={20} />, label: 'Report Issue', onClick: () => console.log('Report') },
-  ];
+    try {
+      const res = await fetch('/api/search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query,
+          userLat: mapRef.current?.getCenter().lat ?? BERGEN[1],
+          userLon: mapRef.current?.getCenter().lng ?? BERGEN[0],
+          radius: 5000,
+        }),
+      });
+      const data = await res.json();
+      if (data.results) {
+        setSearchSuggestions(
+          data.results.slice(0, 8).map((r: any) => ({
+            id: r.id,
+            label: r.name,
+            desc: r.type || 'Location',
+          }))
+        );
+      }
+    } catch (err) {
+      console.warn('Search error:', err);
+    }
+  };
 
-  // M3E Segmented Button options (driving, transit, walking)
-  const modeOptions: SegmentedButtonOption[] = [
-    { id: 'driving', label: 'Car', icon: <Layers size={18} /> },
-    { id: 'transit', label: 'Transit', icon: <Mountain size={18} /> },
-    { id: 'walking', label: 'Walk', icon: <Check size={18} /> },
-  ];
+  const handleSearchSelect = (id: string) => {
+    const result = searchSuggestions.find((s) => s.id === id);
+    if (result) {
+      // TODO: Fly to result location
+      setSearchValue(result.label);
+      setSearchSuggestions([]);
+    }
+  };
 
   return (
-    <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'row' }}>
-      {/* M3E NavRail (left sidebar) */}
-      <MD3NavRail
-        items={navRailItems}
-        selectedId="map"
-        onSelect={(id) => console.log('NavRail:', id)}
-        fab={<button style={{ width: 56, height: 56, borderRadius: 'var(--md-sys-shape-corner-medium)', backgroundColor: 'var(--md-sys-color-primary)', color: 'var(--md-sys-color-on-primary)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24 }} title="Add"><Plus size={24} /></button>}
-        fabPosition="bottom"
-      />
-
-      {/* Main map container + overlays */}
-      <div style={{ flex: 1, position: 'relative' }}>
-        {/* Map canvas */}
-        <div ref={containerRef} style={{ position: 'absolute', inset: 0 }} />
-
-        {/* Loading skeleton overlay */}
-        {loading && <MD3MapSkeleton />}
-
-        {/* M3E Breadcrumb (top) */}
-        <div style={{ position: 'absolute', top: 16, left: 80, zIndex: 10 }}>
-          <MD3Breadcrumb items={breadcrumbItems} />
-        </div>
-
-        {/* M3E SegmentedButton (mode toggle) */}
-        <div style={{ position: 'absolute', top: 16, right: 200, zIndex: 10 }}>
-          <MD3SegmentedButton
-            options={modeOptions}
-            selectedId={selectedMode}
-            onSelect={(id: string) => setSelectedMode(id as 'driving' | 'transit' | 'walking')}
-            multiSelect={false}
-          />
-        </div>
-
-        {/* Version indicator */}
-        <VersionIndicator />
-
-        {/* M3 control stack (basemap, 3D terrain toggles) */}
-        <div style={controlStackStyle}>
-          <IconToggle
-            icon={Layers}
-            label="Basemap"
-            active={panelOpen}
-            disabled={!hasMapTiler}
-            onClick={() => setPanelOpen((o) => !o)}
-          />
-          <IconToggle
-            icon={Mountain}
-            label="3D terrain"
-            active={terrain}
-            disabled={!hasMapTiler}
-            onClick={toggleTerrain}
-          />
-        </div>
-
-        {/* M3 horizontal basemap pill switcher */}
-        {pillTransition(
-          (style, open) =>
-            open && (
-              <animated.div 
-                style={{ ...style, ...pillContainerStyle }}
-                role="radiogroup"
-                aria-label="Basemap options"
-                onKeyDown={handleBasemapKeyDown}
+    <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column' }}>
+      {/* M3E SearchBar (top, full width) */}
+      <div style={{ padding: '16px', zIndex: 50, backgroundColor: 'var(--md-sys-color-surface)', borderBottom: '1px solid var(--md-sys-color-outline-variant)' }}>
+        <m3e-search 
+          placeholder="Search businesses, streets..."
+          onInput={(e: any) => handleSearchInput(e.currentTarget.value)}
+        />
+        {searchSuggestions.length > 0 && (
+          <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 4 }}>
+            {searchSuggestions.map((s) => (
+              <div
+                key={s.id}
+                onClick={() => handleSearchSelect(s.id)}
+                style={{
+                  padding: '12px',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  backgroundColor: 'var(--md-sys-color-surface-container)',
+                  fontSize: '14px',
+                }}
               >
-                {BASEMAPS.map((b) => {
-                  const selected = b.id === basemap;
-                  return (
-                    <button
-                      key={b.id}
-                      onClick={() => switchBasemap(b.id)}
-                      title={b.hint}
-                      role="radio"
-                      aria-checked={selected}
-                      tabIndex={selected ? 0 : -1}
-                      style={{
-                        ...pillStyle,
-                        background: selected ? EMERALD : 'rgba(30,30,30,0.6)',
-                        color: selected ? '#fff' : TEXT_DIM,
-                        borderColor: selected ? EMERALD : 'rgba(255,255,255,0.12)',
-                      }}
-                    >
-                      {b.label}
-                    </button>
-                  );
-                })}
-              </animated.div>
-            )
+                <div style={{ fontWeight: 500 }}>{s.label}</div>
+                {s.desc && <div style={{ fontSize: '12px', color: 'var(--md-sys-color-on-surface-variant)' }}>{s.desc}</div>}
+              </div>
+            ))}
+          </div>
         )}
+      </div>
 
-        {/* M3E FAB Menu (main action) */}
-        <div style={{ position: 'absolute', bottom: 24, right: 24, zIndex: 20 }}>
-          <MD3FABMenu
-            icon={<Plus size={24} />}
-            label="Add"
-            actions={fabMenuActions}
-            onActionClick={(id: string) => console.log('FAB action:', id)}
-            showLabels={true}
-          />
+      {/* Main content flex row */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'row', minHeight: 0 }}>
+        {/* M3E NavRail (left sidebar) */}
+        <m3e-nav-rail style={{ borderRight: '1px solid var(--md-sys-color-outline-variant)' }}>
+          <m3e-nav-rail-item label="Map" selected />
+          <m3e-nav-rail-item label="Nearby" />
+          <m3e-fab slot="fab" />
+        </m3e-nav-rail>
+
+        {/* Map container */}
+        <div style={{ flex: 1, position: 'relative' }}>
+          <div ref={containerRef} style={{ position: 'absolute', inset: 0 }} />
+
+          {/* Top right controls: Mode toggle */}
+          <div style={{ position: 'absolute', top: 16, right: 16, zIndex: 10 }}>
+            <m3e-segmented-button value={selectedMode} onChange={(e: any) => setSelectedMode(e.currentTarget.value)}>
+              <m3e-segmented-button-segment value="driving">Car</m3e-segmented-button-segment>
+              <m3e-segmented-button-segment value="transit">Transit</m3e-segmented-button-segment>
+              <m3e-segmented-button-segment value="walking">Walk</m3e-segmented-button-segment>
+            </m3e-segmented-button>
+          </div>
+
+          {/* Bottom controls: FAB Menu */}
+          <div style={{ position: 'absolute', bottom: 24, right: 24, zIndex: 20 }}>
+            <m3e-fab-menu>
+              <m3e-fab slot="trigger" />
+              <m3e-fab-menu-action>Add Business</m3e-fab-menu-action>
+              <m3e-fab-menu-action>Add Location</m3e-fab-menu-action>
+              <m3e-fab-menu-action>Report Issue</m3e-fab-menu-action>
+            </m3e-fab-menu>
+          </div>
+
+          {/* Version indicator & Watermark */}
+          <VersionIndicator />
+          <MapWatermark version={AppVersion.display} />
+
+          {/* Basemap switcher */}
+          {pillTransition(
+            (style, open) =>
+              open && (
+                <animated.div 
+                  style={{ ...style, ...pillContainerStyle }}
+                  role="radiogroup"
+                  aria-label="Basemap options"
+                  onKeyDown={handleBasemapKeyDown}
+                >
+                  {BASEMAPS.map((b) => {
+                    const selected = b.id === basemap;
+                    return (
+                      <button
+                        key={b.id}
+                        onClick={() => switchBasemap(b.id)}
+                        title={b.hint}
+                        role="radio"
+                        aria-checked={selected}
+                        tabIndex={selected ? 0 : -1}
+                        style={{
+                          ...pillStyle,
+                          background: selected ? 'var(--md-sys-color-primary)' : 'rgba(30,30,30,0.6)',
+                          color: selected ? 'var(--md-sys-color-on-primary)' : 'var(--md-sys-color-on-surface-variant)',
+                          borderColor: selected ? 'var(--md-sys-color-primary)' : 'rgba(255,255,255,0.12)',
+                        }}
+                      >
+                        {b.label}
+                      </button>
+                    );
+                  })}
+                </animated.div>
+              )
+          )}
         </div>
-
-        {/* M3E Watermark (version overlay) */}
-        <MapWatermark version={AppVersion.display} />
       </div>
     </div>
   );
 }
 
-// M3 semantic colors - these are token values from material3-theme.css.
-// CSS variable names: --md-sys-color-primary and --md-sys-color-text-dim
-// Note: dynamic theme switching would require reading these from CSS at runtime
-// via getComputedStyle() for proper dark/light mode support.
-const EMERALD = '#10b981'; // --md-sys-color-primary
-const TEXT_DIM = '#94a3b8'; // --md-sys-color-text-dim
 
-type IconToggleProps = {
-  // lucide-react icon component
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  icon: any;
-  label: string;
-  active: boolean;
-  disabled: boolean;
-  onClick: () => void;
-};
-
-function IconToggle({ icon: Icon, label, active, disabled, onClick }: IconToggleProps) {
-  const style = useSpring({
-    background: active ? EMERALD : 'rgba(21,21,21,0.72)',
-    color: active ? '#ffffff' : TEXT_DIM,
-    config: { tension: 300, friction: 26 },
-  });
-
-  return (
-    <animated.button
-      onClick={onClick}
-      disabled={disabled}
-      title={disabled ? `${label} needs a MapTiler key` : label}
-      aria-label={label}
-      aria-pressed={active}
-      style={{
-        ...style,
-        width: 48,
-        height: 48,
-        borderRadius: 16,
-        border: '1px solid rgba(255,255,255,0.08)',
-        backdropFilter: 'blur(20px) saturate(180%)',
-        WebkitBackdropFilter: 'blur(20px) saturate(180%)',
-        boxShadow: '0 8px 24px rgba(0,0,0,0.35)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: 0,
-        cursor: disabled ? 'not-allowed' : 'pointer',
-        opacity: disabled ? 0.4 : 1,
-      }}
-    >
-      <Icon size={20} strokeWidth={2} />
-    </animated.button>
-  );
-}
 
 const controlStackStyle: CSSProperties = {
   position: 'absolute',
