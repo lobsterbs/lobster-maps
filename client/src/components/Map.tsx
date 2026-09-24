@@ -465,22 +465,69 @@ export function MapCanvas({ onMapReady, onMoveEnd, onError, onStyleReload }: Pro
         <div style={{ flex: 1, position: 'relative' }}>
           <div ref={containerRef} style={{ position: 'absolute', inset: 0 }} />
 
-          {/* Top right controls: Mode toggle */}
-          <div style={{ position: 'absolute', top: 16, right: 16, zIndex: 10 }}>
+          {/* Top right controls: Mode toggle + Terrain */}
+          <div style={{ position: 'absolute', top: 16, right: 16, zIndex: 10, display: 'flex', flexDirection: 'column', gap: 12 }}>
             <m3e-segmented-button value={selectedMode} onChange={(e: any) => setSelectedMode(e.currentTarget.value)}>
               <m3e-segmented-button-segment value="driving">Car</m3e-segmented-button-segment>
               <m3e-segmented-button-segment value="transit">Transit</m3e-segmented-button-segment>
               <m3e-segmented-button-segment value="walking">Walk</m3e-segmented-button-segment>
             </m3e-segmented-button>
+            <button
+              onClick={toggleTerrain}
+              title={terrain ? 'Disable 3D terrain' : 'Enable 3D terrain'}
+              style={{
+                width: 48,
+                height: 48,
+                borderRadius: 'var(--md-sys-shape-corner-medium)',
+                backgroundColor: terrain ? 'var(--md-sys-color-primary)' : 'rgba(30,30,30,0.6)',
+                color: terrain ? 'var(--md-sys-color-on-primary)' : 'var(--md-sys-color-on-surface)',
+                border: '1px solid rgba(255,255,255,0.12)',
+                cursor: 'pointer',
+                fontSize: 20,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              ⛰️
+            </button>
+            <button
+              onClick={() => setPanelOpen((o) => !o)}
+              title="Switch basemap style"
+              style={{
+                width: 48,
+                height: 48,
+                borderRadius: 'var(--md-sys-shape-corner-medium)',
+                backgroundColor: panelOpen ? 'var(--md-sys-color-primary)' : 'rgba(30,30,30,0.6)',
+                color: panelOpen ? 'var(--md-sys-color-on-primary)' : 'var(--md-sys-color-on-surface)',
+                border: '1px solid rgba(255,255,255,0.12)',
+                cursor: 'pointer',
+                fontSize: 20,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              🗺️
+            </button>
           </div>
 
           {/* Bottom controls: FAB Menu */}
           <div style={{ position: 'absolute', bottom: 24, right: 24, zIndex: 20 }}>
             <m3e-fab-menu>
               <m3e-fab slot="trigger" />
-              <m3e-fab-menu-action>Add Business</m3e-fab-menu-action>
-              <m3e-fab-menu-action>Add Location</m3e-fab-menu-action>
-              <m3e-fab-menu-action>Report Issue</m3e-fab-menu-action>
+              <m3e-fab-menu-action onClick={() => {
+                console.log('Add Business');
+                // TODO: Open add business modal
+              }}>Add Business</m3e-fab-menu-action>
+              <m3e-fab-menu-action onClick={() => {
+                console.log('Add Location');
+                // TODO: Open add location modal
+              }}>Add Location</m3e-fab-menu-action>
+              <m3e-fab-menu-action onClick={() => {
+                console.log('Report Issue');
+                // TODO: Open report issue modal
+              }}>Report Issue</m3e-fab-menu-action>
             </m3e-fab-menu>
           </div>
 
