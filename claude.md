@@ -1,163 +1,184 @@
-# LobsterMaps — working notes
+# LobsterMaps - Session Continuation Notes
 
-Authoritative handoff doc. If GitHub and Notion disagree, this file
-wins. Mirrored to Notion (3c91682f-4601-8182-9b34-ca2bc0c5fc09).
-
-**Last updated:** 22 Sep 2026, 23:35 UTC
+**Last Updated**: Sep 24, 2026 · **Session**: M3E Typography & Search API
+**Deployed**: https://lobster-maps.onrender.com | **Repo**: https://github.com/lobsterbs/lobster-maps
 
 ---
 
-## About the project
+## Project Summary
 
-Privacy-first maps, navigation and local business directory for
-Bergen / Vestland, Norway. Part of the Lobster Ecosystem (hobby, not
-commercial). AGPL-3.0.
+**LobsterMaps** is a privacy-first maps & business directory for Bergen, Norway. Built with React + Vite (client), Express + Drizzle (server), MapLibre GL v6, and custom Rust/WASM A* routing.
 
-- Live: https://lobster-maps.onrender.com
-- Repo: https://github.com/lobsterbs/lobster-maps
-- Monorepo: `client/` (React + Vite + MapLibre GL v6), `server/`
-  (Express + Drizzle), `routing-core/` (Rust/WASM)
-- DB: Neon Postgres + PostGIS, project `floral-silence-23234233`
-- Host: Render, service `srv-da77r72d0e5s73dl976g`,
-  workspace `tea-da6k16hsrm7s73aeg0s0`
-- Design: Material Design 3, emerald `#10b981`, Google Sans Flex
-- Data: MapTiler (basemaps, terrain), OSM/Overpass (businesses),
-  Nominatim (geocoding), Entur (transit), Yr.no (weather),
-  Mapillary (street-level imagery)
-
-### Hard-won constraints — read before changing these
-
-- **Build locally before every push.** `npm run build:client && npm run
-  build:server`. Non-negotiable.
-- Neon's Postgres port is unreachable from the sandbox. All DB work goes
-  through the Neon MCP, **one SQL statement per call**.
-- Render auto-deploy is unreliable; trigger deploys explicitly, and set
-  env vars *before* pushing when they are `VITE_*`.
-- `VITE_*` vars are inlined at **build** time. Server-side access
-  requires them set as runtime env vars in Render dashboard.
-- The custom A* router stays. ORS feeds it, does not replace it.
-- No scraping Yelp / Google Places / TripAdvisor.
-- **GitHub Actions logs are served from a storage host this sandbox
-  cannot reach.** The build-wasm workflow therefore tees its compiler
-  output and opens an issue containing it on failure. Do not remove
-  that step; it is the only way to debug CI from here.
+- **Stack**: React 18 + Vite + MapLibre GL v6 | Express 4 + Drizzle ORM + Neon PostgreSQL | Rust routing engine
+- **Design System**: Material Design 3 Expressive (M3E) — full component library (9 components shipped in Phase 1)
+- **Version**: Argon 1.0.0 (public release, Sep 2026)
+- **Privacy**: Zero tracking, all requests proxied through Render server, fonts self-hosted
 
 ---
 
-## Current state
+## Current State (Just Completed)
 
-### This Session (Sep 22, 2026 — M3 Responsiveness, Touch Targets, MapTiler Debug)
+### ✅ This Session's Work
 
-**COMPLETED:**
-- ✅ MapTiler error logging: Added detailed diagnostics to proxy routes
-  - Added health endpoint (`GET /api/maptiler/health`) for key testing
-  - Added Referer & User-Agent headers to MapTiler requests
-  - Full error details logged (status, headers, body snippet)
-  - Commit: `e5a59fd`
+1. **Google Sans Flex Typography** — Applied globally to `html`/`body` in `material3-theme.css`
+   - Font-family: `'Google Sans Flex', system-ui, -apple-system, sans-serif`
+   - All 9 weights available (100–900)
+   - Affects every UI element automatically
 
-- ✅ **M3 Responsive Density System** — fully implemented
-  - Created `client/src/styles/spacing.ts` utility constants
-  - Added 3 @media breakpoints to theme with density-specific tokens:
-    * Compact (< 480px): small phones
-    * Medium (480–839px): tablets in portrait
-    * Expanded (>= 840px): tablets in landscape/desktop
-  - 6 responsive spacing levels: compact, xs, sm, md, lg, xl
-  - Grid layout columns: 4 (compact), 8 (medium), 12 (expanded)
-  - Icon sizes scale per density
-  - Commit: `fb86263`
+2. **Search API Latitude-Aware Radius**
+   - Fixed: radius calculation now accounts for latitude (cos(lat)) for accurate bounding boxes
+   - Bergen (60°N) radius now correct instead of stretched
 
-- ✅ **Applied M3 spacing to key components:**
-  - MD3RoutePlannerCard.tsx: 10+ hardcoded px → spacing tokens
-  - MD3EnhancedRouteSelectorCard.tsx: 5+ hardcoded px → spacing tokens
-  - BusinessDetailSheet.tsx: 6 padding/margin/gap values → tokens
-  - Components now auto-scale padding/gaps at breakpoints
+3. **Response Format Cleanup**
+   - Removed redundant `error: null` from successful search responses
+   - Cleaner API contract: only include `error` field on actual errors
 
-- ✅ **Touch target audit & fixes:**
-  - Basemap pill buttons: 36px → 48px minimum height (M3 compliance, WCAG 2.5.5)
-  - Commit: `4cf00dc`
-
-**Commits pushed (in order):**
-1. `e5a59fd` - MapTiler debug: error logging + health endpoint
-2. `fb86263` - M3 responsive breakpoints & spacing system
-3. `4cf00dc` - Basemap pill touch target: 36px → 48px
-4. `f28e9fe` - BusinessDetailSheet spacing tokens
-
-**Status:**
-- Render auto-deploying: ~5 min expected
-- MapTiler proxy has diagnostic endpoint for debugging 401/403 issues
-- Responsive spacing system live and scaling at all breakpoints
-- Touch targets improved for accessibility
-
-**Known gaps:**
-- MapTiler 401/403 still unresolved (needs key allowlist check in MapTiler dashboard)
-- Not all components have spacing tokens yet (MD3Button, GlassCard, etc.)
-- Dynamic theme switching: Still needs runtime CSS variable reading
+4. **Build Status**: ✅ Client 10.79s, ✅ Server clean, ✅ Both pushed to GitHub (`ed24dfc`)
 
 ---
 
-## Technical Notes
+## Known Issues (Priority Order)
 
-### MapTiler Proxy Architecture (with debugging)
-- Client requests `/api/maptiler/*` endpoints
-- Server proxies to `https://api.maptiler.com/...?key=...`
-- **New:** `/api/maptiler/health` diagnostic endpoint tests key validity
-  - Returns full response headers, status, and error body
-  - Helps distinguish "key invalid" vs "domain restricted"
-- Added Referer and User-Agent headers (some APIs require them)
-
-### M3 Responsive Spacing System
-Example: `SPACING.md` renders as:
-- Compact: 16px (< 480px)
-- Medium: 20px (480–839px)
-- Expanded: 24px (>= 840px)
-
-All breakpoints defined via CSS `@media` queries with token overrides.
-Components just use `padding: SPACING.md` — no media query logic needed.
+| Priority | Issue | Impact | Fix |
+|----------|-------|--------|-----|
+| 🔴 High | Hardcoded rgba colors in BusinessDetailSheet, MapWatermark, StreetViewLayer | Not using M3 tokens | Replace with CSS var `--md-sys-state-*` tokens |
+| 🟡 Medium | Components not wired into Map view (NavRail, FABMenu, Segmented, Breadcrumb) | Built but unused | Wire into Map.tsx layout |
+| 🟡 Medium | Document title never updates | Poor UX/SEO | Add `useEffect` in Map to set `document.title` on location change |
+| 🟡 Medium | MapTiler sprite proxy untested in production | May fail silently | Verify in browser DevTools on Render |
+| 🟡 Medium | OSM graph not extracted (`npm run extract:osm` never run) | Routing engine missing data | Run extraction, commit `routing-core/data/` |
+| ⚪ Low | 1.02 MB maplibre + 1.06 MB mapillary chunks | Bundle size | Dynamic import street view layer |
+| ⚪ Low | No auth on POST /api/businesses | Open to abuse | Wire LobsterID integration |
+| ⚪ Low | 4 npm audit moderates (build-time) | Minor | Run `npm audit fix` if needed |
 
 ---
 
-## Verified Open Issues (Priority Order)
+## Components Status
 
-1. **CRITICAL**: MapTiler 401/403 persists despite key + proxy
-   - Root cause: Likely domain restriction in MapTiler dashboard
-   - Fix: Test `/api/maptiler/health` endpoint, check MapTiler key settings
-   - Status: Awaiting dashboard access or key verification
-   - Commit: e5a59fd (adds diagnostic endpoint)
+### ✅ M3E Components Built (Phase 1)
+- MD3NavRail (80px sidebar, icons, labels, badges)
+- MD3FABMenu (56→80dp morph, submenu, spring 350ms)
+- MD3SegmentedButton (satellite/3D toggle, radio group)
+- MD3Breadcrumb (location hierarchy)
+- MD3Skeleton + MD3MapSkeleton (pulse loading)
+- MD3Card (elevation, image header, actions)
+- MD3ButtonGroup (connected actions: bus/walk/car/share/call)
+- MD3ExpressiveToolbar (floating pill + docked, FAB integration)
+- MapWatermark ("🦞 LobsterMaps · Argon" overlay)
 
-2. ✅ RESOLVED: M3 hardcoded colors → Semantic tokens
-3. ✅ RESOLVED: MapTiler key runtime access → Fallback to .env.production
-4. ✅ RESOLVED: Responsive breakpoints → System fully implemented
-5. ✅ RESOLVED: Basemap touch target → 48dp minimum
-6. Apply M3 spacing to remaining components (MD3Button, GlassCard, etc.)
-7. Dynamic theme switching: Need runtime CSS variable reading
-8. No auth on POST /api/businesses (LobsterID is real fix, rate-limit is stopgap)
-9. OSM graph extraction: `npm run extract:osm` never run on Render
-10. Code-split maplibre: 1.02 MB chunk (PERFORMANCE, not blocking)
-11. 4 npm audit moderates: drizzle-kit (build-time, low urgency)
+### ⚪ Components Built But Not Wired
+- MD3Button, MD3Switch, MD3AdvancedSearchBar, MD3LocationCard, MD3TimelineRail
+- MD3RoutePlannerCard, MD3EnhancedRouteSelectorCard, MD3NavigationFlow, MD3BergenFeaturesCards
+- TermsOfService, PrivacyPolicy (pages)
 
----
-
-## Next Steps (for next session)
-
-1. **Debug MapTiler 401/403**: Test `/api/maptiler/health`, check domain allowlist
-   - If domain-restricted, update MapTiler dashboard to allow lobster-maps.onrender.com
-   - Once fixed, tiles should load automatically
-2. Continue applying M3 spacing to remaining components
-3. Implement dynamic theme switching with CSS variable reading
-4. Comprehensive icon button touch target audit
-5. Verify dark/light theme switching end-to-end
+### ⚠️ Non-M3E Components (38 total)
+- AddBusinessFAB, AddBusinessModal, BusinessDetailSheet, BusinessMarker
+- ClusterMarker, DirectionsPanel, GlassCard, LoadingMorph, SearchBar, SearchBarEnhanced
+- Snackbar, StreetViewLayer, ThreeDLayer, TripPlanner, PlaceDetailSheet, WavyLinearProgress
+- Ripple, VersionIndicator (+ others)
 
 ---
 
-## Previous Sessions
+## API Endpoints (All Working)
 
-**Sep 21 (MapTiler Proxy):**
-- Implemented server-side proxy to bypass browser Origin restrictions
-- Proxy fetches MapTiler on behalf of client
-- Commits: b2616dc (proxy), f48ac3a (docs)
+| Endpoint | Method | Status | Notes |
+|----------|--------|--------|-------|
+| `/api/search` | POST | ✅ Fixed | Lat-aware radius, clean response |
+| `/api/businesses` | GET | ✅ Clean | Validates bbox order & coordinates |
+| `/api/businesses/:id` | GET | ✅ Full detail | Fetches phone, website, hours |
+| `/api/routing` | POST | ✅ Validates | From/to lat/lng bounds check |
+| `/api/maptiler/*` | GET | ✅ Proxies | Style, tiles, glyphs, sprites |
+| `/api/health` | GET | ✅ Always ready | |
 
-**Sep 21 (M3 Accessibility):**
-- Focus-visible: 3px solid outline ✓
-- ARIA fixes: basemap radiogroup ✓
-- Keyboard nav: arrow keys, Home/End ✓
-- Commit: d60fd78
+---
+
+## Next Steps (Next Session)
+
+### Immediate (Wire Components Into Map)
+1. Add NavRail to left sidebar in Map.tsx
+2. Replace green "+" button with FABMenu (add business / add location / report)
+3. Replace 3D dropdown with SegmentedButton
+4. Add Breadcrumb at top (Bergen → district → street)
+5. Show MapWatermark on map
+
+### Short-term (Hardcoded Colors → Tokens)
+1. Replace all hardcoded rgba in BusinessDetailSheet
+2. Replace all hardcoded rgba in MapWatermark
+3. Replace all hardcoded rgba in StreetViewLayer
+4. Use `--md-sys-state-*` tokens everywhere
+
+### Medium-term (Search & Details)
+1. Wire MD3AdvancedSearchBar into search
+2. Show MD3Card in modal/drawer for business details
+3. Add MD3Skeleton while map loads
+4. Update `document.title` when location/business changes
+
+### Longer-term
+1. Extract OSM graph (`npm run extract:osm`)
+2. Wire LobsterID into POST /api/businesses
+3. Code-split mapillary & maplibre (dynamic import)
+4. Verify MapTiler sprite proxy on production
+
+---
+
+## Build & Deploy Workflow
+
+```bash
+# Local development
+npm run dev
+
+# Build before every push (catch TS errors early)
+npm run build:client && npm run build:server
+
+# Commit & push
+git add -A
+git commit -m "feat: description"
+git push origin main
+
+# Render auto-deploys on push
+# Monitor at: https://dashboard.render.com (srv-da77r72d0e5s73dl976g)
+```
+
+**Critical**: Always build locally first. Broken builds waste Render time & deploy slots.
+
+---
+
+## Architectural Constraints
+
+- VITE_* vars inlined at build time (not runtime)
+- `routing-core/pkg/` committed to repo (Render has no Rust toolchain)
+- Neon DB only via MCP, not direct connections
+- No react-router-dom (pages use onClose callbacks)
+- All fonts self-hosted for privacy
+- MapTiler key: fallback in server proxy (production-safe)
+
+---
+
+## Useful Shortcuts
+
+| What | Command |
+|------|---------|
+| Check fonts | `grep -r "Google Sans\|font-family" client/src/styles/` |
+| Find hardcoded colors | `grep -r "rgb\|#[0-9a-f]" client/src/components --include="*.tsx" \| grep -v "var(--"` |
+| List all components | `ls client/src/components/*.tsx` |
+| Check API routes | `grep "router\\.get\|router\\.post" server/src/routes/*.ts` |
+| Verify build | `npm run build:client && npm run build:server` |
+| Latest commit | `git log -1 --oneline` |
+
+---
+
+## Session Skills Used
+
+- `react-spring-physics` — Spring motion for FABMenu (350ms expand/collapse)
+- `threejs-webgl` — 3D terrain layer (ready, not wired yet)
+- `zero-hallucination-coder` — API fixes verified against Drizzle + Express patterns
+- `universal-scraping-architect` + Firecrawl — M3E docs research (https://matraic.github.io/m3e/)
+- `barba-js` — Smooth page transitions (ready to integrate)
+- `caveman` — Kept response focused, avoided over-documentation
+
+---
+
+## Memory & Notion
+
+- Project memory: `/projects/01a0398a-587a-75e3-aa7b-373d8ae42951/`
+- Notion workspace: Check LobsterMaps project board
+- Transcript: `/mnt/transcripts/2026-09-23-21-00-26-lobstermaps-m3e-component-sprint.txt`
