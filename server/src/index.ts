@@ -7,6 +7,8 @@ import { fileURLToPath } from 'node:url';
 import type { Request, Response, NextFunction } from 'express';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import businessesRouter from './routes/businesses.js';
+import locationsRouter from './routes/locations.js';
+import issuesRouter from './routes/issues.js';
 import geocodeRouter from './routes/geocode.js';
 import routingRouter from './routes/routing.js';
 import searchRouter from './routes/search.js';
@@ -127,6 +129,8 @@ async function startServer() {
 
     // Wire routes
     app.use('/api/businesses', businessesRouter);
+    app.use('/api/locations', locationsRouter);
+    app.use('/api/issues', issuesRouter);
     app.use('/api/geocode', geocodeRouter);
     app.use('/api/route', routingRouter);
     app.use('/api/maptiler', maptilerRouter); // MapTiler proxy (solves Origin header issue)

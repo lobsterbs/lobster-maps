@@ -30,6 +30,38 @@ export const businesses = pgTable(
 export type Business = typeof businesses.$inferSelect;
 export type NewBusiness = typeof businesses.$inferInsert;
 
+export const locations = pgTable(
+  'locations',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    name: text('name').notNull(),
+    description: text('description'),
+    latitude: doublePrecision('latitude').notNull(),
+    longitude: doublePrecision('longitude').notNull(),
+    verified: boolean('verified').default(false).notNull(),
+    submittedAt: timestamp('submitted_at', { withTimezone: true }).defaultNow().notNull(),
+  }
+);
+
+export type Location = typeof locations.$inferSelect;
+export type NewLocation = typeof locations.$inferInsert;
+
+export const issues = pgTable(
+  'issues',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    type: text('type').notNull(), // Road damage, Blocked path, Missing data, Business info wrong, Other
+    description: text('description').notNull(),
+    latitude: doublePrecision('latitude').notNull(),
+    longitude: doublePrecision('longitude').notNull(),
+    resolved: boolean('resolved').default(false).notNull(),
+    submittedAt: timestamp('submitted_at', { withTimezone: true }).defaultNow().notNull(),
+  }
+);
+
+export type Issue = typeof issues.$inferSelect;
+export type NewIssue = typeof issues.$inferInsert;
+
 // Tracks which coarse grid cells (see server/src/lib/liveOverpass.ts)
 // have recently had a live Overpass query run for them, so panning
 // around the same neighborhood doesn't trigger a fresh Overpass call
