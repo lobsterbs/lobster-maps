@@ -1,0 +1,163 @@
+import { useState } from 'react';
+import { animated, useTransition } from '@react-spring/web';
+import '@m3e/react/dialog';
+import '@m3e/react/heading';
+import '@m3e/react/button';
+import '@m3e/react/form-field';
+import '@m3e/react/divider';
+import { WavyLinearProgress } from './WavyLinearProgress';
+
+type Props = {
+  open: boolean;
+  onClose: () => void;
+  mapCenter: [number, number]; // [lng, lat]
+};
+
+export function AddLocationModal({ open, onClose, mapCenter }: Props) {
+  const [form, setForm] = useState({ name: '', description: '', lat: mapCenter[1], lon: mapCenter[0] });
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const transition = useTransition(open, {
+    from: { opacity: 0, transform: 'translateY(24px) scale(0.96)' },
+    enter: { opacity: 1, transform: 'translateY(0px) scale(1)' },
+    leave: { opacity: 0, transform: 'translateY(24px) scale(0.96)' },
+    config: { tension: 280, friction: 24 },
+  });
+
+  const handleSubmit = async () => {
+    setSubmitting(true);
+    setError(null);
+    try {
+      const res = await fetch('/api/locations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: form.name,
+          description: form.description || undefined,
+          latitude: form.lat,
+          longitude: form.lon,
+        }),
+      });
+      if (!res.ok) throw new Error('Failed to add location');
+      setForm({ name: '', description: '', lat: mapCenter[1], lon: mapCenter[0] });
+      onClose();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Something went wrong');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return transition(
+    (style, item) =>
+      item && (
+        <animated.div
+          style={{
+            ...style,
+            position: 'fixed',
+            inset: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 101,
+            pointerEvents: open ? 'auto' : 'none',
+          }}
+        >
+          <animated.div
+            onClick={onClose}
+            style={{
+              position: 'absolute',
+              inset: 0,
+              backgroundColor: 'rgba(0, 0, 0, 0.32)',
+              zIndex: 0,
+            }}
+          />
+
+          <m3e-dialog
+            open={open}
+            onClose={onClose}
+            style={{
+              zIndex: 1,
+              '--md-dialog-container-max-width': '480px',
+              '--md-dialog-container-inset-block-start': '24px',
+            } as any}
+          >
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', padding: '24px' }}>
+              <m3e-heading type="headline-medium">Add Location</m3e-heading>
+
+              <m3e-form-field>
+                <label htmlFor="loc-name">Location name</label>
+                <input
+                  id="loc-name"
+                  autoFocus
+                  placeholder="e.g., Hidden viewpoint"
+                  value={form.name}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  style={inputStyle}
+                />
+              </m3e-form-field>
+
+              <m3e-form-field>
+                <label htmlFor="loc-desc">Description (optional)</label>
+                <textarea
+                  id="loc-desc"
+                  placeholder="Why is this place worth visiting?"
+                  value={form.description}
+                  onChange={(e) => setForm({ ...form, description: e.target.value })}
+                  style={{ ...inputStyle, minHeight: '80px', resize: 'vertical' }}
+                />
+              </m3e-form-field>
+
+              <m3e-form-field>
+                <label>Coordinates (auto-filled from map center)</label>
+                <div style={{ fontSize: '12px', color: 'var(--md-sys-color-on-surface-variant)' }}>
+                  Lat: {form.lat.toFixed(4)} | Lon: {form.lon.toFixed(4)}
+                </div>
+              </m3e-form-field>
+
+              {error && (
+                <p style={{ color: 'var(--md-sys-color-error)', fontSize: '12px', margin: '0' }}>
+                  ❌ {error}
+                </p>
+              )}
+
+              {submitting && (
+                <div style={{ display: 'flex', justifyContent: 'center' }}>
+                  <WavyLinearProgress width={296} height={14} />
+                </div>
+              )}
+
+              <m3e-divider />
+
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <m3e-button onClick={onClose} variant="outlined" disabled={submitting}>
+                  Cancel
+                </m3e-button>
+                <m3e-button
+                  onClick={handleSubmit}
+                  disabled={!form.name || submitting}
+                  variant="filled"
+                  style={{ flex: 1 }}
+                >
+                  {submitting ? 'Adding…' : 'Add location'}
+                </m3e-button>
+              </div>
+            </div>
+          </m3e-dialog>
+        </animated.div>
+      )
+  );
+}
+
+const inputStyle = {
+  width: '100%',
+  padding: '10px 12px',
+  marginTop: '8px',
+  borderRadius: '8px',
+  border: '1px solid var(--md-sys-color-outline)',
+  background: 'var(--md-sys-color-surface-container)',
+  color: 'var(--md-sys-color-on-surface)',
+  fontFamily: '"Google Sans Flex", sans-serif',
+  fontSize: '14px',
+};

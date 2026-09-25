@@ -13,6 +13,9 @@ import '@m3e/react/fab';
 import '@m3e/react/segmented-button';
 import VersionIndicator from './VersionIndicator';
 import { MapWatermark } from './MapWatermark';
+import { AddBusinessModal } from './AddBusinessModal';
+import { AddLocationModal } from './AddLocationModal';
+import { ReportIssueModal } from './ReportIssueModal';
 import { AppVersion } from '../lib/versions';
 import {
   BASEMAPS,
@@ -123,7 +126,9 @@ export function MapCanvas({ onMapReady, onMoveEnd, onError, onStyleReload }: Pro
   const [loading, setLoading] = useState(true);
   const [selectedMode, setSelectedMode] = useState<string>('driving');
   const [searchValue, setSearchValue] = useState('');
-  const [searchSuggestions, setSearchSuggestions] = useState<Array<{ id: string; label: string; desc?: string; lat?: number; lon?: number }>>([]);
+  const [searchSuggestions, setSearchSuggestions] = useState<Array<{ id: string; label: string; desc?: string; lat?: number; lon?: number }>>([]); const [addBusinessOpen, setAddBusinessOpen] = useState(false);
+  const [addLocationOpen, setAddLocationOpen] = useState(false);
+  const [reportIssueOpen, setReportIssueOpen] = useState(false);;
 
   // Refs mirror state so the style-reload handler always reads the
   // current selection rather than the value captured when it was bound.
@@ -516,18 +521,15 @@ export function MapCanvas({ onMapReady, onMoveEnd, onError, onStyleReload }: Pro
           <div style={{ position: 'absolute', bottom: 24, right: 24, zIndex: 20 }}>
             <m3e-fab-menu>
               <m3e-fab slot="trigger" />
-              <m3e-fab-menu-action onClick={() => {
-                console.log('Add Business');
-                // TODO: Open add business modal
-              }}>Add Business</m3e-fab-menu-action>
-              <m3e-fab-menu-action onClick={() => {
-                console.log('Add Location');
-                // TODO: Open add location modal
-              }}>Add Location</m3e-fab-menu-action>
-              <m3e-fab-menu-action onClick={() => {
-                console.log('Report Issue');
-                // TODO: Open report issue modal
-              }}>Report Issue</m3e-fab-menu-action>
+              <m3e-fab-menu-action onClick={() => setAddBusinessOpen(true)}>
+                Add Business
+              </m3e-fab-menu-action>
+              <m3e-fab-menu-action onClick={() => setAddLocationOpen(true)}>
+                Add Location
+              </m3e-fab-menu-action>
+              <m3e-fab-menu-action onClick={() => setReportIssueOpen(true)}>
+                Report Issue
+              </m3e-fab-menu-action>
             </m3e-fab-menu>
           </div>
 
@@ -569,6 +571,26 @@ export function MapCanvas({ onMapReady, onMoveEnd, onError, onStyleReload }: Pro
                 </animated.div>
               )
           )}
+
+        {/* Modals */}
+        <AddBusinessModal
+          open={addBusinessOpen}
+          onClose={() => setAddBusinessOpen(false)}
+          onCreated={() => {
+            // TODO: Refetch businesses or add marker
+          }}
+          mapCenter={[mapRef.current?.getCenter().lng ?? BERGEN[0], mapRef.current?.getCenter().lat ?? BERGEN[1]]}
+        />
+        <AddLocationModal
+          open={addLocationOpen}
+          onClose={() => setAddLocationOpen(false)}
+          mapCenter={[mapRef.current?.getCenter().lng ?? BERGEN[0], mapRef.current?.getCenter().lat ?? BERGEN[1]]}
+        />
+        <ReportIssueModal
+          open={reportIssueOpen}
+          onClose={() => setReportIssueOpen(false)}
+          mapCenter={[mapRef.current?.getCenter().lng ?? BERGEN[0], mapRef.current?.getCenter().lat ?? BERGEN[1]]}
+        />
         </div>
       </div>
     </div>

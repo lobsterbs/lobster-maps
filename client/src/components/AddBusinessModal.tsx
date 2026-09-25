@@ -4,6 +4,11 @@ import { animated, useTransition } from '@react-spring/web';
 import { geocodeAddress, submitBusiness, type GeocodeResult } from '../lib/api';
 import { RippleContainer, useRipple } from './Ripple';
 import { WavyLinearProgress } from './WavyLinearProgress';
+import '@m3e/react/dialog';
+import '@m3e/react/heading';
+import '@m3e/react/button';
+import '@m3e/react/form-field';
+import '@m3e/react/divider';
 
 type Step = 'location' | 'details';
 
@@ -97,132 +102,220 @@ export function AddBusinessModal({ open, onClose, onCreated, mapCenter }: Props)
         <animated.div
           style={{
             ...style,
-            position: 'absolute',
-            bottom: 24,
-            left: '50%',
-            marginLeft: -170,
-            width: 340,
-            maxHeight: '70vh',
-            overflowY: 'auto',
-            background: 'rgba(21, 21, 21, 0.78)',
-            backdropFilter: 'blur(24px) saturate(180%)',
-            WebkitBackdropFilter: 'blur(24px) saturate(180%)',
-            border: '1px solid rgba(255,255,255,0.08)',
-            borderRadius: 24,
-            padding: 20,
-            boxShadow: '0 12px 40px rgba(0,0,0,0.5)',
+            position: 'fixed',
+            inset: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 101,
+            pointerEvents: open ? 'auto' : 'none',
           }}
         >
-          {step === 'location' && (
-            <>
-              <h3 style={{ marginTop: 0 }}>Where&apos;s the business?</h3>
-              <input
-                autoFocus
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search an address..."
-                style={inputStyle}
-              />
-              <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 4 }}>
-                {results.map((r) => (
-                  <button
-                    key={`${r.lat}-${r.lon}`}
+          {/* Scrim */}
+          <animated.div
+            onClick={onClose}
+            style={{
+              position: 'absolute',
+              inset: 0,
+              backgroundColor: 'rgba(0, 0, 0, 0.32)',
+              zIndex: 0,
+            }}
+          />
+
+          {/* M3E Dialog Container */}
+          <m3e-dialog
+            open={open}
+            onClose={onClose}
+            style={{
+              zIndex: 1,
+              '--md-dialog-container-max-width': '480px',
+              '--md-dialog-container-inset-block-start': '24px',
+            } as any}
+          >
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', padding: '24px' }}>
+              {step === 'location' && (
+                <>
+                  <m3e-heading type="headline-medium">Where&apos;s the business?</m3e-heading>
+                  <m3e-form-field>
+                    <input
+                      autoFocus
+                      value={query}
+                      onChange={(e) => setQuery(e.target.value)}
+                      placeholder="Search an address..."
+                      style={inputStyle}
+                    />
+                  </m3e-form-field>
+
+                  {/* Results */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '300px', overflowY: 'auto' }}>
+                    {results.map((r) => (
+                      <m3e-button
+                        key={`${r.lat}-${r.lon}`}
+                        onClick={() => {
+                          setPicked({ lat: parseFloat(r.lat), lon: parseFloat(r.lon), label: r.display_name });
+                          setStep('details');
+                        }}
+                        variant="outlined"
+                        style={{ textAlign: 'left', width: '100%' }}
+                      >
+                        {r.display_name}
+                      </m3e-button>
+                    ))}
+                  </div>
+
+                  {/* Fallback: Use map center */}
+                  <m3e-button
                     onClick={() => {
-                      setPicked({ lat: parseFloat(r.lat), lon: parseFloat(r.lon), label: r.display_name });
+                      setPicked({ lat: mapCenter[1], lon: mapCenter[0], label: 'Dropped pin (map center)' });
                       setStep('details');
                     }}
-                    style={resultStyle}
+                    variant="text"
+                    style={{ color: 'var(--lobster-gold)' }}
                   >
-                    {r.display_name}
-                  </button>
-                ))}
-              </div>
-              <button
-                onClick={() => {
-                  setPicked({ lat: mapCenter[1], lon: mapCenter[0], label: 'Dropped pin (map center)' });
-                  setStep('details');
-                }}
-                style={{ ...resultStyle, marginTop: 8, color: 'var(--lobster-gold)' }}
-              >
-                Use current map center instead →
-              </button>
-              <button onClick={onClose} style={cancelStyle}>
-                Cancel
-              </button>
-            </>
-          )}
+                    Use current map center →
+                  </m3e-button>
 
-          {step === 'details' && picked && (
-            <>
-              <h3 style={{ marginTop: 0 }}>Tell us about it</h3>
-              <p style={{ fontSize: 13, color: 'var(--lobster-text-dim)', marginTop: -8 }}>{picked.label}</p>
-              <input
-                placeholder="Business name"
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                style={inputStyle}
-              />
-              <input
-                placeholder="Category (e.g. Cafe, Bookstore)"
-                value={form.category}
-                onChange={(e) => setForm({ ...form, category: e.target.value })}
-                style={inputStyle}
-              />
-              <textarea
-                placeholder="Short description (optional)"
-                value={form.description}
-                onChange={(e) => setForm({ ...form, description: e.target.value })}
-                style={{ ...inputStyle, minHeight: 60, resize: 'vertical' }}
-              />
-              <input
-                placeholder="Phone (optional)"
-                value={form.phone}
-                onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                style={inputStyle}
-              />
-              <input
-                placeholder="Website (optional)"
-                value={form.website}
-                onChange={(e) => setForm({ ...form, website: e.target.value })}
-                style={inputStyle}
-              />
-              <input
-                placeholder="Photo URL (optional)"
-                value={form.imageUrl}
-                onChange={(e) => setForm({ ...form, imageUrl: e.target.value })}
-                style={inputStyle}
-              />
-              {form.imageUrl && (
-                <img
-                  src={form.imageUrl}
-                  alt="Preview"
-                  style={imagePreviewStyle}
-                  onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                  onLoad={(e) => { (e.target as HTMLImageElement).style.display = 'block'; }}
-                />
+                  <m3e-divider />
+
+                  {/* Close */}
+                  <m3e-button onClick={onClose} variant="outlined" style={{ width: '100%' }}>
+                    Cancel
+                  </m3e-button>
+                </>
               )}
-              {error && <p style={{ color: 'var(--lobster-red)', fontSize: 13 }}>{error}</p>}
-              {submitting && (
-                <div style={{ display: 'flex', justifyContent: 'center', margin: '12px 0 4px' }}>
-                  <WavyLinearProgress width={296} height={14} />
-                </div>
+
+              {step === 'details' && picked && (
+                <>
+                  <m3e-heading type="headline-medium">Tell us about it</m3e-heading>
+                  <p style={{ fontSize: '12px', color: 'var(--md-sys-color-on-surface-variant)', margin: '0 0 12px 0' }}>
+                    {picked.label}
+                  </p>
+
+                  {/* Name */}
+                  <m3e-form-field>
+                    <label htmlFor="business-name">Business name</label>
+                    <input
+                      id="business-name"
+                      placeholder="e.g., Goodfood Café"
+                      value={form.name}
+                      onChange={(e) => setForm({ ...form, name: e.target.value })}
+                      style={inputStyle}
+                    />
+                  </m3e-form-field>
+
+                  {/* Category */}
+                  <m3e-form-field>
+                    <label htmlFor="business-category">Category</label>
+                    <input
+                      id="business-category"
+                      placeholder="e.g., Café, Restaurant, Shop"
+                      value={form.category}
+                      onChange={(e) => setForm({ ...form, category: e.target.value })}
+                      style={inputStyle}
+                    />
+                  </m3e-form-field>
+
+                  {/* Description */}
+                  <m3e-form-field>
+                    <label htmlFor="business-description">Description (optional)</label>
+                    <textarea
+                      id="business-description"
+                      placeholder="Tell us about this business..."
+                      value={form.description}
+                      onChange={(e) => setForm({ ...form, description: e.target.value })}
+                      style={{ ...inputStyle, minHeight: '80px', resize: 'vertical' }}
+                    />
+                  </m3e-form-field>
+
+                  {/* Phone */}
+                  <m3e-form-field>
+                    <label htmlFor="business-phone">Phone (optional)</label>
+                    <input
+                      id="business-phone"
+                      type="tel"
+                      placeholder="+47 55 12 34 56"
+                      value={form.phone}
+                      onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                      style={inputStyle}
+                    />
+                  </m3e-form-field>
+
+                  {/* Website */}
+                  <m3e-form-field>
+                    <label htmlFor="business-website">Website (optional)</label>
+                    <input
+                      id="business-website"
+                      type="url"
+                      placeholder="https://example.com"
+                      value={form.website}
+                      onChange={(e) => setForm({ ...form, website: e.target.value })}
+                      style={inputStyle}
+                    />
+                  </m3e-form-field>
+
+                  {/* Photo URL */}
+                  <m3e-form-field>
+                    <label htmlFor="business-photo">Photo URL (optional)</label>
+                    <input
+                      id="business-photo"
+                      type="url"
+                      placeholder="https://example.com/photo.jpg"
+                      value={form.imageUrl}
+                      onChange={(e) => setForm({ ...form, imageUrl: e.target.value })}
+                      style={inputStyle}
+                    />
+                  </m3e-form-field>
+
+                  {/* Image Preview */}
+                  {form.imageUrl && (
+                    <img
+                      src={form.imageUrl}
+                      alt="Business preview"
+                      style={imagePreviewStyle}
+                      onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                      onLoad={(e) => { (e.target as HTMLImageElement).style.display = 'block'; }}
+                    />
+                  )}
+
+                  {/* Error Message */}
+                  {error && (
+                    <p style={{ color: 'var(--md-sys-color-error)', fontSize: '12px', margin: '0' }}>
+                      ❌ {error}
+                    </p>
+                  )}
+
+                  {/* Loading Progress */}
+                  {submitting && (
+                    <div style={{ display: 'flex', justifyContent: 'center', margin: '12px 0 4px' }}>
+                      <WavyLinearProgress width={296} height={14} />
+                    </div>
+                  )}
+
+                  {/* Action Buttons */}
+                  <m3e-divider />
+                  <div style={{ display: 'flex', gap: '12px' }}>
+                    <m3e-button
+                      onClick={() => setStep('location')}
+                      variant="outlined"
+                      disabled={submitting}
+                    >
+                      Back
+                    </m3e-button>
+                    <m3e-button
+                      onClick={handleSubmit}
+                      onPointerDown={submitRipple.addRipple}
+                      disabled={!form.name || !form.category || submitting}
+                      variant="filled"
+                      style={{ position: 'relative', overflow: 'hidden', flex: 1 }}
+                    >
+                      {submitting ? 'Adding…' : 'Add business'}
+                      <RippleContainer ripples={submitRipple.ripples} onRippleDone={submitRipple.removeRipple} />
+                    </m3e-button>
+                  </div>
+                </>
               )}
-              <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-                <button onClick={() => setStep('location')} style={cancelStyle} disabled={submitting}>
-                  Back
-                </button>
-                <button
-                  onClick={handleSubmit}
-                  onPointerDown={submitRipple.addRipple}
-                  disabled={!form.name || !form.category || submitting}
-                  style={{ ...submitStyle, position: 'relative', overflow: 'hidden' }}
-                >
-                  {submitting ? 'Adding…' : 'Add business'}
-                  <RippleContainer ripples={submitRipple.ripples} onRippleDone={submitRipple.removeRipple} />
-                </button>
-              </div>
-            </>
-          )}
+            </div>
+          </m3e-dialog>
         </animated.div>
       )
   );
