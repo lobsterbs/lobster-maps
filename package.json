@@ -28,9 +28,8 @@
     "lint:server": "cd server && npm run lint 2>/dev/null || echo 'No server linter'",
     "lint:client": "cd client && npm run lint 2>/dev/null || echo 'No client linter'"
   },
-  "dependencies": {},
   "devDependencies": {
-    "concurrently": "^9.0.0"
+    "concurrently": "^9.2.4"
   },
   "keywords": [
     "maps",

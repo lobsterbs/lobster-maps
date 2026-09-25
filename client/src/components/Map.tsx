@@ -11,12 +11,12 @@ import '@m3e/react/nav-rail';
 import '@m3e/react/fab-menu';
 import '@m3e/react/fab';
 import '@m3e/react/segmented-button';
-import VersionIndicator from './VersionIndicator';
-import { MapWatermark } from './MapWatermark';
+import '@m3e/react/icon-button';
+
 import { AddBusinessModal } from './AddBusinessModal';
 import { AddLocationModal } from './AddLocationModal';
 import { ReportIssueModal } from './ReportIssueModal';
-import { AppVersion } from '../lib/versions';
+
 import {
   BASEMAPS,
   DEFAULT_BASEMAP,
@@ -249,18 +249,6 @@ export function MapCanvas({ onMapReady, onMoveEnd, onError, onStyleReload }: Pro
 
     mapRef.current = map;
 
-    map.addControl(
-      new maplibregl.AttributionControl({
-        compact: true,
-        customAttribution: hasMapTiler ? MAPTILER_ATTRIBUTION : OSM_ATTRIBUTION,
-      }),
-      'bottom-right'
-    );
-
-    // Attribution is a licence term for both MapTiler and OSM, not
-    // decoration — it was previously switched off entirely. Compact
-    // keeps it to a single "i" disc on mobile.
-
     const loadTimeout = setTimeout(() => {
       if (loadedRef.current) return;
       console.error('Map load timed out after', LOAD_TIMEOUT_MS, 'ms');
@@ -430,7 +418,7 @@ export function MapCanvas({ onMapReady, onMoveEnd, onError, onStyleReload }: Pro
   return (
     <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column' }}>
       {/* M3E SearchBar (top, full width) */}
-      <div style={{ padding: '16px', zIndex: 50, backgroundColor: 'var(--md-sys-color-surface)', borderBottom: '1px solid var(--md-sys-color-outline-variant)' }}>
+      <div style={{ padding: '16px', zIndex: 50, backgroundColor: 'transparent' }}>
         <m3e-search 
           placeholder="Search businesses, streets..."
           onInput={(e: any) => handleSearchInput(e.currentTarget.value)}
@@ -477,44 +465,24 @@ export function MapCanvas({ onMapReady, onMoveEnd, onError, onStyleReload }: Pro
               <m3e-segmented-button-segment value="transit">Transit</m3e-segmented-button-segment>
               <m3e-segmented-button-segment value="walking">Walk</m3e-segmented-button-segment>
             </m3e-segmented-button>
-            <button
+            <m3e-icon-button 
               onClick={toggleTerrain}
               title={terrain ? 'Disable 3D terrain' : 'Enable 3D terrain'}
-              style={{
-                width: 48,
-                height: 48,
-                borderRadius: 'var(--md-sys-shape-corner-medium)',
-                backgroundColor: terrain ? 'var(--md-sys-color-primary)' : 'rgba(30,30,30,0.6)',
-                color: terrain ? 'var(--md-sys-color-on-primary)' : 'var(--md-sys-color-on-surface)',
-                border: '1px solid rgba(255,255,255,0.12)',
-                cursor: 'pointer',
-                fontSize: 20,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
+              selected={terrain}
             >
-              ⛰️
-            </button>
-            <button
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2l8 5v8l-8 5-8-5v-8l8-5m0 2.5l-6 3.75v6.25l6 3.75 6-3.75v-6.25L12 4.5z"/>
+              </svg>
+            </m3e-icon-button>
+            <m3e-icon-button 
               onClick={() => setPanelOpen((o) => !o)}
               title="Switch basemap style"
-              style={{
-                width: 48,
-                height: 48,
-                borderRadius: 'var(--md-sys-shape-corner-medium)',
-                backgroundColor: panelOpen ? 'var(--md-sys-color-primary)' : 'rgba(30,30,30,0.6)',
-                color: panelOpen ? 'var(--md-sys-color-on-primary)' : 'var(--md-sys-color-on-surface)',
-                border: '1px solid rgba(255,255,255,0.12)',
-                cursor: 'pointer',
-                fontSize: 20,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
+              selected={panelOpen}
             >
-              🗺️
-            </button>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+              </svg>
+            </m3e-icon-button>
           </div>
 
           {/* Bottom controls: FAB Menu */}
@@ -532,10 +500,6 @@ export function MapCanvas({ onMapReady, onMoveEnd, onError, onStyleReload }: Pro
               </m3e-fab-menu-action>
             </m3e-fab-menu>
           </div>
-
-          {/* Version indicator & Watermark */}
-          <VersionIndicator />
-          <MapWatermark version={AppVersion.display} />
 
           {/* Basemap switcher */}
           {pillTransition(
