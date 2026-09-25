@@ -12,6 +12,7 @@ import '@m3e/react/fab-menu';
 import '@m3e/react/fab';
 import '@m3e/react/segmented-button';
 import '@m3e/react/icon-button';
+import '@m3e/react/switch';
 
 import { AddBusinessModal } from './AddBusinessModal';
 import { AddLocationModal } from './AddLocationModal';
@@ -458,31 +459,26 @@ export function MapCanvas({ onMapReady, onMoveEnd, onError, onStyleReload }: Pro
         <div style={{ flex: 1, position: 'relative' }}>
           <div ref={containerRef} style={{ position: 'absolute', inset: 0 }} />
 
-          {/* Top right controls: Mode toggle + Terrain */}
-          <div style={{ position: 'absolute', top: 16, right: 16, zIndex: 10, display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <m3e-segmented-button value={selectedMode} onChange={(e: any) => setSelectedMode(e.currentTarget.value)}>
-              <m3e-segmented-button-segment value="driving">Car</m3e-segmented-button-segment>
-              <m3e-segmented-button-segment value="transit">Transit</m3e-segmented-button-segment>
-              <m3e-segmented-button-segment value="walking">Walk</m3e-segmented-button-segment>
-            </m3e-segmented-button>
-            <m3e-icon-button 
-              onClick={toggleTerrain}
-              title={terrain ? 'Disable 3D terrain' : 'Enable 3D terrain'}
-              selected={terrain}
-            >
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 2l8 5v8l-8 5-8-5v-8l8-5m0 2.5l-6 3.75v6.25l6 3.75 6-3.75v-6.25L12 4.5z"/>
-              </svg>
-            </m3e-icon-button>
-            <m3e-icon-button 
-              onClick={() => setPanelOpen((o) => !o)}
-              title="Switch basemap style"
-              selected={panelOpen}
-            >
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-              </svg>
-            </m3e-icon-button>
+          {/* Top right controls: Mode toggle, Terrain, Satellite */}
+          <div style={{ position: 'absolute', top: 16, right: 16, zIndex: 10, display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: '12px', backgroundColor: 'rgba(30,30,30,0.4)', borderRadius: 'var(--md-sys-shape-corner-large)', backdropFilter: 'blur(8px)' }}>
+              <m3e-segmented-button value={selectedMode} onChange={(e: any) => setSelectedMode(e.currentTarget.value)} style={{ display: 'flex' }}>
+                <m3e-button-segment value="driving">Car</m3e-button-segment>
+                <m3e-button-segment value="transit">Transit</m3e-button-segment>
+                <m3e-button-segment value="walking">Walk</m3e-button-segment>
+              </m3e-segmented-button>
+            </div>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '12px', backgroundColor: 'rgba(30,30,30,0.4)', borderRadius: 'var(--md-sys-shape-corner-large)', backdropFilter: 'blur(8px)' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--md-sys-color-on-surface)', fontSize: '14px', cursor: 'pointer' }}>
+                <m3e-switch checked={terrain} onChange={(e: any) => toggleTerrain()} />
+                <span>3D Terrain</span>
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--md-sys-color-on-surface)', fontSize: '14px', cursor: 'pointer' }}>
+                <m3e-switch checked={panelOpen} onChange={(e: any) => setPanelOpen((o) => !o)} />
+                <span>Basemaps</span>
+              </label>
+            </div>
           </div>
 
           {/* Bottom controls: FAB Menu */}

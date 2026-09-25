@@ -13,7 +13,9 @@ declare global {
       'm3e-heading': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement> & { type?: string }, HTMLElement>;
       'm3e-form-field': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement>;
       'm3e-button': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement> & { variant?: string; disabled?: boolean }, HTMLElement>;
+      'm3e-button-segment': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement> & { value?: string; checked?: boolean; disabled?: boolean }, HTMLElement>;
       'm3e-icon-button': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement> & { selected?: boolean; title?: string }, HTMLElement>;
+      'm3e-switch': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement> & { checked?: boolean; onChange?: (e: Event) => void; disabled?: boolean }, HTMLElement>;
       'm3e-divider': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement>;
     }
   }
