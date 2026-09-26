@@ -1,240 +1,51 @@
-# LobsterMaps — Claude Handoff (Sep 24, 2026, 19:30 UTC)
+# LobsterMaps — Working Notes for the Next Agent
 
-## Project Overview
+## About the project
+LobsterMaps is a privacy-first, self-hosted maps and local-business directory for Bergen, Norway. Part of the Lobster Ecosystem (a hobby project, not commercial).
 
-**LobsterMaps** is a privacy-first maps app focused on Bergen, Norway. Built with React + MapLibreGL v6 + custom Rust/WASM routing engine. Render-hosted with Neon PostgreSQL backend.
+**Stack:**
+- Client: React + Vite, MapLibre GL v6, `@m3e/react` (Material 3 Expressive web components)
+- Server: Express + Drizzle ORM, Neon Postgres
+- Routing: custom Rust/WASM A* engine (`routing-core/`)
+- Hosting: Render (`srv-da77r72d0e5s73dl976g`, workspace `tea-da6k16hsrm7s73aeg0s0`)
+- DB: Neon project `floral-silence-23234233`
+- Repo: https://github.com/lobsterbs/lobster-maps
+- Live: https://lobster-maps.onrender.com
 
-- **Live**: https://lobster-maps.onrender.com
-- **Repo**: https://github.com/lobsterbs/lobster-maps
-- **Version**: Argon 1.0.0
-- **Status**: All core UI wired, modals complete, ready for endpoint testing
+## Current task (as of Sep 26, 2026, 16:25 UTC)
 
-## Current Session (Sep 24 PM)
+**Root cause fixed:** the whole M3E integration was broken because:
+1. `@m3e/react` exports real React wrapper components (via `@lit/react`) — the app was instead doing side-effect-only imports (`import '@m3e/react/search'`) and using raw lowercase custom-element tags with React event props, which never actually bound.
+2. The app never mounted `<m3e-theme>` anywhere, so **zero design tokens** reached any component (no colors, shapes, motion — everything unstyled).
+3. Several component/tag names were just wrong (`m3e-nav-rail-item` doesn't exist, `m3e-fab-menu-action` doesn't exist, FAB-menu anatomy was backwards, search bar was missing its required `<input slot="input">`).
 
-### What Just Got Done ✅
+**Fixed this session:**
+- `App.tsx` now imports and wraps everything in `<M3eTheme>` (commit `c745b87`)
+- `Map.tsx` fully rewritten to use real `@m3e/react` component imports (`M3eSearchBar`, `M3eNavRail`, `M3eNavItem`, `M3eFab`, `M3eFabMenu`, `M3eFabMenuTrigger`, `M3eFabMenuItem`, `M3eSegmentedButton`, `M3eButtonSegment`, `M3eSwitch`, `M3eIcon`) — verified every prop/event/slot against the actual `custom-elements.json` in `node_modules/@m3e/web`, not guessed (commits `c745b87`, `6a96d98`, `c9540b9`)
+- Modal components (`AddBusinessModal`, `AddLocationModal`, `ReportIssueModal`) converted from raw tags to real component imports; fixed `M3eHeading` size prop (`"large"` not `"headline-medium"`) and `M3eDialog`'s close event (`onClosed` not `onClose`)
+- **Important:** my first pass at rewriting `Map.tsx` accidentally *deleted* real functionality (basemap switching, 3D terrain via `setTerrain`, 3D building extrusion, live search-with-suggestions, basemap pill switcher) and replaced it with a decorative non-functional stub. Caught this and rebuilt properly — all that logic is restored, just with correct M3E syntax now (commit `c9540b9`)
+- Deliberately did **not** duplicate "Add Business" into Map.tsx's FAB menu — `App.tsx` already owns that flow correctly (`AddBusinessFAB` + `AddBusinessModal` + marker refresh via `handleCreated`). Map.tsx's FAB menu only offers Add Location / Report Issue to avoid double-mounting the business modal.
 
-**Phase 3: All M3E Modals with Full Forms**
+**Deploy status:** commit `c9540b9` pushed, deploy `dep-darv3lnavr4c738b2cvg` triggered manually (auto-deploy didn't seem to fire on push — worth checking Render's auto-deploy setting if this keeps happening). Build was in progress as of last check.
 
-Three modals built using @m3e/react package:
+## Known architecture wart (not yet fixed, flagging for whoever picks this up)
+App.tsx and Map.tsx both own UI chrome that arguably should live in one place — App.tsx has `SearchBarEnhanced` + category pills + `AddBusinessFAB`/`AddBusinessModal` + `TripPlanner`/`DirectionsPanel`, while Map.tsx (internally) now also has its own search bar, nav rail, and FAB menu (Location/Issue). This predates this session. Two different search UIs exist in the app simultaneously. Worth consolidating eventually but out of scope for the M3E correctness fix.
 
-1. **AddBusinessModal** (2-step wizard)
-   - Step 1: Geocode address search → select location → fallback to map center
-   - Step 2: Name, category, description, phone, website, image URL
-   - Validation: name + category required
-   - Submits POST `/api/businesses`
+## To-Do (priority order)
+1. 🔴 Verify the c9540b9 deploy actually goes live clean (check Render logs for runtime errors, not just build success)
+2. 🔴 Manually verify in a real browser that M3eTheme tokens are actually rendering (colors, not just structurally correct markup) — I could only verify via build success + code review, not live rendering, since the site isn't web-search-indexed and web_fetch requires a prior search hit
+3. 🟡 Consolidate the App.tsx/Map.tsx dual-search-bar, dual-chrome situation
+4. 🟡 Business Detail Sheet — click marker → detail panel (component exists, wire-check needed)
+5. 🟡 Routing on Map — call `/api/routing`, draw polyline (partial — DirectionsPanel/TripPlanner exist, verify end-to-end)
+6. 🟡 Mobile layout — drawer at ≤480px, nav-rail should probably collapse to a bottom nav-bar on mobile (M3E has `m3e-nav-bar` for this)
+7. ⚪ Code split — maplibre (1.02MB) + mapillary (1.06MB) chunks, both flagged by Vite's build warning
+8. ⚪ Auth on `POST /api/businesses` (LobsterID integration is the real fix, not built yet)
+9. ⚪ OSM graph extraction (`npm run extract:osm`) — never actually run on Render, WASM routing engine may be running on a stub/test graph
 
-2. **AddLocationModal** (1-step)
-   - Name + optional description
-   - Auto-filled map center coordinates
-   - Validation: name required
-   - Submits POST `/api/locations`
+## Plan for next session
+1. Confirm deploy `dep-darv3lnavr4c738b2cvg` (or whatever superseded it) is live and error-free in Render logs
+2. If clean: move to Business Detail Sheet wiring, then routing polyline draw
+3. If there are runtime errors (not caught by `tsc`, e.g. missing CSS custom properties, slot mismatches at runtime): read the actual error, don't guess — `mcp__Render__list_logs` with `type: ["app"]` right after a page load attempt
+4. Keep using the `custom-elements.json` at `client/node_modules/@m3e/web/dist/custom-elements.json` as ground truth for any M3E prop/event/slot question — don't guess component APIs from memory, the naming is inconsistent across the library (`m3e-fab-menu-action` vs `m3e-fab-menu-item`, `m3e-nav-rail-item` vs `m3e-nav-item`, etc.)
 
-3. **ReportIssueModal** (1-step)
-   - Issue type dropdown
-   - Description textarea (required)
-   - Auto-filled map center coordinates
-   - Submits POST `/api/issues`
 
-**Integration**
-
-FAB menu (bottom-right) now opens modals via onClick handlers. Modal state lives in Map.tsx. Modals receive current map center as coordinates.
-
-**Forms Built With**
-
-- `m3e-dialog` — Material 3 modal dialog
-- `m3e-heading` — Semantic headline
-- `m3e-form-field` — Label + input wrapper
-- `m3e-button` — M3 button component
-- `m3e-divider` — Visual separator
-- Standard HTML: `<input>`, `<textarea>`, `<select>`
-- M3 semantic colors + spacing tokens
-
-**Type Safety**
-
-Added 5 new M3E component type declarations to `client/src/m3e.d.ts`. All modals fully typed, zero TypeScript errors.
-
-**Build Status**
-- ✅ Client: 9.86s, zero errors
-- ✅ Server: Clean
-- ✅ Commit: 76b23ea pushed to GitHub
-
-### All Features Wired End-to-End ✅
-
-| Feature | Status | Notes |
-|---------|--------|-------|
-| **Search → FlyTo** | ✅ | Search suggestions geo-tag to lat/lon, click animates map |
-| **FAB Menu → Modals** | ✅ | Add Business, Add Location, Report Issue all bound |
-| **Routing Mode** | ✅ | Segmented button tracks car/transit/walk selection |
-| **Terrain Toggle** | ✅ | ⛰️ button toggles DEM layer |
-| **Basemap Switcher** | ✅ | 🗺️ button shows/hides basemap pill selector |
-| **Version Watermark** | ✅ | Shows "LobsterMaps · Argon v1.0.0" |
-
-## API Endpoints (All Working)
-
-```
-POST   /api/search           — Search places by query (lat-aware radius)
-GET    /api/businesses       — List businesses in bbox
-GET    /api/businesses/:id   — Get business detail
-POST   /api/businesses       — Add new business (not yet auth'd)
-POST   /api/locations        — Add location (new endpoint)
-POST   /api/issues           — Report issue (new endpoint)
-POST   /api/routing          — Route car/transit/walk (WASM ready)
-GET    /api/maptiler/*       — Proxy MapTiler sprites/fonts/tiles
-GET    /api/health           — Server health check
-```
-
-## Architecture
-
-### Frontend (client/)
-- **Framework**: React + Vite
-- **Map Library**: MapLibreGL v6 (vector tiles)
-- **Motion**: React Spring (physics-based animations)
-- **Design**: Material 3 Expressive (@m3e/react web components)
-- **Styling**: CSS + M3 tokens (--md-sys-color-*, --md-sys-shape-*)
-
-### Backend (server/)
-- **Runtime**: Express.js + Node.js
-- **Database**: Neon PostgreSQL (floral-silence-23234233)
-- **ORM**: Drizzle
-- **Routing**: Rust/WASM (routing-core/pkg/) with A* pathfinding
-- **Tiles**: MapTiler proxy (@api/maptiler/* routes)
-
-### Deployment
-- **Hosting**: Render (srv-da77r72d0e5s73dl976g)
-- **Auto-deploy**: Git push to main → Render redeploys
-- **Environment**: .env.production has MAPTILER_KEY fallback
-
-## Build Commands
-
-```bash
-# Local development (both servers)
-npm run dev
-
-# Build for production
-npm run build:client    # Client: ~10s, 2.3MB gzipped
-npm run build:server    # Server: ~2s, TypeScript check
-
-# Full build (required before push)
-npm run build:client && npm run build:server
-```
-
-## Known Issues / Technical Debt
-
-### High Priority (Fix Next)
-1. **Modal endpoints not yet tested** — Modals POST to `/api/locations` and `/api/issues` which may not exist on server. Need to create handlers.
-2. **No auth on business creation** — Anyone can POST /api/businesses. Need LobsterID integration.
-3. **OSM graph extraction never run** — `npm run extract:osm` should populate routing dataset. Not yet run on Render.
-
-### Medium Priority
-1. **Code splitting** — maplibre (1.02MB) + mapillary (1.06MB) chunks could be lazy-loaded
-2. **Mobile responsive** — NavRail 80px is too wide for phones; need drawer at ≤480px
-3. **Dark theme incomplete** — M3 tokens exist but some old hex colors still hardcoded
-
-### Low Priority
-1. **4 npm audit moderates** (drizzle-kit, build-time only)
-2. **No analytics** (add Plausible or Posthog)
-3. **No error tracking** (add Sentry)
-
-## File Structure (Key Files)
-
-```
-client/src/
-├── components/
-│   ├── Map.tsx                    (main map view, all controls wired)
-│   ├── AddBusinessModal.tsx       (just added, fully functional)
-│   ├── AddLocationModal.tsx       (just added, fully functional)
-│   ├── ReportIssueModal.tsx       (just added, fully functional)
-│   ├── SearchBar.tsx              (autocomplete search)
-│   ├── MapWatermark.tsx           (version display)
-│   └── ... (10+ other components)
-├── pages/
-│   ├── TermsOfService.tsx
-│   └── PrivacyPolicy.tsx
-├── lib/
-│   ├── api.ts                     (fetch wrappers)
-│   ├── versions.ts                (versioning system)
-│   └── maptiler.ts                (basemap config)
-├── styles/
-│   ├── globals.css
-│   └── material3-theme.css        (M3 tokens)
-└── m3e.d.ts                       (M3E type declarations)
-
-server/src/
-├── routes/
-│   ├── search.ts                  (places search)
-│   ├── businesses.ts              (business CRUD)
-│   ├── routing.ts                 (A* pathfinding)
-│   ├── maptiler.ts                (tile/font/sprite proxy)
-│   └── locations.ts               (new, probably missing)
-│   └── issues.ts                  (new, probably missing)
-├── middleware/
-│   └── cors.ts
-└── db/
-    └── schema.ts                  (Drizzle schema)
-```
-
-## Commit History (Latest 5)
-
-```
-76b23ea  feat: add all M3E modals (business, location, issue) with full form fields
-990f855  docs: update claude.md with session 2 completion status
-21b53c9  feat: wire FAB actions, terrain toggle, and basemap switcher
-6c2237d  feat: wire search results to map flyTo
-a9eb4f1  feat: swap custom M3E components for @m3e/react package
-```
-
-## What's Next
-
-### Immediate (Next 1-2 hours)
-1. **Create POST handlers** for `/api/locations` and `/api/issues` on server
-2. **Test modal submissions** — verify modals POST successfully
-3. **Add snackbar feedback** — show "Location added ✓" or error toast after submit
-4. **Refetch businesses** — after AddBusinessModal closes, fetch updated list and re-render markers
-
-### Following Session
-1. Build endpoint tests in Postman/curl
-2. Implement business detail modal (click marker → show detail sheet)
-3. Wire routing mode selection to actual `/api/routing` call
-4. Mobile responsive layout (drawer for NavRail at <480px)
-5. OSM graph extraction on Render (npm run extract:osm)
-
-### Phase 2 (This Sprint)
-1. Fix remaining hardcoded colors → M3 tokens (dark theme)
-2. Add search history / saved places
-3. Share route feature (QR code / URL)
-4. Offline map caching (service worker)
-5. LobsterID auth integration for user accounts
-
-## Contacts & Resources
-
-- **MapTiler API key**: `st6o11zRZ5rBnmLDbS6K` (set as origin restriction to domain only)
-- **Neon console**: https://console.neon.tech/ (proj: floral-silence-23234233)
-- **Render dashboard**: https://dashboard.render.com/ (lobster-maps service)
-- **GitHub**: https://github.com/lobsterbs/lobster-maps
-- **Notion handoff**: https://app.notion.com/p/3e51682f46018146bb81eea76befadc8
-
-## Quick Reference
-
-**Start local dev:**
-```bash
-npm run dev
-# Runs client at http://localhost:5173 + server at http://localhost:3000
-```
-
-**Build & push (safest workflow):**
-```bash
-npm run build:client && npm run build:server
-git add -A
-git commit -m "feat: description"
-git push origin main
-# Render auto-deploys 2-3 min later
-```
-
-**Check deployed app:**
-- https://lobster-maps.onrender.com
-- Network tab in DevTools should show `/api/*` routes + `/assets/*` chunks
-
----
-
-**Session end**: Sep 24, 2026 19:30 UTC  
-**Next agent**: Pick up at "Create POST handlers for /api/locations and /api/issues"
