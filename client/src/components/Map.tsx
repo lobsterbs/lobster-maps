@@ -16,7 +16,7 @@ interface Props {
   onStyleReload?: (map: maplibregl.Map) => void;
 }
 
-export function Map({ onMapReady, onMoveEnd, onError, onStyleReload }: Props) {
+export function MapCanvas({ onMapReady, onMoveEnd, onError, onStyleReload }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const [terrain, setTerrain] = useState(false);

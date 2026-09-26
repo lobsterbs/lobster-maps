@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { animated, useTransition } from '@react-spring/web';
-import '@m3e/react/dialog';
-import '@m3e/react/heading';
-import '@m3e/react/button';
-import '@m3e/react/form-field';
-import '@m3e/react/divider';
+import { M3eDialog } from '@m3e/react/dialog';
+import { M3eHeading } from '@m3e/react/heading';
+import { M3eButton } from '@m3e/react/button';
+import { M3eFormField } from '@m3e/react/form-field';
+import { M3eDivider } from '@m3e/react/divider';
 import { WavyLinearProgress } from './WavyLinearProgress';
 
 type Props = {
@@ -74,9 +74,9 @@ export function AddLocationModal({ open, onClose, mapCenter }: Props) {
             }}
           />
 
-          <m3e-dialog
+          <M3eDialog
             open={open}
-            onClose={onClose}
+            onClosed={onClose}
             style={{
               zIndex: 1,
               '--md-dialog-container-max-width': '480px',
@@ -84,9 +84,9 @@ export function AddLocationModal({ open, onClose, mapCenter }: Props) {
             } as any}
           >
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', padding: '24px' }}>
-              <m3e-heading type="headline-medium">Add Location</m3e-heading>
+              <M3eHeading size="large">Add Location</M3eHeading>
 
-              <m3e-form-field>
+              <M3eFormField>
                 <label htmlFor="loc-name">Location name</label>
                 <input
                   id="loc-name"
@@ -96,9 +96,9 @@ export function AddLocationModal({ open, onClose, mapCenter }: Props) {
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
                   style={inputStyle}
                 />
-              </m3e-form-field>
+              </M3eFormField>
 
-              <m3e-form-field>
+              <M3eFormField>
                 <label htmlFor="loc-desc">Description (optional)</label>
                 <textarea
                   id="loc-desc"
@@ -107,14 +107,14 @@ export function AddLocationModal({ open, onClose, mapCenter }: Props) {
                   onChange={(e) => setForm({ ...form, description: e.target.value })}
                   style={{ ...inputStyle, minHeight: '80px', resize: 'vertical' }}
                 />
-              </m3e-form-field>
+              </M3eFormField>
 
-              <m3e-form-field>
+              <M3eFormField>
                 <label>Coordinates (auto-filled from map center)</label>
                 <div style={{ fontSize: '12px', color: 'var(--md-sys-color-on-surface-variant)' }}>
                   Lat: {form.lat.toFixed(4)} | Lon: {form.lon.toFixed(4)}
                 </div>
-              </m3e-form-field>
+              </M3eFormField>
 
               {error && (
                 <p style={{ color: 'var(--md-sys-color-error)', fontSize: '12px', margin: '0' }}>
@@ -128,23 +128,23 @@ export function AddLocationModal({ open, onClose, mapCenter }: Props) {
                 </div>
               )}
 
-              <m3e-divider />
+              <M3eDivider />
 
               <div style={{ display: 'flex', gap: '12px' }}>
-                <m3e-button onClick={onClose} variant="outlined" disabled={submitting}>
+                <M3eButton onClick={onClose} variant="outlined" disabled={submitting}>
                   Cancel
-                </m3e-button>
-                <m3e-button
+                </M3eButton>
+                <M3eButton
                   onClick={handleSubmit}
                   disabled={!form.name || submitting}
                   variant="filled"
                   style={{ flex: 1 }}
                 >
                   {submitting ? 'Adding…' : 'Add location'}
-                </m3e-button>
+                </M3eButton>
               </div>
             </div>
-          </m3e-dialog>
+          </M3eDialog>
         </animated.div>
       )
   );

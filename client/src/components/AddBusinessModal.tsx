@@ -4,11 +4,11 @@ import { animated, useTransition } from '@react-spring/web';
 import { geocodeAddress, submitBusiness, type GeocodeResult } from '../lib/api';
 import { RippleContainer, useRipple } from './Ripple';
 import { WavyLinearProgress } from './WavyLinearProgress';
-import '@m3e/react/dialog';
-import '@m3e/react/heading';
-import '@m3e/react/button';
-import '@m3e/react/form-field';
-import '@m3e/react/divider';
+import { M3eDialog } from '@m3e/react/dialog';
+import { M3eHeading } from '@m3e/react/heading';
+import { M3eButton } from '@m3e/react/button';
+import { M3eFormField } from '@m3e/react/form-field';
+import { M3eDivider } from '@m3e/react/divider';
 
 type Step = 'location' | 'details';
 
@@ -123,9 +123,9 @@ export function AddBusinessModal({ open, onClose, onCreated, mapCenter }: Props)
           />
 
           {/* M3E Dialog Container */}
-          <m3e-dialog
+          <M3eDialog
             open={open}
-            onClose={onClose}
+            onClosed={onClose}
             style={{
               zIndex: 1,
               '--md-dialog-container-max-width': '480px',
@@ -135,8 +135,8 @@ export function AddBusinessModal({ open, onClose, onCreated, mapCenter }: Props)
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', padding: '24px' }}>
               {step === 'location' && (
                 <>
-                  <m3e-heading type="headline-medium">Where&apos;s the business?</m3e-heading>
-                  <m3e-form-field>
+                  <M3eHeading size="large">Where&apos;s the business?</M3eHeading>
+                  <M3eFormField>
                     <input
                       autoFocus
                       value={query}
@@ -144,12 +144,12 @@ export function AddBusinessModal({ open, onClose, onCreated, mapCenter }: Props)
                       placeholder="Search an address..."
                       style={inputStyle}
                     />
-                  </m3e-form-field>
+                  </M3eFormField>
 
                   {/* Results */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '300px', overflowY: 'auto' }}>
                     {results.map((r) => (
-                      <m3e-button
+                      <M3eButton
                         key={`${r.lat}-${r.lon}`}
                         onClick={() => {
                           setPicked({ lat: parseFloat(r.lat), lon: parseFloat(r.lon), label: r.display_name });
@@ -159,12 +159,12 @@ export function AddBusinessModal({ open, onClose, onCreated, mapCenter }: Props)
                         style={{ textAlign: 'left', width: '100%' }}
                       >
                         {r.display_name}
-                      </m3e-button>
+                      </M3eButton>
                     ))}
                   </div>
 
                   {/* Fallback: Use map center */}
-                  <m3e-button
+                  <M3eButton
                     onClick={() => {
                       setPicked({ lat: mapCenter[1], lon: mapCenter[0], label: 'Dropped pin (map center)' });
                       setStep('details');
@@ -173,26 +173,26 @@ export function AddBusinessModal({ open, onClose, onCreated, mapCenter }: Props)
                     style={{ color: 'var(--lobster-gold)' }}
                   >
                     Use current map center →
-                  </m3e-button>
+                  </M3eButton>
 
-                  <m3e-divider />
+                  <M3eDivider />
 
                   {/* Close */}
-                  <m3e-button onClick={onClose} variant="outlined" style={{ width: '100%' }}>
+                  <M3eButton onClick={onClose} variant="outlined" style={{ width: '100%' }}>
                     Cancel
-                  </m3e-button>
+                  </M3eButton>
                 </>
               )}
 
               {step === 'details' && picked && (
                 <>
-                  <m3e-heading type="headline-medium">Tell us about it</m3e-heading>
+                  <M3eHeading size="large">Tell us about it</M3eHeading>
                   <p style={{ fontSize: '12px', color: 'var(--md-sys-color-on-surface-variant)', margin: '0 0 12px 0' }}>
                     {picked.label}
                   </p>
 
                   {/* Name */}
-                  <m3e-form-field>
+                  <M3eFormField>
                     <label htmlFor="business-name">Business name</label>
                     <input
                       id="business-name"
@@ -201,10 +201,10 @@ export function AddBusinessModal({ open, onClose, onCreated, mapCenter }: Props)
                       onChange={(e) => setForm({ ...form, name: e.target.value })}
                       style={inputStyle}
                     />
-                  </m3e-form-field>
+                  </M3eFormField>
 
                   {/* Category */}
-                  <m3e-form-field>
+                  <M3eFormField>
                     <label htmlFor="business-category">Category</label>
                     <input
                       id="business-category"
@@ -213,10 +213,10 @@ export function AddBusinessModal({ open, onClose, onCreated, mapCenter }: Props)
                       onChange={(e) => setForm({ ...form, category: e.target.value })}
                       style={inputStyle}
                     />
-                  </m3e-form-field>
+                  </M3eFormField>
 
                   {/* Description */}
-                  <m3e-form-field>
+                  <M3eFormField>
                     <label htmlFor="business-description">Description (optional)</label>
                     <textarea
                       id="business-description"
@@ -225,10 +225,10 @@ export function AddBusinessModal({ open, onClose, onCreated, mapCenter }: Props)
                       onChange={(e) => setForm({ ...form, description: e.target.value })}
                       style={{ ...inputStyle, minHeight: '80px', resize: 'vertical' }}
                     />
-                  </m3e-form-field>
+                  </M3eFormField>
 
                   {/* Phone */}
-                  <m3e-form-field>
+                  <M3eFormField>
                     <label htmlFor="business-phone">Phone (optional)</label>
                     <input
                       id="business-phone"
@@ -238,10 +238,10 @@ export function AddBusinessModal({ open, onClose, onCreated, mapCenter }: Props)
                       onChange={(e) => setForm({ ...form, phone: e.target.value })}
                       style={inputStyle}
                     />
-                  </m3e-form-field>
+                  </M3eFormField>
 
                   {/* Website */}
-                  <m3e-form-field>
+                  <M3eFormField>
                     <label htmlFor="business-website">Website (optional)</label>
                     <input
                       id="business-website"
@@ -251,10 +251,10 @@ export function AddBusinessModal({ open, onClose, onCreated, mapCenter }: Props)
                       onChange={(e) => setForm({ ...form, website: e.target.value })}
                       style={inputStyle}
                     />
-                  </m3e-form-field>
+                  </M3eFormField>
 
                   {/* Photo URL */}
-                  <m3e-form-field>
+                  <M3eFormField>
                     <label htmlFor="business-photo">Photo URL (optional)</label>
                     <input
                       id="business-photo"
@@ -264,7 +264,7 @@ export function AddBusinessModal({ open, onClose, onCreated, mapCenter }: Props)
                       onChange={(e) => setForm({ ...form, imageUrl: e.target.value })}
                       style={inputStyle}
                     />
-                  </m3e-form-field>
+                  </M3eFormField>
 
                   {/* Image Preview */}
                   {form.imageUrl && (
@@ -292,16 +292,16 @@ export function AddBusinessModal({ open, onClose, onCreated, mapCenter }: Props)
                   )}
 
                   {/* Action Buttons */}
-                  <m3e-divider />
+                  <M3eDivider />
                   <div style={{ display: 'flex', gap: '12px' }}>
-                    <m3e-button
+                    <M3eButton
                       onClick={() => setStep('location')}
                       variant="outlined"
                       disabled={submitting}
                     >
                       Back
-                    </m3e-button>
-                    <m3e-button
+                    </M3eButton>
+                    <M3eButton
                       onClick={handleSubmit}
                       onPointerDown={submitRipple.addRipple}
                       disabled={!form.name || !form.category || submitting}
@@ -310,12 +310,12 @@ export function AddBusinessModal({ open, onClose, onCreated, mapCenter }: Props)
                     >
                       {submitting ? 'Adding…' : 'Add business'}
                       <RippleContainer ripples={submitRipple.ripples} onRippleDone={submitRipple.removeRipple} />
-                    </m3e-button>
+                    </M3eButton>
                   </div>
                 </>
               )}
             </div>
-          </m3e-dialog>
+          </M3eDialog>
         </animated.div>
       )
   );
