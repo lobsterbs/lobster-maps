@@ -2,6 +2,7 @@ import { useCallback, useRef, useState, useEffect } from 'react';
 import * as maplibregl from 'maplibre-gl';
 import { type Map as MapLibreMap } from 'maplibre-gl';
 import { createRoot } from 'react-dom/client';
+import { M3eTheme } from '@m3e/react/theme';
 import Supercluster from 'supercluster';
 import { MapCanvas } from './components/Map';
 import { AddBusinessFAB } from './components/AddBusinessFAB';
@@ -349,8 +350,9 @@ export default function App() {
   }, []);
 
   return (
-    <div style={{ position: 'fixed', inset: 0 }}>
-      <MapCanvas
+    <M3eTheme>
+      <div style={{ position: 'fixed', inset: 0 }}>
+        <MapCanvas
         onMapReady={handleMapReady}
         onMoveEnd={handleMoveEnd}
         onError={handleMapError}
@@ -483,6 +485,7 @@ export default function App() {
         }}
       />
       <Snackbar message={snackbarMessage} onDismiss={handleSnackbarDismiss} />
-    </div>
+      </div>
+    </M3eTheme>
   );
 }
