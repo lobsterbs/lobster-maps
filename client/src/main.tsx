@@ -1,10 +1,20 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Globals } from '@react-spring/web';
+import { M3eThemeElement } from '@m3e/web/theme';
 import App from './App';
 import './styles/google-sans-flex.css';
 import './styles/material3-theme.css';
 import './styles/tokens.css';
+
+// Register M3eTheme globally BEFORE React mounts
+if (!customElements.get('m3e-theme')) {
+  customElements.define('m3e-theme', M3eThemeElement);
+}
+
+// Mount theme wrapper in DOM
+const themeEl = document.createElement('m3e-theme');
+document.documentElement.appendChild(themeEl);
 
 // Motion in this app is mostly react-spring, which runs in JS and
 // ignores the CSS `prefers-reduced-motion` block in material3-theme.css.
