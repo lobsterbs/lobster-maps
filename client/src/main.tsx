@@ -16,6 +16,19 @@ const applyMotionPreference = () => Globals.assign({ skipAnimation: reduceMotion
 applyMotionPreference();
 reduceMotion.addEventListener('change', applyMotionPreference);
 
+// Error boundary for debugging
+window.addEventListener('error', (e) => {
+  console.error('Global error:', e.error);
+  const root = document.getElementById('root');
+  if (root) {
+    root.innerHTML = `<div style="padding:20px; color:red; font-family:monospace; white-space:pre-wrap; background:#1a1a1a;"><strong>Error:</strong> ${e.error?.message || 'Unknown error'}</div>`;
+  }
+});
+
+window.addEventListener('unhandledrejection', (e) => {
+  console.error('Unhandled rejection:', e.reason);
+});
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <App />
