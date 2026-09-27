@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { animated, useTransition } from '@react-spring/web';
 import { M3eDialog } from '@m3e/react/dialog';
 import { M3eHeading } from '@m3e/react/heading';
@@ -14,9 +14,18 @@ type Props = {
 };
 
 export function AddLocationModal({ open, onClose, mapCenter }: Props) {
+  const dialogRef = useRef<any>(null);
   const [form, setForm] = useState({ name: '', description: '', lat: mapCenter[1], lon: mapCenter[0] });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (open && dialogRef.current?.showModal) {
+      dialogRef.current.showModal();
+    } else if (!open && dialogRef.current?.close) {
+      dialogRef.current.close();
+    }
+  }, [open]);
 
   const transition = useTransition(open, {
     from: { opacity: 0, transform: 'translateY(24px) scale(0.96)' },
@@ -75,7 +84,7 @@ export function AddLocationModal({ open, onClose, mapCenter }: Props) {
           />
 
           <M3eDialog
-            open={open}
+            ref={dialogRef}
             onClosed={onClose}
             style={{
               zIndex: 1,
