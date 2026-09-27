@@ -126,9 +126,26 @@ export function MapCanvas({ onMapReady, onMoveEnd, onError, onStyleReload }: Pro
   const terrainRef = useRef(terrain);
   basemapRef.current = basemap;
   terrainRef.current = terrain;
+  
+  // Refs for M3eSwitch controls (checked is read-only, use imperative control)
+  const terrainSwitchRef = useRef<any>(null);
+  const basemapSwitchRef = useRef<any>(null);
 
   const onStyleReloadRef = useRef(onStyleReload);
   onStyleReloadRef.current = onStyleReload;
+
+  // Sync M3eSwitch state imperatively (checked property is read-only)
+  useEffect(() => {
+    if (terrainSwitchRef.current) {
+      terrainSwitchRef.current.checked = terrain;
+    }
+  }, [terrain]);
+
+  useEffect(() => {
+    if (basemapSwitchRef.current) {
+      basemapSwitchRef.current.checked = panelOpen;
+    }
+  }, [panelOpen]);
 
   /** Re-attach everything that is ours, not MapTiler's. Idempotent. */
   const applyCustomLayers = useCallback((map: MapLibreMap) => {
@@ -457,11 +474,11 @@ export function MapCanvas({ onMapReady, onMoveEnd, onError, onStyleReload }: Pro
               }}
             >
               <label style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--md-sys-color-on-surface)', fontSize: '14px', cursor: 'pointer' }}>
-                <M3eSwitch checked={terrain} onChange={() => toggleTerrain()} />
+                <M3eSwitch ref={terrainSwitchRef} onChange={() => toggleTerrain()} />
                 <span>3D Terrain</span>
               </label>
               <label style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--md-sys-color-on-surface)', fontSize: '14px', cursor: 'pointer' }}>
-                <M3eSwitch checked={panelOpen} onChange={() => setPanelOpen((o) => !o)} />
+                <M3eSwitch ref={basemapSwitchRef} onChange={() => setPanelOpen((o) => !o)} />
                 <span>Basemaps</span>
               </label>
             </div>
