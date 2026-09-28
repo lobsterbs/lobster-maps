@@ -74,6 +74,18 @@ function instrumentFetch() {
   };
 }
 
+const counters = { render: 0, sourcedata: 0, dataloading: 0, tileEvents: 0, contextLost: 0 };
+
+function glInfo(map: MapLibreMap) {
+  try {
+    const gl = map.getCanvas().getContext('webgl2') || map.getCanvas().getContext('webgl');
+    const ext = gl && (gl as WebGLRenderingContext).getExtension('WEBGL_debug_renderer_info');
+    return ext ? String((gl as WebGLRenderingContext).getParameter(ext.UNMASKED_RENDERER_WEBGL)).slice(0, 80) : 'no-ext';
+  } catch (e) {
+    return 'err:' + String(e);
+  }
+}
+
 function mapState(map: MapLibreMap) {
   const sources: Record<string, unknown> = {};
   try {
@@ -84,8 +96,18 @@ function mapState(map: MapLibreMap) {
     sources.error = String(e);
   }
   const now = performance.now();
+  const c = map.getContainer();
+  const cv = map.getCanvas();
   return {
     proxy: useProxy,
+    counters: { ...counters },
+    containerPx: [c.clientWidth, c.clientHeight],
+    canvasPx: [cv.width, cv.height],
+    visibility: document.visibilityState,
+    dpr: window.devicePixelRatio,
+    gl: glInfo(map),
+    zoom: Number(map.getZoom().toFixed(2)),
+    pitch: Math.round(map.getPitch()),
     styleLoaded: map.isStyleLoaded(),
     loaded: map.loaded(),
     sources,
@@ -312,6 +334,10 @@ export function MapCanvas({ onMapReady, onMoveEnd, onError, onStyleReload }: Pro
       console.warn('MapLibre (pre-load):', msg);
     });
 
+    map.on('render', () => { counters.render++; });
+    map.on('sourcedata', (e: any) => { counters.sourcedata++; if (e.tile) counters.tileEvents++; });
+    map.on('dataloading', () => { counters.dataloading++; });
+    map.getCanvas().addEventListener('webglcontextlost', () => { counters.contextLost++; sendDiag('webglcontextlost'); });
     map.once('styledata', () => sendDiag('styledata'));
     map.once('idle', () => sendDiag('idle', { resources: resourceSummary() }));
     map.on('load', () => {
