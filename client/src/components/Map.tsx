@@ -42,7 +42,7 @@ import {
 const BERGEN: [number, number] = [5.3221, 60.3913];
 const DEFAULT_PITCH = 55;
 const TERRAIN_EXAGGERATION = 1.4;
-const LOAD_TIMEOUT_MS = 12000;
+const LOAD_TIMEOUT_MS = 25000;
 
 const BUILDING_SOURCE_LAYER = 'building'; // docs.maptiler.com/schema/planet-v4/
 const BUILDINGS_LAYER_ID = 'lobster-buildings-3d';
@@ -219,7 +219,11 @@ export function MapCanvas({ onMapReady, onMoveEnd, onError, onStyleReload }: Pro
     mapRef.current = map;
 
     const loadTimeout = setTimeout(() => {
-      if (loadedRef.current) return;
+      // Style is up and the map is drawing: slow tiles, not a failure.
+      if (loadedRef.current || map.isStyleLoaded()) {
+        console.warn('Map slow to finish loading, but style is up');
+        return;
+      }
       console.error('Map load timed out after', LOAD_TIMEOUT_MS, 'ms');
       onError?.(
         hasMapTiler

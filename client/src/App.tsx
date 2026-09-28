@@ -241,6 +241,7 @@ export default function App() {
       console.log('Map ready', map);
       mapRef.current = map;
       setMapLoaded(true);
+      setMapError(null);
       const b = map.getBounds();
       syncMarkers([b.getWest(), b.getSouth(), b.getEast(), b.getNorth()]);
     },
