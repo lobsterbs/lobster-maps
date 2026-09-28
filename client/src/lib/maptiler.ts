@@ -40,9 +40,18 @@ export const MAPTILER_ATTRIBUTION =
  * Uses server proxy to avoid browser Origin header issues with MapTiler.
  * If the server proxy is available, uses that; otherwise falls back to direct.
  */
+/**
+ * Proxy is used on the deployed site unless the page is opened with ?direct
+ * (A/B test: MapTiler's documented setup is style URL + key straight from the
+ * browser, with the key locked to allowed origins in the MapTiler dashboard).
+ */
+export const useProxy =
+  typeof window !== 'undefined' &&
+  window.location.hostname !== 'localhost' &&
+  !new URLSearchParams(window.location.search).has('direct');
+
 export function styleUrl(mapId: string): string {
-  // Use server proxy if available (no key needed, server has it)
-  if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
+  if (useProxy) {
     return `/api/maptiler/style/${mapId}`;
   }
   // Fallback to direct MapTiler for localhost dev
@@ -54,8 +63,7 @@ export function styleUrl(mapId: string): string {
  * Uses server proxy to avoid browser Origin header issues.
  */
 export function tilesUrl(tilesId: string): string {
-  // Use server proxy if available
-  if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
+  if (useProxy) {
     return `/api/maptiler/tiles/${tilesId}`;
   }
   // Fallback to direct MapTiler for localhost dev

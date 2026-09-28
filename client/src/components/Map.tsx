@@ -19,6 +19,7 @@ import { M3eIcon } from '@m3e/react/icon';
 import { AddLocationModal } from './AddLocationModal';
 import { ReportIssueModal } from './ReportIssueModal';
 
+import { useProxy } from '../lib/maptiler';
 import {
   BASEMAPS,
   DEFAULT_BASEMAP,
@@ -53,6 +54,43 @@ function sendDiag(event: string, data: Record<string, unknown> = {}) {
   } catch {
     /* diagnostics must never break the map */
   }
+}
+
+// Track in-flight MapTiler fetches: Resource Timing only lists COMPLETED requests,
+// so a hung tile/glyph request is invisible without this.
+const pendingFetches = new Map<number, { url: string; t: number }>();
+let fetchSeq = 0;
+function instrumentFetch() {
+  const w = window as any;
+  if (w.__mapFetchInstrumented) return;
+  w.__mapFetchInstrumented = true;
+  const orig = window.fetch.bind(window);
+  window.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = typeof input === 'string' ? input : input instanceof URL ? input.href : (input as Request).url;
+    if (!/maptiler/.test(url)) return orig(input, init);
+    const id = ++fetchSeq;
+    pendingFetches.set(id, { url: url.replace(/key=[^&]*/, 'key=***').slice(0, 140), t: performance.now() });
+    return orig(input, init).finally(() => pendingFetches.delete(id));
+  };
+}
+
+function mapState(map: MapLibreMap) {
+  const sources: Record<string, unknown> = {};
+  try {
+    for (const [id, src] of Object.entries(map.getStyle()?.sources ?? {})) {
+      sources[id] = { type: (src as any).type, loaded: map.isSourceLoaded(id) };
+    }
+  } catch (e) {
+    sources.error = String(e);
+  }
+  const now = performance.now();
+  return {
+    proxy: useProxy,
+    styleLoaded: map.isStyleLoaded(),
+    loaded: map.loaded(),
+    sources,
+    pending: [...pendingFetches.values()].map((p) => ({ url: p.url, ageMs: Math.round(now - p.t) })).slice(0, 15),
+  };
 }
 
 function resourceSummary() {
@@ -240,10 +278,12 @@ export function MapCanvas({ onMapReady, onMoveEnd, onError, onStyleReload }: Pro
     }
 
     mapRef.current = map;
+    instrumentFetch();
+    const snap = setTimeout(() => sendDiag('snapshot8s', mapState(map)), 8000);
     sendDiag('init', { hasMapTiler, style: typeof initialStyle === 'string' ? initialStyle.replace(/key=[^&]*/, 'key=***') : 'inline' });
 
     const loadTimeout = setTimeout(() => {
-      sendDiag('timeout', { styleLoaded: map.isStyleLoaded(), loaded: map.loaded(), tilesLoaded: map.areTilesLoaded(), resources: resourceSummary() });
+      sendDiag('timeout', { ...mapState(map), resources: resourceSummary() });
       // Style is up and the map is drawing: slow tiles, not a failure.
       if (loadedRef.current || map.isStyleLoaded()) {
         console.warn('Map slow to finish loading, but style is up');
@@ -288,6 +328,7 @@ export function MapCanvas({ onMapReady, onMoveEnd, onError, onStyleReload }: Pro
     });
 
     return () => {
+      clearTimeout(snap);
       clearTimeout(loadTimeout);
       map.remove();
       mapRef.current = null;
