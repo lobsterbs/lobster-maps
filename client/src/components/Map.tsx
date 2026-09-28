@@ -44,6 +44,29 @@ const DEFAULT_PITCH = 55;
 const TERRAIN_EXAGGERATION = 1.4;
 const LOAD_TIMEOUT_MS = 25000;
 
+// --- Diagnostics: ship map events to the server so they show in Render logs ---
+function sendDiag(event: string, data: Record<string, unknown> = {}) {
+  const payload = { event, t: Math.round(performance.now()), ua: navigator.userAgent.slice(0, 80), ...data };
+  console.log('[map-diag]', payload);
+  try {
+    navigator.sendBeacon('/api/maptiler/diag', new Blob([JSON.stringify(payload)], { type: 'application/json' }));
+  } catch {
+    /* diagnostics must never break the map */
+  }
+}
+
+function resourceSummary() {
+  return performance
+    .getEntriesByType('resource')
+    .filter((r) => /maptiler|\/api\//.test(r.name))
+    .slice(-25)
+    .map((r) => {
+      const e = r as PerformanceResourceTiming;
+      return { url: e.name.replace(/key=[^&]*/, 'key=***').slice(0, 140), ms: Math.round(e.duration), status: (e as any).responseStatus ?? null, size: e.transferSize };
+    });
+}
+
+
 const BUILDING_SOURCE_LAYER = 'building'; // docs.maptiler.com/schema/planet-v4/
 const BUILDINGS_LAYER_ID = 'lobster-buildings-3d';
 
@@ -217,8 +240,10 @@ export function MapCanvas({ onMapReady, onMoveEnd, onError, onStyleReload }: Pro
     }
 
     mapRef.current = map;
+    sendDiag('init', { hasMapTiler, style: typeof initialStyle === 'string' ? initialStyle.replace(/key=[^&]*/, 'key=***') : 'inline' });
 
     const loadTimeout = setTimeout(() => {
+      sendDiag('timeout', { styleLoaded: map.isStyleLoaded(), loaded: map.loaded(), tilesLoaded: map.areTilesLoaded(), resources: resourceSummary() });
       // Style is up and the map is drawing: slow tiles, not a failure.
       if (loadedRef.current || map.isStyleLoaded()) {
         console.warn('Map slow to finish loading, but style is up');
@@ -234,6 +259,7 @@ export function MapCanvas({ onMapReady, onMoveEnd, onError, onStyleReload }: Pro
 
     map.on('error', (e) => {
       const msg = e.error?.message ?? String(e);
+      sendDiag('error', { msg: String(msg).replace(/key=[^&]*/g, 'key=***').slice(0, 300), status: (e.error as any)?.status, sourceId: (e as any).sourceId, loaded: loadedRef.current });
       if (loadedRef.current) {
         console.warn('MapLibre (non-fatal):', msg);
         return;
@@ -246,7 +272,10 @@ export function MapCanvas({ onMapReady, onMoveEnd, onError, onStyleReload }: Pro
       console.warn('MapLibre (pre-load):', msg);
     });
 
+    map.once('styledata', () => sendDiag('styledata'));
+    map.once('idle', () => sendDiag('idle', { resources: resourceSummary() }));
     map.on('load', () => {
+      sendDiag('load');
       loadedRef.current = true;
       clearTimeout(loadTimeout);
       applyCustomLayers(map);

@@ -14,6 +14,25 @@
 import express from 'express';
 
 const router = express.Router();
+
+// Log every proxy request with status + timing so slow/failed tiles show up in Render logs.
+router.use((req, res, next) => {
+  const started = Date.now();
+  res.on('finish', () => {
+    console.log(`[maptiler] ${req.method} ${req.originalUrl} -> ${res.statusCode} ${Date.now() - started}ms`);
+  });
+  next();
+});
+
+// Browser-side map diagnostics land here so they can be read in Render logs.
+router.post('/diag', (req, res) => {
+  try {
+    console.log('[map-diag]', JSON.stringify(req.body).slice(0, 4000));
+  } catch {
+    console.log('[map-diag] unserialisable body');
+  }
+  res.status(204).end();
+});
 // MapTiler API key for server-side proxy
 // Production: set VITE_MAPTILER_KEY in Render environment, or hardcode if env var unavailable
 // Client: key is in client/.env.production and inlined at build time
@@ -159,6 +178,7 @@ router.get('/tiles/:tilesId', async (req, res) => {
     }
 
     const data = await response.json();
+    console.log('[maptiler] tilejson', tilesId, 'tiles[0]=', String(data.tiles?.[0] ?? '').replace(/key=[^&]*/, 'key=***'));
     
     // Rewrite embedded glyphs/fonts URLs in TileJSON if present
     if (data.glyphs) {
@@ -222,6 +242,37 @@ router.get('/fonts/:fontstack/:range.pbf', async (req, res) => {
   } catch (error) {
     console.error('MapTiler fonts proxy error:', error);
     res.status(500).json({ error: 'Failed to fetch MapTiler fonts' });
+  }
+});
+
+/**
+ * GET /api/maptiler/sprite/:file
+ * style.json sprite URLs are rewritten to /api/maptiler/sprite/{mapId}; MapLibre
+ * appends .json, @2x.json, .png or @2x.png. This route had no handler before.
+ */
+router.get('/sprite/:file', async (req, res) => {
+  const m = /^([a-z0-9-]+)(@2x)?\.(json|png)$/.exec(req.params.file);
+  if (!m) {
+    res.status(400).json({ error: 'Invalid sprite name' });
+    return;
+  }
+  const [, mapId, retina, ext] = m;
+  try {
+    const url = `https://api.maptiler.com/maps/${mapId}/sprite${retina ?? ''}.${ext}?key=${MAPTILER_KEY}`;
+    const response = await fetch(url, {
+      headers: { 'User-Agent': 'LobsterMaps/1.0', Referer: 'https://lobster-maps.onrender.com/' },
+    });
+    if (!response.ok) {
+      console.error('[maptiler] sprite failed', { status: response.status, mapId, ext, retina: !!retina });
+      res.status(response.status).end();
+      return;
+    }
+    res.setHeader('Content-Type', ext === 'png' ? 'image/png' : 'application/json');
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+    res.send(Buffer.from(await response.arrayBuffer()));
+  } catch (error) {
+    console.error('[maptiler] sprite proxy error:', error);
+    res.status(500).end();
   }
 });
 
