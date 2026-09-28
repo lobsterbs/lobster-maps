@@ -20,7 +20,6 @@ type Props = {
 };
 
 export function AddBusinessModal({ open, onClose, onCreated, mapCenter }: Props) {
-  const dialogRef = useRef<any>(null);
   const [step, setStep] = useState<Step>('location');
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<GeocodeResult[]>([]);
@@ -29,14 +28,6 @@ export function AddBusinessModal({ open, onClose, onCreated, mapCenter }: Props)
   const submitRipple = useRipple();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (open && dialogRef.current?.showModal) {
-      dialogRef.current.showModal();
-    } else if (!open && dialogRef.current?.close) {
-      dialogRef.current.close();
-    }
-  }, [open]);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
 
   const transition = useTransition(open, {
@@ -133,7 +124,7 @@ export function AddBusinessModal({ open, onClose, onCreated, mapCenter }: Props)
 
           {/* M3E Dialog Container */}
           <M3eDialog
-            ref={dialogRef}
+            open={open}
             onClosed={onClose}
             style={{
               zIndex: 1,
